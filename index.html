@@ -210,6 +210,14 @@
             let m = window.App.levels.find(l => l.surahId == surahId);
             if(m){ m.active = true; if(window.dbSave) window.dbSave('levels', m.id, m); }
         }
+        
+        // Trik Friday: Pastikan video YouTube memuat video milik surah yang baru dipilih
+        if (window.App.yt && typeof window.App.yt.cueVideoById === 'function') {
+            if (videoId) window.App.yt.cueVideoById(videoId);
+            else window.App.yt.stopVideo();
+            window.App.isPlay = false;
+        }
+
         window.switchView('player');
     };
 
