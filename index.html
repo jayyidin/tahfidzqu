@@ -12,8 +12,8 @@
     @layer components {
       .input-std { @apply w-full bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-sm text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-inner dark:bg-[#0a120f] dark:border-[#1a2e26] dark:text-white dark:focus:ring-0 transition-colors; }
       .btn-std { @apply w-full py-3 bg-emerald-500 text-white font-bold rounded-lg hover:bg-emerald-600 transition shadow-md dark:text-black dark:hover:bg-emerald-400; }
-      .modal-overlay { @apply fixed inset-0 bg-slate-900/40 flex items-center justify-center z-[60] backdrop-blur-sm dark:bg-black/80 transition-colors p-4; }
-      .modal-box { @apply bg-white border border-slate-200 rounded-2xl w-full max-w-[400px] p-6 shadow-2xl dark:bg-[#15241e] dark:border-[#1a2e26] transition-colors max-h-[90vh] overflow-y-auto; }
+      .modal-overlay { @apply fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[100] backdrop-blur-sm dark:bg-black/80 transition-colors p-4; }
+      .modal-box { @apply bg-white border border-slate-200 rounded-3xl w-full max-w-[400px] p-6 shadow-2xl dark:bg-[#15241e] dark:border-[#1a2e26] transition-colors max-h-[90vh] overflow-y-auto; }
       .card-std { @apply bg-white border border-slate-200 shadow-sm dark:bg-[#15241e] dark:border-[#1a2e26] rounded-2xl p-5 hover:border-emerald-400 hover:shadow-md dark:hover:border-emerald-500/50 transition-all cursor-pointer flex flex-col h-full relative overflow-hidden; }
       .btn-action { @apply flex-1 bg-slate-50 hover:bg-slate-100 border border-slate-200 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 dark:bg-[#0a120f] dark:border-[#1a2e26] dark:hover:bg-[#15241e] dark:text-gray-300; }
       .tab-active { @apply bg-emerald-500 text-white dark:text-black shadow-emerald-500/20 border border-emerald-500 dark:border-transparent px-5 py-2 rounded-full font-bold transition-all flex-shrink-0; }
@@ -30,7 +30,18 @@
     .font-arabic { font-family: "Amiri", "Traditional Arabic", serif; line-height: 3.5 !important; padding-top: 0.5rem; padding-bottom: 0.5rem; }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 dark:bg-[#111c18] dark:text-gray-200 font-sans flex flex-col w-full h-screen overflow-hidden transition-colors duration-300" id="app-root">
+<body class="bg-slate-50 text-slate-800 dark:bg-[#111c18] dark:text-gray-200 font-sans flex flex-col w-full h-screen overflow-hidden transition-colors duration-300">
+
+  <!-- LAYAR UTAMA (Aplikasi berjalan di sini) -->
+  <div id="app-root" class="flex flex-col w-full h-full relative z-0"></div>
+  
+  <!-- LAYAR MODAL (Dialog & Login berjalan di sini agar tidak mengganggu video) -->
+  <div id="modal-root" class="relative z-50"></div>
+
+  <!-- TEMPAT PERMANEN VIDEO YOUTUBE AGAR TIDAK HANCUR SAAT RENDER -->
+  <div id="persistent-player-wrapper" class="hidden">
+      <div id="youtube-player" class="w-full h-full"></div>
+  </div>
 
   <script>
     // --- KEAMANAN: XSS Sanitizer ---
@@ -43,16 +54,42 @@
 
     // --- HELPER DOM ---
     window.getEl = function(id) { return document.getElementById(id); };
-    window.hide = function(id) { var e = window.getEl(id); if(e) e.classList.add('hidden'); };
-    window.show = function(id) { var e = window.getEl(id); if(e) e.classList.remove('hidden'); };
     window.val = function(id, v) { var e = window.getEl(id); if(!e) return ''; if(v !== undefined) e.value = v; return e.value; };
-    window.text = function(id, t) { var e = window.getEl(id); if(e) e.innerText = t; };
     
-    // --- NAVIGASI PINTAR & AUTO-LOGOUT ---
+    // --- DATA KONSTANTA ---
+    const Q_SURAHS = JSON.parse('[{"no":1,"name":"Al-Fatihah","juz":[1]},{"no":2,"name":"Al-Baqarah","juz":[1,2,3]},{"no":3,"name":"Ali \'Imran","juz":[3,4]},{"no":4,"name":"An-Nisa\'","juz":[4,5,6]},{"no":5,"name":"Al-Ma\'idah","juz":[6,7]},{"no":6,"name":"Al-An\'am","juz":[7,8]},{"no":7,"name":"Al-A\'raf","juz":[8,9]},{"no":8,"name":"Al-Anfal","juz":[9,10]},{"no":9,"name":"At-Taubah","juz":[10,11]},{"no":10,"name":"Yunus","juz":[11]},{"no":11,"name":"Hud","juz":[11,12]},{"no":12,"name":"Yusuf","juz":[12,13]},{"no":13,"name":"Ar-Ra\'d","juz":[13]},{"no":14,"name":"Ibrahim","juz":[13]},{"no":15,"name":"Al-Hijr","juz":[14]},{"no":16,"name":"An-Nahl","juz":[14]},{"no":17,"name":"Al-Isra\'","juz":[15]},{"no":18,"name":"Al-Kahf","juz":[15,16]},{"no":19,"name":"Maryam","juz":[16]},{"no":20,"name":"Taha","juz":[16]},{"no":21,"name":"Al-Anbiya\'","juz":[17]},{"no":22,"name":"Al-Hajj","juz":[17]},{"no":23,"name":"Al-Mu\'minun","juz":[18]},{"no":24,"name":"An-Nur","juz":[18]},{"no":25,"name":"Al-Furqan","juz":[18,19]},{"no":26,"name":"Asy-Syu\'ara\'","juz":[19]},{"no":27,"name":"An-Naml","juz":[19,20]},{"no":28,"name":"Al-Qasas","juz":[20]},{"no":29,"name":"Al-\'Ankabut","juz":[20,21]},{"no":30,"name":"Ar-Rum","juz":[21]},{"no":31,"name":"Luqman","juz":[21]},{"no":32,"name":"As-Sajdah","juz":[21]},{"no":33,"name":"Al-Ahzab","juz":[21,22]},{"no":34,"name":"Saba\'","juz":[22]},{"no":35,"name":"Fatir","juz":[22]},{"no":36,"name":"Yasin","juz":[22,23]},{"no":37,"name":"As-Saffat","juz":[23]},{"no":38,"name":"Sad","juz":[23]},{"no":39,"name":"Az-Zumar","juz":[23,24]},{"no":40,"name":"Ghafir","juz":[24]},{"no":41,"name":"Fussilat","juz":[24,25]},{"no":42,"name":"Asy-Syura","juz":[25]},{"no":43,"name":"Az-Zukhruf","juz":[25]},{"no":44,"name":"Ad-Dukhan","juz":[25]},{"no":45,"name":"Al-Jasiyah","juz":[25]},{"no":46,"name":"Al-Ahqaf","juz":[26]},{"no":47,"name":"Muhammad","juz":[26]},{"no":48,"name":"Al-Fath","juz":[26]},{"no":49,"name":"Al-Hujurat","juz":[26]},{"no":50,"name":"Qaf","juz":[26]},{"no":51,"name":"Az-Zariyat","juz":[26,27]},{"no":52,"name":"At-Tur","juz":[27]},{"no":53,"name":"An-Najm","juz":[27]},{"no":54,"name":"Al-Qamar","juz":[27]},{"no":55,"name":"Ar-Rahman","juz":[27]},{"no":56,"name":"Al-Waqi\'ah","juz":[27]},{"no":57,"name":"Al-Hadid","juz":[27]},{"no":58,"name":"Al-Mujadilah","juz":[28]},{"no":59,"name":"Al-Hasyr","juz":[28]},{"no":60,"name":"Al-Mumtahanah","juz":[28]},{"no":61,"name":"As-Saff","juz":[28]},{"no":62,"name":"Al-Jumu\'ah","juz":[28]},{"no":63,"name":"Al-Munafiqun","juz":[28]},{"no":64,"name":"At-Tagabun","juz":[28]},{"no":65,"name":"At-Talaq","juz":[28]},{"no":66,"name":"At-Tahrim","juz":[28]},{"no":67,"name":"Al-Mulk","juz":[29]},{"no":68,"name":"Al-Qalam","juz":[29]},{"no":69,"name":"Al-Haqqah","juz":[29]},{"no":70,"name":"Al-Ma\'arij","juz":[29]},{"no":71,"name":"Nuh","juz":[29]},{"no":72,"name":"Al-Jinn","juz":[29]},{"no":73,"name":"Al-Muzzammil","juz":[29]},{"no":74,"name":"Al-Muddassir","juz":[29]},{"no":75,"name":"Al-Qiyamah","juz":[29]},{"no":76,"name":"Al-Insan","juz":[29]},{"no":77,"name":"Al-Mursalat","juz":[29]},{"no":78,"name":"An-Naba\'","juz":[30]},{"no":79,"name":"An-Nazi\'at","juz":[30]},{"no":80,"name":"\'Abasa","juz":[30]},{"no":81,"name":"At-Takwir","juz":[30]},{"no":82,"name":"Al-Infitar","juz":[30]},{"no":83,"name":"Al-Mutaffifin","juz":[30]},{"no":84,"name":"Al-Insyiqaq","juz":[30]},{"no":85,"name":"Al-Buruj","juz":[30]},{"no":86,"name":"At-Tariq","juz":[30]},{"no":87,"name":"Al-A\'la","juz":[30]},{"no":88,"name":"Al-Gasyiyah","juz":[30]},{"no":89,"name":"Al-Fajr","juz":[30]},{"no":90,"name":"Al-Balad","juz":[30]},{"no":91,"name":"Asy-Syams","juz":[30]},{"no":92,"name":"Al-Lail","juz":[30]},{"no":93,"name":"Ad-Duha","juz":[30]},{"no":94,"name":"Al-Insyirah","juz":[30]},{"no":95,"name":"At-Tin","juz":[30]},{"no":96,"name":"Al-\'Alaq","juz":[30]},{"no":97,"name":"Al-Qadr","juz":[30]},{"no":98,"name":"Al-Bayyinah","juz":[30]},{"no":99,"name":"Az-Zalzalah","juz":[30]},{"no":100,"name":"Al-\'Adiyat","juz":[30]},{"no":101,"name":"Al-Qari\'ah","juz":[30]},{"no":102,"name":"At-Takasur","juz":[30]},{"no":103,"name":"Al-\'Asr","juz":[30]},{"no":104,"name":"Al-Humazah","juz":[30]},{"no":105,"name":"Al-Fil","juz":[30]},{"no":106,"name":"Quraisy","juz":[30]},{"no":107,"name":"Al-Ma\'un","juz":[30]},{"no":108,"name":"Al-Kausar","juz":[30]},{"no":109,"name":"Al-Kafirun","juz":[30]},{"no":110,"name":"An-Nasr","juz":[30]},{"no":111,"name":"Al-Lahab","juz":[30]},{"no":112,"name":"Al-Ikhlas","juz":[30]},{"no":113,"name":"Al-Falaq","juz":[30]},{"no":114,"name":"An-Nas","juz":[30]}]');
+
+    // --- DATA MEMORI ---
+    window.App = {
+      theme: localStorage.getItem('tahfidzqu_theme') || 'light',
+      adminLvl: 0, 
+      view: 'home',
+      schLogo: localStorage.getItem('tahfidzqu_logo') || '',
+      schSub: localStorage.getItem('tahfidzqu_subtitle') || '',
+      search: '',
+      loginAttempts: 0,
+      lockoutTime: 0,
+      loginError: '',
+      inactivityTimer: null,
+      customDialog: { show: false, type: 'alert', message: '', onConfirm: null },
+      juzs: [], surahs: [], levels: [], segs: [], ustadz: [], halaqohs: [], siswas: [], subs: [],
+      actJuzId: 1, actSurahId: null, actSegId: null,
+      yt: null, isPlay: false, repTarget: 7, curRep: 0, speed: 1, interval: null,
+      modal: null, modalData: null,
+      filter: {u:'all', h:'all', s:'all'},
+      hierSel: {u:null, h:null, s:null},
+      rec: {is:false, secs:0, int:null, src:'player'},
+      resubmitId: null, 
+      editingUstadzId: null, editingHalaqohId: null, editingSiswaId: null,
+      currentGradingAudioUrl: null, isGradingRecording: false, gradingMediaRecorder: null, gradingAudioChunks: [],
+      studentMediaRecorder: null, studentAudioChunks: [], currentStudentAudioUrl: null
+    };
+
+    // --- FUNGSI NAVIGASI ---
     window.switchView = function(viewTarget) {
       window.App.search = ''; 
       window.App.view = viewTarget;
-      window.render();
+      window.render(true); // Paksa gambar ulang layar
     };
 
     window.resetTimer = function() {
@@ -85,11 +122,12 @@
         window.render();
     };
 
-    // --- KONTROL VIDEO MANUAL (TANPA RE-RENDER LAYAR) ---
+    // --- KONTROL VIDEO (DOM UPDATE BEDAH) ---
+    // Di sinilah keajaibannya, video tidak akan dihancurkan saat update UI
     window.selectSeg = function(id) {
         window.App.actSegId = id;
         window.App.curRep = 0;
-        let sgs = window.getSgs();
+        let sgs = window.App.segs.filter(s=>s.surahId===window.App.actSurahId).sort((a,b)=>a.start-b.start);
         let sg = sgs.find(x => x.id === id);
         if(!sg) return;
 
@@ -98,34 +136,13 @@
             window.App.yt.playVideo();
             window.App.isPlay = true;
         }
-
-        // Update warna & highlight tombol daftar ayat
-        document.querySelectorAll('.seg-item').forEach(el => {
-            let isAct = (el.dataset.id == id);
-            el.className = `seg-item p-3 lg:p-4 rounded-xl border cursor-pointer transition shadow-sm ${isAct?'bg-emerald-50 border-emerald-300 dark:bg-[#152b22] dark:border-emerald-500/50':'bg-white border-slate-200 hover:border-emerald-300 dark:bg-[#15241e] dark:border-[#1a2e26]'}`;
-            el.querySelector('.seg-title').className = `seg-title text-sm lg:text-base font-bold ${isAct?'text-emerald-800 dark:text-white':'text-slate-700 dark:text-gray-300'}`;
-            let btn = el.querySelector('.play-btn-box');
-            if(btn) {
-                btn.className = `play-btn-box p-1.5 rounded-md ${isAct?'bg-emerald-500 text-white':'text-slate-300 hover:text-emerald-500 bg-slate-50 dark:bg-[#0a120f]'}`;
-                btn.querySelector('.play-icon').className = `${isAct?'ph-fill':'ph-bold'} ph-play play-icon`;
-            }
-        });
-
-        // Update indikator bar progres
-        sgs.forEach(s => {
-            let mk = document.getElementById('seg-marker-' + s.id);
-            if(mk) mk.className = `absolute h-full border-r border-black transition-colors ${s.id === id ? 'bg-emerald-500' : 'bg-gray-400 opacity-30'}`;
-        });
-
-        // Update teks Al-Quran di bawah video
-        if(document.getElementById('quran-title')) document.getElementById('quran-title').innerText = sg.title;
-        if(document.getElementById('quran-arabic')) document.getElementById('quran-arabic').innerText = sg.arabic;
-        if(document.getElementById('quran-trans')) document.getElementById('quran-trans').innerText = sg.translation;
-        if(document.getElementById('rep-text')) document.getElementById('rep-text').innerText = '';
         
-        // Update tombol play/pause utama
-        let btn = document.getElementById('play-pause-btn'); if(btn) btn.innerHTML = '<i class="ph-fill ph-pause text-2xl lg:text-3xl hover:text-emerald-400"></i>';
-        let bigBtn = document.getElementById('big-play-btn'); if(bigBtn) { bigBtn.classList.replace('scale-100', 'scale-95'); bigBtn.classList.replace('opacity-100', 'opacity-0'); }
+        // Update DOM langsung tanpa merusak Iframe
+        window.updatePlayerDOM();
+        
+        let btn = window.getEl('play-pause-btn'); if(btn) btn.innerHTML = '<i class="ph-fill ph-pause text-2xl lg:text-3xl hover:text-emerald-400"></i>';
+        let bigBtn = window.getEl('big-play-btn'); if(bigBtn) { bigBtn.classList.replace('scale-100', 'scale-95'); bigBtn.classList.replace('opacity-100', 'opacity-0'); }
+        let rt = window.getEl('rep-text'); if(rt) rt.innerText = '';
     };
 
     window.toggleYTPlay = function() {
@@ -133,12 +150,13 @@
             if(window.App.isPlay) {
                 window.App.yt.pauseVideo();
             } else {
-                let cSg = window.getActSeg();
+                let sgs = window.App.segs.filter(s=>s.surahId===window.App.actSurahId).sort((a,b)=>a.start-b.start);
+                let cSg = sgs.find(x => x.id === window.App.actSegId);
                 let t = window.App.yt.getCurrentTime();
                 if(t < (cSg?.start||0) || t >= (cSg?.end||100)) {
                     window.App.yt.seekTo(cSg?.start||0);
                     window.App.curRep = 0;
-                    let rt = document.getElementById('rep-text'); if(rt) rt.innerText = '';
+                    let rt = window.getEl('rep-text'); if(rt) rt.innerText = '';
                 }
                 window.App.yt.playVideo();
             }
@@ -146,7 +164,7 @@
     };
 
     window.nextSeg = function(dir) {
-        let sgs = window.getSgs();
+        let sgs = window.App.segs.filter(s=>s.surahId===window.App.actSurahId).sort((a,b)=>a.start-b.start);
         let idx = sgs.findIndex(x => x.id === window.App.actSegId);
         if(dir === 1 && idx >= 0 && idx < sgs.length - 1) window.selectSeg(sgs[idx+1].id);
         else if (dir === -1 && idx > 0) window.selectSeg(sgs[idx-1].id);
@@ -154,20 +172,19 @@
 
     window.updateRepTarget = function(delta) {
         window.App.repTarget = Math.max(1, window.App.repTarget + delta);
-        let el = document.getElementById('rep-target-val');
+        let el = window.getEl('rep-target-val');
         if(el) el.innerText = window.App.repTarget + 'x';
     };
 
     window.updateSpeed = function(delta) {
         window.App.speed = Math.max(0.25, Math.min(2, window.App.speed + delta));
-        let el = document.getElementById('speed-val');
+        let el = window.getEl('speed-val');
         if(el) el.innerText = window.App.speed + 'x';
         if(window.App.yt && typeof window.App.yt.setPlaybackRate === 'function') {
             window.App.yt.setPlaybackRate(window.App.speed);
         }
     };
 
-    // --- PEMBUKA SURAH AMAN ---
     window.openSurah = function(surahId, videoId) {
         window.App.actSurahId = surahId;
         window.App.actSegId = null;
@@ -182,15 +199,10 @@
             if(m){ m.active = true; if(window.dbSave) window.dbSave('levels', m.id, m); }
         }
         
-        if(window.App.yt && typeof window.App.yt.loadVideoById === 'function'){
-            if(videoId) window.App.yt.loadVideoById(videoId);
-            else if(typeof window.App.yt.stopVideo === 'function') window.App.yt.stopVideo();
-            window.App.isPlay = false;
-        }
-        window.switchView('player');
+        window.switchView('player'); // Ini akan memanggil render() penuh sekali saja untuk membangun bingkai Player
     };
 
-    // --- INISIALISASI YOUTUBE IFRAME API ---
+    // --- INISIALISASI YOUTUBE ---
     window.initYTPlayer = function() {
         if(!window.YT || !window.YT.Player) return;
         var sur = window.App.surahs.find(s=>s.id===window.App.actSurahId);
@@ -231,55 +243,15 @@
         if (window.App && window.App.view === 'player') window.initYTPlayer();
     };
 
-    // Muat Script API YouTube
-    var tag = document.createElement('script');
-    tag.src = "https://www.youtube.com/iframe_api";
-    var firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-
-    // --- CONSTANTS & INITIAL STATE ---
-    const Q_SURAHS = JSON.parse('[{"no":1,"name":"Al-Fatihah","juz":[1]},{"no":2,"name":"Al-Baqarah","juz":[1,2,3]},{"no":3,"name":"Ali \'Imran","juz":[3,4]},{"no":4,"name":"An-Nisa\'","juz":[4,5,6]},{"no":5,"name":"Al-Ma\'idah","juz":[6,7]},{"no":6,"name":"Al-An\'am","juz":[7,8]},{"no":7,"name":"Al-A\'raf","juz":[8,9]},{"no":8,"name":"Al-Anfal","juz":[9,10]},{"no":9,"name":"At-Taubah","juz":[10,11]},{"no":10,"name":"Yunus","juz":[11]},{"no":11,"name":"Hud","juz":[11,12]},{"no":12,"name":"Yusuf","juz":[12,13]},{"no":13,"name":"Ar-Ra\'d","juz":[13]},{"no":14,"name":"Ibrahim","juz":[13]},{"no":15,"name":"Al-Hijr","juz":[14]},{"no":16,"name":"An-Nahl","juz":[14]},{"no":17,"name":"Al-Isra\'","juz":[15]},{"no":18,"name":"Al-Kahf","juz":[15,16]},{"no":19,"name":"Maryam","juz":[16]},{"no":20,"name":"Taha","juz":[16]},{"no":21,"name":"Al-Anbiya\'","juz":[17]},{"no":22,"name":"Al-Hajj","juz":[17]},{"no":23,"name":"Al-Mu\'minun","juz":[18]},{"no":24,"name":"An-Nur","juz":[18]},{"no":25,"name":"Al-Furqan","juz":[18,19]},{"no":26,"name":"Asy-Syu\'ara\'","juz":[19]},{"no":27,"name":"An-Naml","juz":[19,20]},{"no":28,"name":"Al-Qasas","juz":[20]},{"no":29,"name":"Al-\'Ankabut","juz":[20,21]},{"no":30,"name":"Ar-Rum","juz":[21]},{"no":31,"name":"Luqman","juz":[21]},{"no":32,"name":"As-Sajdah","juz":[21]},{"no":33,"name":"Al-Ahzab","juz":[21,22]},{"no":34,"name":"Saba\'","juz":[22]},{"no":35,"name":"Fatir","juz":[22]},{"no":36,"name":"Yasin","juz":[22,23]},{"no":37,"name":"As-Saffat","juz":[23]},{"no":38,"name":"Sad","juz":[23]},{"no":39,"name":"Az-Zumar","juz":[23,24]},{"no":40,"name":"Ghafir","juz":[24]},{"no":41,"name":"Fussilat","juz":[24,25]},{"no":42,"name":"Asy-Syura","juz":[25]},{"no":43,"name":"Az-Zukhruf","juz":[25]},{"no":44,"name":"Ad-Dukhan","juz":[25]},{"no":45,"name":"Al-Jasiyah","juz":[25]},{"no":46,"name":"Al-Ahqaf","juz":[26]},{"no":47,"name":"Muhammad","juz":[26]},{"no":48,"name":"Al-Fath","juz":[26]},{"no":49,"name":"Al-Hujurat","juz":[26]},{"no":50,"name":"Qaf","juz":[26]},{"no":51,"name":"Az-Zariyat","juz":[26,27]},{"no":52,"name":"At-Tur","juz":[27]},{"no":53,"name":"An-Najm","juz":[27]},{"no":54,"name":"Al-Qamar","juz":[27]},{"no":55,"name":"Ar-Rahman","juz":[27]},{"no":56,"name":"Al-Waqi\'ah","juz":[27]},{"no":57,"name":"Al-Hadid","juz":[27]},{"no":58,"name":"Al-Mujadilah","juz":[28]},{"no":59,"name":"Al-Hasyr","juz":[28]},{"no":60,"name":"Al-Mumtahanah","juz":[28]},{"no":61,"name":"As-Saff","juz":[28]},{"no":62,"name":"Al-Jumu\'ah","juz":[28]},{"no":63,"name":"Al-Munafiqun","juz":[28]},{"no":64,"name":"At-Tagabun","juz":[28]},{"no":65,"name":"At-Talaq","juz":[28]},{"no":66,"name":"At-Tahrim","juz":[28]},{"no":67,"name":"Al-Mulk","juz":[29]},{"no":68,"name":"Al-Qalam","juz":[29]},{"no":69,"name":"Al-Haqqah","juz":[29]},{"no":70,"name":"Al-Ma\'arij","juz":[29]},{"no":71,"name":"Nuh","juz":[29]},{"no":72,"name":"Al-Jinn","juz":[29]},{"no":73,"name":"Al-Muzzammil","juz":[29]},{"no":74,"name":"Al-Muddassir","juz":[29]},{"no":75,"name":"Al-Qiyamah","juz":[29]},{"no":76,"name":"Al-Insan","juz":[29]},{"no":77,"name":"Al-Mursalat","juz":[29]},{"no":78,"name":"An-Naba\'","juz":[30]},{"no":79,"name":"An-Nazi\'at","juz":[30]},{"no":80,"name":"\'Abasa","juz":[30]},{"no":81,"name":"At-Takwir","juz":[30]},{"no":82,"name":"Al-Infitar","juz":[30]},{"no":83,"name":"Al-Mutaffifin","juz":[30]},{"no":84,"name":"Al-Insyiqaq","juz":[30]},{"no":85,"name":"Al-Buruj","juz":[30]},{"no":86,"name":"At-Tariq","juz":[30]},{"no":87,"name":"Al-A\'la","juz":[30]},{"no":88,"name":"Al-Gasyiyah","juz":[30]},{"no":89,"name":"Al-Fajr","juz":[30]},{"no":90,"name":"Al-Balad","juz":[30]},{"no":91,"name":"Asy-Syams","juz":[30]},{"no":92,"name":"Al-Lail","juz":[30]},{"no":93,"name":"Ad-Duha","juz":[30]},{"no":94,"name":"Al-Insyirah","juz":[30]},{"no":95,"name":"At-Tin","juz":[30]},{"no":96,"name":"Al-\'Alaq","juz":[30]},{"no":97,"name":"Al-Qadr","juz":[30]},{"no":98,"name":"Al-Bayyinah","juz":[30]},{"no":99,"name":"Az-Zalzalah","juz":[30]},{"no":100,"name":"Al-\'Adiyat","juz":[30]},{"no":101,"name":"Al-Qari\'ah","juz":[30]},{"no":102,"name":"At-Takasur","juz":[30]},{"no":103,"name":"Al-\'Asr","juz":[30]},{"no":104,"name":"Al-Humazah","juz":[30]},{"no":105,"name":"Al-Fil","juz":[30]},{"no":106,"name":"Quraisy","juz":[30]},{"no":107,"name":"Al-Ma\'un","juz":[30]},{"no":108,"name":"Al-Kausar","juz":[30]},{"no":109,"name":"Al-Kafirun","juz":[30]},{"no":110,"name":"An-Nasr","juz":[30]},{"no":111,"name":"Al-Lahab","juz":[30]},{"no":112,"name":"Al-Ikhlas","juz":[30]},{"no":113,"name":"Al-Falaq","juz":[30]},{"no":114,"name":"An-Nas","juz":[30]}]');
-
-    // Data akan diisi secara otomatis oleh Firebase
-    window.App = {
-      theme: localStorage.getItem('tahfidzqu_theme') || 'light',
-      adminLvl: 0, 
-      view: 'home',
-      schLogo: localStorage.getItem('tahfidzqu_logo') || '',
-      schSub: localStorage.getItem('tahfidzqu_subtitle') || '',
-      search: '',
-      loginAttempts: 0,
-      lockoutTime: 0,
-      loginError: '',
-      inactivityTimer: null,
-      customDialog: { show: false, type: 'alert', message: '', onConfirm: null },
-      juzs: [], surahs: [], levels: [], segs: [], ustadz: [], halaqohs: [], siswas: [], subs: [],
-      actJuzId: 1, actSurahId: null, actSegId: null,
-      yt: null, isPlay: false, repTarget: 7, curRep: 0, speed: 1, interval: null,
-      modal: null, modalData: null,
-      filter: {u:'all', h:'all', s:'all'},
-      hierSel: {u:null, h:null, s:null},
-      rec: {is:false, secs:0, int:null, src:'player'},
-      resubmitId: null, 
-      editingUstadzId: null, editingHalaqohId: null, editingSiswaId: null,
-      currentGradingAudioUrl: null, isGradingRecording: false, gradingMediaRecorder: null, gradingAudioChunks: [],
-      studentMediaRecorder: null, studentAudioChunks: [], currentStudentAudioUrl: null
-    };
-
     // --- GETTERS ---
     window.fmtT = s => `${Math.floor(s/60).toString().padStart(2,'0')}:${Math.floor(s%60).toString().padStart(2,'0')}`;
-    window.getLvl = () => App.levels.find(l=>l.surahId===App.actSurahId&&l.active)?.id;
-    window.getSgs = () => App.segs.filter(s=>s.surahId===App.actSurahId&&s.levelId===window.getLvl()).sort((a,b)=>a.start-b.start);
-    window.getActSeg = () => { var s=window.getSgs(); if(s.length===0)return null; return s.find(x=>x.id===App.actSegId)||s[0]; };
-    window.getUName = id => window.esc(App.ustadz.find(x=>x.id==id)?.name||"-");
-    window.getHName = id => window.esc(App.halaqohs.find(x=>x.id==id)?.name||"-");
-    window.getSName = id => window.esc(App.siswas.find(x=>x.id==id)?.name||"-");
-    window.getSKelas = id => window.esc(App.siswas.find(x=>x.id==id)?.kelas||"-");
+    window.getUName = id => window.esc(window.App.ustadz.find(x=>x.id==id)?.name||"-");
+    window.getHName = id => window.esc(window.App.halaqohs.find(x=>x.id==id)?.name||"-");
+    window.getSName = id => window.esc(window.App.siswas.find(x=>x.id==id)?.name||"-");
+    window.getSKelas = id => window.esc(window.App.siswas.find(x=>x.id==id)?.kelas||"-");
     window.toArabicNumeral = en => (""+en).replace(/[0-9]/g, t=>String.fromCharCode(t.charCodeAt(0)+1584));
-    window.extractVideoId = url => { if(!url)return null; var m=url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/); return (m&&m[2].length===11)?m[2]:null; };
 
-    // --- LOGO & SEKOLAH FUNCTIONS ---
+    // --- REKAMAN & UPLOAD ---
     window.handleLogoUpload = function(e) {
       var f = e.target.files[0];
       if (f) {
@@ -287,199 +259,93 @@
         var r = new FileReader();
         r.onload = function(ev) {
           try {
-            App.schLogo = ev.target.result;
-            localStorage.setItem('tahfidzqu_logo', App.schLogo);
-            window.render();
+            window.App.schLogo = ev.target.result;
+            localStorage.setItem('tahfidzqu_logo', window.App.schLogo);
+            window.render(true);
           } catch(err) { window.showAlert("Gagal menyimpan logo."); }
         };
         r.readAsDataURL(f);
       }
     };
     window.removeLogo = function() {
-      App.schLogo = '';
+      window.App.schLogo = '';
       try { localStorage.removeItem('tahfidzqu_logo'); } catch(e){}
-      window.render();
-    };
-    window.saveSchoolSubtitle = function() {
-      var input = window.getEl('i-sub');
-      if (input) {
-        App.schSub = window.esc(input.value.trim());
-        try { localStorage.setItem('tahfidzqu_subtitle', App.schSub); } catch(e){}
-        window.render();
-      }
+      window.render(true);
     };
 
-    // --- FITUR LOGIN ADMIN PINTAR ---
-    window.handleAdminLogin = function(u, p) {
-        if (Date.now() < App.lockoutTime) {
-            let remain = Math.ceil((App.lockoutTime - Date.now()) / 1000);
-            App.loginError = `Akses Terkunci! Tunggu ${remain} detik.`;
-            window.render(); return;
-        }
-        if(u === 'jayyidin' && p === 'offthewallba123') {
-            App.adminLvl = 1; App.modal = null; App.loginError = ''; App.loginAttempts = 0; window.resetTimer(); window.switchView('admin'); 
-        } else {
-            let ust = App.ustadz.find(x => x.username === u && x.password === p);
-            if(ust) {
-                App.adminLvl = 2; App.modal = null; App.loginError = ''; App.loginAttempts = 0; window.resetTimer(); window.switchView('admin');
-            } else {
-                App.loginAttempts++;
-                if (App.loginAttempts >= 3) {
-                    App.lockoutTime = Date.now() + 30000;
-                    App.loginError = 'Akun terkunci sementara karena gagal 3 kali berturut-turut.';
-                } else {
-                    App.loginError = `Username atau Password salah! (Sisa percobaan: ${3 - App.loginAttempts})`;
-                }
-                window.render();
-            }
-        }
-    };
-
-    // --- CONVERT BLOB KE BASE64 (Untuk Firebase) ---
-    window.blobToBase64 = function(blob) {
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.readAsDataURL(blob);
-        });
-    };
-
-    // --- FITUR REKAMAN SANTRI CLOUD ---
     window.startStudentRecord = async function() {
         try {
             var stream = await navigator.mediaDevices.getUserMedia({audio: true});
-            App.studentMediaRecorder = new MediaRecorder(stream);
-            App.studentAudioChunks = [];
-            App.studentMediaRecorder.ondataavailable = e => { if(e.data.size > 0) App.studentAudioChunks.push(e.data); };
-            App.studentMediaRecorder.onstop = async () => {
-                var b = new Blob(App.studentAudioChunks, { type: 'audio/webm' });
-                App.currentStudentAudioUrl = await window.blobToBase64(b);
+            window.App.studentMediaRecorder = new MediaRecorder(stream);
+            window.App.studentAudioChunks = [];
+            window.App.studentMediaRecorder.ondataavailable = e => { if(e.data.size > 0) window.App.studentAudioChunks.push(e.data); };
+            window.App.studentMediaRecorder.onstop = async () => {
+                var b = new Blob(window.App.studentAudioChunks, { type: 'audio/webm' });
+                window.App.currentStudentAudioUrl = await window.blobToBase64(b);
                 stream.getTracks().forEach(t => t.stop());
-                window.render();
+                window.render(true);
             };
-            App.studentMediaRecorder.start();
-            App.rec.is = true;
-            App.rec.secs = 0;
-            App.rec.int = setInterval(()=>{ App.rec.secs++; window.render(); }, 1000);
-            window.render();
+            window.App.studentMediaRecorder.start();
+            window.App.rec.is = true;
+            window.App.rec.secs = 0;
+            window.App.rec.int = setInterval(()=>{ window.App.rec.secs++; window.render(true); }, 1000);
+            window.render(true);
         } catch(e) {
-            window.showAlert("Gagal mengakses mikrofon. Pastikan browser diizinkan merekam suara.");
+            window.showAlert("Gagal mengakses mikrofon.");
         }
     };
 
     window.stopStudentRecord = function() {
-        if(App.studentMediaRecorder && App.rec.is) {
-            App.studentMediaRecorder.stop();
-            App.rec.is = false;
-            clearInterval(App.rec.int);
-            window.render();
+        if(window.App.studentMediaRecorder && window.App.rec.is) {
+            window.App.studentMediaRecorder.stop();
+            window.App.rec.is = false;
+            clearInterval(window.App.rec.int);
+            window.render(true);
         }
     };
 
     window.submitRec = async function(type, evt=null) { 
-        if(!App.hierSel.s) { 
+        if(!window.App.hierSel.s) { 
             if(evt) evt.target.value=''; 
             window.showAlert('Pilih identitas santri terlebih dahulu!'); 
             return; 
         }
         var mediaType = type === 'mic' ? 'rekaman mic' : 'file audio';
         var tDate = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
-        let audioData = App.currentStudentAudioUrl;
+        let audioData = window.App.currentStudentAudioUrl;
 
         if(type === 'file' && evt && evt.target.files[0]) {
             audioData = await window.blobToBase64(evt.target.files[0]);
         }
         
-        if (App.resubmitId) {
-            var existingSub = App.subs.find(x => x.id === App.resubmitId);
+        if (window.App.resubmitId) {
+            var existingSub = window.App.subs.find(x => x.id === window.App.resubmitId);
             if (existingSub) {
                 existingSub.status = 'pending';
                 existingSub.type = mediaType;
                 existingSub.date = tDate;
                 existingSub.audioUrl = audioData;
-                await window.dbSave('subs', existingSub.id, existingSub);
+                if(window.dbSave) await window.dbSave('subs', existingSub.id, existingSub);
             }
-            App.resubmitId = null;
+            window.App.resubmitId = null;
         } else {
             let nid = Date.now();
-            await window.dbSave('subs', nid, {
-                id: nid, siswaId: Number(App.hierSel.s), halaqohId: Number(App.hierSel.h), ustadzId: Number(App.hierSel.u),
-                surahId: App.actSurahId, segmentId: App.actSegId, type: mediaType, date: tDate,
+            if(window.dbSave) await window.dbSave('subs', nid, {
+                id: nid, siswaId: Number(window.App.hierSel.s), halaqohId: Number(window.App.hierSel.h), ustadzId: Number(window.App.hierSel.u),
+                surahId: window.App.actSurahId, segmentId: window.App.actSegId, type: mediaType, date: tDate,
                 status: 'pending', grade: null, note: null, audioUrl: audioData
             });
         }
         
-        App.currentStudentAudioUrl = null;
-        if(App.rec.is){clearInterval(App.rec.int);App.rec.is=false;} 
-        App.rec.secs = 0;
+        window.App.currentStudentAudioUrl = null;
+        if(window.App.rec.is){clearInterval(window.App.rec.int);window.App.rec.is=false;} 
+        window.App.rec.secs = 0;
         
-        window.switchView(App.rec.src);
-        window.showAlert('Setoran Berhasil Terkirim ke Cloud!'); 
+        window.switchView(window.App.rec.src);
+        window.showAlert('Setoran Berhasil Terkirim!'); 
     };
 
-    // --- FITUR PENILAIAN & PENGHAPUSAN USTADZ/ADMIN ---
-    window.submitGrade = async function(id, grade) {
-        let sub = App.subs.find(x => x.id == id);
-        if(sub) {
-            sub.status = grade === 'repeat' ? 'need-repeat' : 'graded';
-            sub.grade = grade === 'repeat' ? null : grade;
-            sub.note = window.esc(window.val('gn'));
-            sub.voiceNote = App.currentGradingAudioUrl;
-            await window.dbSave('subs', id, sub);
-        }
-        App.currentGradingAudioUrl = null; 
-        App.modal = null; 
-        window.render();
-    };
-
-    window.toggleGradingRecord = async function() {
-        if(App.isGradingRecording) {
-            App.gradingMediaRecorder.stop(); 
-            App.isGradingRecording=false;
-            window.render();
-        } else {
-            try {
-                var s = await navigator.mediaDevices.getUserMedia({audio:true});
-                App.gradingMediaRecorder = new MediaRecorder(s); 
-                App.gradingAudioChunks = [];
-                App.gradingMediaRecorder.ondataavailable = e => {if(e.data.size>0)App.gradingAudioChunks.push(e.data);};
-                App.gradingMediaRecorder.onstop = async () => {
-                    var b = new Blob(App.gradingAudioChunks,{type:'audio/webm'});
-                    App.currentGradingAudioUrl = await window.blobToBase64(b);
-                    window.render(); 
-                    s.getTracks().forEach(t=>t.stop());
-                };
-                App.gradingMediaRecorder.start(); 
-                App.isGradingRecording = true;
-                window.render();
-            } catch(e) { window.showAlert("Akses mikrofon ditolak oleh browser."); }
-        }
-    };
-
-    window.deleteGradingAudio = function() {
-        App.currentGradingAudioUrl = null;
-        window.render();
-    };
-
-    window.deleteSubmission = function(id) {
-        window.showConfirm('Yakin ingin menghapus riwayat setoran ini secara permanen dari Cloud?', function() {
-            window.dbDelete('subs', id);
-        });
-    };
-
-    window.confirmDelete = function(type, id) {
-        window.showConfirm('Yakin ingin menghapus data ini secara permanen dari Cloud?', function() {
-            if (type === 'juz') window.dbDelete('juzs', id);
-            if (type === 'surah') window.dbDelete('surahs', id);
-            if (type === 'level') window.dbDelete('levels', id);
-            if (type === 'segment') window.dbDelete('segs', id);
-            if (type === 'ustadz') { window.dbDelete('ustadz', id); if(App.hierSel.u == id){App.hierSel.u=null;App.hierSel.h=null;} }
-            if (type === 'halaqoh') { window.dbDelete('halaqohs', id); if(App.hierSel.h == id){App.hierSel.h=null;} }
-            if (type === 'siswa') window.dbDelete('siswas', id);
-        });
-    };
-
-    // --- MAIN RENDERER (PENGGAMBAR LAYAR UTAMA) ---
+    // --- ENGINE PENGGAMBAR UI ---
     window.render = function() {
       let activeEl = document.activeElement;
       let focusedId = activeEl ? activeEl.id : null;
@@ -488,190 +354,161 @@
           try { selStart = activeEl.selectionStart; selEnd = activeEl.selectionEnd; } catch(e){}
       }
 
-      if(App.theme==='dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark');
+      if(window.App.theme==='dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark');
       
-      const pend = App.subs.filter(s=>s.status==='pending').length;
-      const isAdmin = App.adminLvl > 0;
+      const pend = window.App.subs.filter(s=>s.status==='pending').length;
+      const isAdmin = window.App.adminLvl > 0;
       
       let searchPh = 'Cari...';
-      if (App.view === 'home') searchPh = 'Cari Judul Surah...';
-      else if (App.view === 'hub' || App.view === 'admin') searchPh = 'Cari Nama Santri atau Surah...';
-      else if (App.view === 'master') searchPh = 'Cari Ustadz / Halaqoh / Santri...';
-      else if (App.view === 'player') searchPh = 'Cari Ayat / Arti...';
+      if (window.App.view === 'home') searchPh = 'Cari Judul Surah...';
+      else if (window.App.view === 'hub' || window.App.view === 'admin') searchPh = 'Cari Nama Santri atau Surah...';
+      else if (window.App.view === 'master') searchPh = 'Cari Ustadz / Halaqoh / Santri...';
+      else if (window.App.view === 'player') searchPh = 'Cari Ayat / Arti...';
 
-      const mobileSearchBar = `<div class="md:hidden mb-6 relative shrink-0"><i class="ph ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i><input id="search-mobile" type="text" placeholder="${searchPh}" value="${App.search}" oninput="App.search=this.value;window.render()" class="input-std !w-full !rounded-full !pl-11 py-3 shadow-sm"></div>`;
+      const mobileSearchBar = `<div class="md:hidden mb-6 relative shrink-0"><i class="ph ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i><input type="text" placeholder="${searchPh}" value="${window.App.search}" oninput="window.App.search=this.value;window.render()" class="input-std !w-full !rounded-full !pl-11 py-3 shadow-sm"></div>`;
 
       let html = `
         <header class="shrink-0 border-b border-slate-200 dark:border-[#1a2e26] bg-white dark:bg-[#0a120f] z-50">
           <div class="flex items-center justify-between px-4 md:px-8 py-3 md:py-4">
              <div class="flex items-center gap-3 text-emerald-500 font-bold cursor-pointer" onclick="window.switchView('home')">
-                ${App.schLogo ? `<img src="${App.schLogo}" class="h-8 md:h-10 max-w-[100px] md:max-w-[150px] object-contain">` : `<i class="ph-fill ph-monitor-play text-3xl md:text-4xl"></i>`}
-                <div class="flex flex-col justify-center max-w-[150px] md:max-w-xs"><span class="text-lg md:text-xl leading-none truncate">TahfidzQu</span>${App.schSub?`<span class="text-[9px] md:text-[10px] text-slate-500 mt-1 uppercase tracking-widest truncate">${App.schSub}</span>`:''}</div>
+                ${window.App.schLogo ? `<img src="${window.App.schLogo}" class="h-8 md:h-10 max-w-[100px] md:max-w-[150px] object-contain">` : `<i class="ph-fill ph-monitor-play text-3xl md:text-4xl"></i>`}
+                <div class="flex flex-col justify-center max-w-[150px] md:max-w-xs"><span class="text-lg md:text-xl leading-none truncate">TahfidzQu</span>${window.App.schSub?`<span class="text-[9px] md:text-[10px] text-slate-500 mt-1 uppercase tracking-widest truncate">${window.App.schSub}</span>`:''}</div>
              </div>
              <div class="flex items-center gap-2 md:hidden">
-                <button onclick="App.theme=App.theme==='dark'?'light':'dark';window.render()" class="w-10 h-10 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 flex items-center justify-center"><i class="ph-fill ${App.theme==='dark'?'ph-sun':'ph-moon'} text-lg"></i></button>
+                <button onclick="window.App.theme=window.App.theme==='dark'?'light':'dark';window.render(true)" class="w-10 h-10 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 flex items-center justify-center"><i class="ph-fill ${window.App.theme==='dark'?'ph-sun':'ph-moon'} text-lg"></i></button>
                 ${isAdmin ? 
-                    `<button onclick="App.adminLvl=0;window.switchView('home');" class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center"><i class="ph-bold ph-sign-out text-lg"></i></button>` : 
-                    `<button onclick="App.modal='login';window.render()" class="w-10 h-10 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 flex items-center justify-center"><i class="ph-fill ph-lock-key text-lg"></i></button>`
+                    `<button onclick="window.App.adminLvl=0;window.switchView('home');" class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center"><i class="ph-bold ph-sign-out text-lg"></i></button>` : 
+                    `<button onclick="window.App.modal='login';window.render()" class="w-10 h-10 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 flex items-center justify-center"><i class="ph-fill ph-lock-key text-lg"></i></button>`
                 }
              </div>
              <div class="hidden md:flex items-center gap-4">
-                <div class="relative"><i class="ph ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i><input id="search-desktop" type="text" placeholder="${searchPh}" value="${App.search}" oninput="App.search=this.value;window.render()" class="input-std !w-64 !rounded-full !pl-11 transition-all focus:!w-80"></div>
-                <button onclick="App.theme=App.theme==='dark'?'light':'dark';window.render()" class="w-11 h-11 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 hover:text-emerald-500 flex items-center justify-center transition"><i class="ph-fill ${App.theme==='dark'?'ph-sun':'ph-moon'} text-xl"></i></button>
+                <div class="relative"><i class="ph ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i><input id="search-desktop" type="text" placeholder="${searchPh}" value="${window.App.search}" oninput="window.App.search=this.value;window.render()" class="input-std !w-64 !rounded-full !pl-11 transition-all focus:!w-80"></div>
+                <button onclick="window.App.theme=window.App.theme==='dark'?'light':'dark';window.render(true)" class="w-11 h-11 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 hover:text-emerald-500 flex items-center justify-center transition"><i class="ph-fill ${window.App.theme==='dark'?'ph-sun':'ph-moon'} text-xl"></i></button>
                 ${isAdmin ? 
-                    `<button onclick="App.adminLvl=0;window.switchView('home');" class="w-11 h-11 rounded-full bg-red-100 text-red-600 hover:bg-red-200 flex items-center justify-center transition" title="Keluar Akun"><i class="ph-bold ph-sign-out text-xl"></i></button>` : 
-                    `<button onclick="App.modal='login';window.render()" class="w-11 h-11 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 hover:bg-emerald-50 hover:text-emerald-500 flex items-center justify-center transition"><i class="ph-fill ph-lock-key text-xl"></i></button>`
+                    `<button onclick="window.App.adminLvl=0;window.switchView('home');" class="w-11 h-11 rounded-full bg-red-100 text-red-600 hover:bg-red-200 flex items-center justify-center transition" title="Keluar Akun"><i class="ph-bold ph-sign-out text-xl"></i></button>` : 
+                    `<button onclick="window.App.modal='login';window.render()" class="w-11 h-11 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 hover:bg-emerald-50 hover:text-emerald-500 flex items-center justify-center transition"><i class="ph-fill ph-lock-key text-xl"></i></button>`
                 }
              </div>
           </div>
           <div class="px-4 md:px-8 border-t border-slate-100 dark:border-[#1a2e26] md:border-none flex items-center overflow-x-auto hide-scrollbar gap-6 text-sm font-bold pt-3 md:pt-0">
-             <button onclick="window.switchView('home')" class="${App.view==='home'?'text-emerald-600 border-b-2 border-emerald-500':'text-slate-500 hover:text-slate-800 dark:text-gray-400 dark:hover:text-white'} pb-2 transition whitespace-nowrap">Beranda</button>
-             <button onclick="window.switchView('hub')" class="${App.view==='hub'?'text-emerald-600 border-b-2 border-emerald-500':'text-slate-500 hover:text-slate-800 dark:text-gray-400 dark:hover:text-white'} pb-2 transition whitespace-nowrap">Setoran Hub</button>
+             <button onclick="window.switchView('home')" class="${window.App.view==='home'?'text-emerald-600 border-b-2 border-emerald-500':'text-slate-500 hover:text-slate-800 dark:text-gray-400 dark:hover:text-white'} pb-2 transition whitespace-nowrap">Beranda</button>
+             <button onclick="window.switchView('hub')" class="${window.App.view==='hub'?'text-emerald-600 border-b-2 border-emerald-500':'text-slate-500 hover:text-slate-800 dark:text-gray-400 dark:hover:text-white'} pb-2 transition whitespace-nowrap">Setoran Hub</button>
              ${isAdmin ? `
-               <button onclick="window.switchView('admin')" class="${App.view==='admin'?'text-orange-600 border-b-2 border-orange-500':'text-orange-500 hover:text-orange-600 dark:text-orange-400'} pb-2 transition whitespace-nowrap flex items-center gap-1.5"><i class="ph-bold ph-tray"></i> Setoran Masuk ${pend>0?`<span class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">${pend}</span>`:''}</button>
-               <button onclick="window.switchView('master')" class="${App.view==='master'?'text-purple-600 border-b-2 border-purple-500':'text-purple-600 hover:text-purple-700 dark:text-purple-400'} pb-2 transition whitespace-nowrap flex items-center gap-1.5"><i class="ph-bold ph-users-three"></i> Data Master</button>
+               <button onclick="window.switchView('admin')" class="${window.App.view==='admin'?'text-orange-600 border-b-2 border-orange-500':'text-orange-500 hover:text-orange-600 dark:text-orange-400'} pb-2 transition whitespace-nowrap flex items-center gap-1.5"><i class="ph-bold ph-tray"></i> Setoran Masuk ${pend>0?`<span class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">${pend}</span>`:''}</button>
+               <button onclick="window.switchView('master')" class="${window.App.view==='master'?'text-purple-600 border-b-2 border-purple-500':'text-purple-600 hover:text-purple-700 dark:text-purple-400'} pb-2 transition whitespace-nowrap flex items-center gap-1.5"><i class="ph-bold ph-users-three"></i> Data Master</button>
              ` : ''}
           </div>
         </header>
         <div class="flex-1 overflow-hidden flex flex-col w-full relative bg-slate-50 dark:bg-[#111c18]">
       `;
 
-      // VIEW: HOME
-      if(App.view === 'home') {
-        const jName = App.juzs.find(j=>j.id===App.actJuzId)?.name||'';
-        const sList = App.search ? App.surahs.filter(s=>s.title.toLowerCase().includes(App.search.toLowerCase())) : App.surahs.filter(s=>s.juzId===App.actJuzId);
+      if(window.App.view === 'home') {
+        const jName = window.App.juzs.find(j=>j.id===window.App.actJuzId)?.name||'';
+        const sList = window.App.search ? window.App.surahs.filter(s=>s.title.toLowerCase().includes(window.App.search.toLowerCase())) : window.App.surahs.filter(s=>s.juzId===window.App.actJuzId);
         sList.sort((a,b)=> (Q_SURAHS.find(q=>q.name===a.title.replace("Surah ",""))?.no||999) - (Q_SURAHS.find(q=>q.name===b.title.replace("Surah ",""))?.no||999));
         
         html += `
           <div class="flex-1 overflow-y-auto p-4 md:p-8"><div class="max-w-6xl mx-auto flex flex-col h-full">
             ${mobileSearchBar}
             <h1 class="text-2xl md:text-3xl font-serif dark:text-white mb-6 md:mb-8 shrink-0">Perpustakaan Tahfidz</h1>
-            ${!App.search ? `
+            ${!window.App.search ? `
               <div class="flex items-center gap-3 border-b border-slate-200 dark:border-[#1a2e26] pb-4 mb-6 md:mb-8 overflow-x-auto hide-scrollbar shrink-0">
-                ${App.juzs.map(j=>`<div class="flex shrink-0 mr-2"><button onclick="App.actJuzId=${j.id};window.render()" class="${j.id===App.actJuzId?'tab-active':'tab-inactive'}">${window.esc(j.name)}</button>${isAdmin?`<div class="flex ml-2"><button onclick="App.modal='juz';App.modalData=${j.id};window.render()" class="p-2 text-blue-500"><i class="ph-bold ph-pencil-simple"></i></button><button onclick="window.confirmDelete('juz', ${j.id})" class="p-2 text-red-500"><i class="ph-bold ph-trash"></i></button></div>`:''}</div>`).join('')}
-                ${isAdmin?`<button onclick="App.modal='juz';App.modalData=null;window.render()" class="tab-inactive !bg-transparent border-dashed flex items-center gap-2"><i class="ph-bold ph-plus"></i> Baru</button>`:''}
+                ${window.App.juzs.map(j=>`<div class="flex shrink-0 mr-2"><button onclick="window.App.actJuzId=${j.id};window.render(true)" class="${j.id===window.App.actJuzId?'tab-active':'tab-inactive'}">${window.esc(j.name)}</button>${isAdmin?`<div class="flex ml-2"><button onclick="window.App.modal='juz';window.App.modalData=${j.id};window.render()" class="p-2 text-blue-500"><i class="ph-bold ph-pencil-simple"></i></button><button onclick="window.confirmDelete('juz', ${j.id})" class="p-2 text-red-500"><i class="ph-bold ph-trash"></i></button></div>`:''}</div>`).join('')}
+                ${isAdmin?`<button onclick="window.App.modal='juz';window.App.modalData=null;window.render()" class="tab-inactive !bg-transparent border-dashed flex items-center gap-2"><i class="ph-bold ph-plus"></i> Baru</button>`:''}
               </div>` : ''}
-            <div class="flex justify-between items-center mb-6 shrink-0"><div><h2 class="text-lg md:text-xl font-bold dark:text-white flex items-center gap-2"><i class="ph-fill ph-books text-emerald-500"></i> Daftar Surah</h2><p class="text-xs md:text-sm text-slate-400 mt-1">${App.search?`Hasil: "${window.esc(App.search)}"`:`Menampilkan surah pada ${window.esc(jName)}`}</p></div>${isAdmin?`<button onclick="App.modal='surah';App.modalData=null;window.render()" class="bg-emerald-500 text-white px-3 py-2 md:px-4 rounded-lg font-bold flex gap-2 items-center text-sm"><i class="ph-bold ph-plus"></i> Surah</button>`:''}</div>
+            <div class="flex justify-between items-center mb-6 shrink-0"><div><h2 class="text-lg md:text-xl font-bold dark:text-white flex items-center gap-2"><i class="ph-fill ph-books text-emerald-500"></i> Daftar Surah</h2><p class="text-xs md:text-sm text-slate-400 mt-1">${window.App.search?`Hasil: "${window.esc(window.App.search)}"`:`Menampilkan surah pada ${window.esc(jName)}`}</p></div>${isAdmin?`<button onclick="window.App.modal='surah';window.App.modalData=null;window.render()" class="bg-emerald-500 text-white px-3 py-2 md:px-4 rounded-lg font-bold flex gap-2 items-center text-sm"><i class="ph-bold ph-plus"></i> Surah</button>`:''}</div>
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5 pb-10">
-              ${sList.length?sList.map(s=>`<div class="card-std group" onclick="window.openSurah(${s.id}, '${s.videoId || ''}')"><div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4"><i class="ph-fill ph-book-open text-2xl"></i></div><h3 class="text-lg md:text-xl font-bold dark:text-white mb-2 flex-1">${window.esc(s.title)}</h3><p class="text-xs text-slate-400 font-mono mb-4 flex items-center gap-1"><i class="ph-fill ph-youtube-logo ${s.videoId?'text-red-500':'text-slate-300'}"></i> ${s.videoId?'Video Tersedia':'Belum ada Video'}</p>${isAdmin?`<div class="flex gap-2 border-t border-slate-100 dark:border-[#1a2e26] pt-4 mt-auto" onclick="event.stopPropagation()"><button onclick="App.modal='surah';App.modalData=${s.id};window.render()" class="btn-action text-blue-500"><i class="ph-bold ph-pencil-simple"></i> Edit</button><button onclick="window.confirmDelete('surah', ${s.id})" class="btn-action text-red-500"><i class="ph-bold ph-trash"></i> Hapus</button></div>`:''}</div>`).join(''):'<div class="col-span-1 sm:col-span-2 md:col-span-4 py-10 text-center text-slate-500 italic">Belum ada data.</div>'}
+              ${sList.length?sList.map(s=>`<div class="card-std group" onclick="window.openSurah(${s.id}, '${s.videoId || ''}')"><div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4"><i class="ph-fill ph-book-open text-2xl"></i></div><h3 class="text-lg md:text-xl font-bold dark:text-white mb-2 flex-1">${window.esc(s.title)}</h3><p class="text-xs text-slate-400 font-mono mb-4 flex items-center gap-1"><i class="ph-fill ph-youtube-logo ${s.videoId?'text-red-500':'text-slate-300'}"></i> ${s.videoId?'Video Tersedia':'Belum ada Video'}</p>${isAdmin?`<div class="flex gap-2 border-t border-slate-100 dark:border-[#1a2e26] pt-4 mt-auto" onclick="event.stopPropagation()"><button onclick="window.App.modal='surah';window.App.modalData=${s.id};window.render()" class="btn-action text-blue-500"><i class="ph-bold ph-pencil-simple"></i> Edit</button><button onclick="window.confirmDelete('surah', ${s.id})" class="btn-action text-red-500"><i class="ph-bold ph-trash"></i> Hapus</button></div>`:''}</div>`).join(''):'<div class="col-span-1 sm:col-span-2 md:col-span-4 py-10 text-center text-slate-500 italic">Belum ada data.</div>'}
             </div>
           </div></div>`;
       }
-      
-      // VIEW: PLAYER (PERBAIKAN ONCLICK BUTTON VIDEO)
-      else if(App.view === 'player') {
-        const sur = App.surahs.find(s=>s.id===App.actSurahId);
-        const ml = App.levels.filter(l=>l.surahId===App.actSurahId);
+      else if(window.App.view === 'player') {
+        const sur = window.App.surahs.find(s=>s.id===window.App.actSurahId);
         
-        let allSgs = window.getSgs();
-        const sgs = App.search ? allSgs.filter(s => s.title.toLowerCase().includes(App.search.toLowerCase()) || (s.translation && s.translation.toLowerCase().includes(App.search.toLowerCase()))) : allSgs;
-        
-        if(!App.actSegId && sgs.length) App.actSegId = sgs[0].id;
-        const cSg = window.getActSeg();
-        const td = allSgs.length ? allSgs[allSgs.length-1].end : 1;
-
         html += `
           <div class="flex flex-col lg:flex-row w-full h-full overflow-hidden">
-            <!-- LEVELS PANEL -->
             <div class="w-full lg:w-64 bg-white border-b lg:border-b-0 lg:border-r border-slate-200 p-4 lg:p-6 flex flex-row lg:flex-col shrink-0 dark:bg-[#0a120f] dark:border-[#1a2e26] overflow-x-auto hide-scrollbar items-center lg:items-stretch gap-4 lg:gap-0 z-10 shadow-sm lg:shadow-none">
               <button onclick="window.switchView('home')" class="flex items-center gap-2 text-slate-500 hover:text-emerald-500 font-bold text-sm lg:mb-8 whitespace-nowrap shrink-0"><i class="ph-bold ph-arrow-left"></i> Kembali</button>
-              <div class="hidden lg:flex justify-between items-center mb-4"><h3 class="text-xs text-slate-400 font-bold uppercase tracking-wider">Level Hafalan</h3>${isAdmin?`<button onclick="App.modal='level';window.render()" class="w-6 h-6 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition"><i class="ph-bold ph-plus"></i></button>`:''}</div>
-              <div class="flex flex-row lg:flex-col gap-2 lg:gap-3">
-                 ${ml.map((l,i)=>`<button onclick="App.levels.forEach(x=>{if(x.surahId===App.actSurahId){let a=(x.id===${l.id}); if(x.active!==a){x.active=a;window.dbSave('levels',x.id,x);}}});App.actSegId=null;window.render()" class="flex items-center gap-2 lg:gap-3 p-2 lg:p-3 rounded-xl shrink-0 whitespace-nowrap transition ${l.active?'bg-emerald-500 text-white shadow-md shadow-emerald-500/20':'bg-slate-50 border border-slate-200 dark:bg-[#15241e] dark:border-[#1a2e26] dark:text-gray-300 hover:border-emerald-300'}"><div class="w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${l.active?'bg-white/20':'bg-white dark:bg-[#0a120f] text-slate-500'}">${i+1}</div><span class="text-sm font-bold lg:font-medium">${window.esc(l.name)}</span>${isAdmin?`<div onclick="event.stopPropagation();window.confirmDelete('level', ${l.id})" class="text-red-300 hover:text-red-500 hidden lg:block ml-auto"><i class="ph-bold ph-trash"></i></div>`:''}</button>`).join('')}
-                 ${isAdmin?`<button onclick="App.modal='level';window.render()" class="lg:hidden flex items-center gap-1 px-4 py-2 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 text-emerald-600 shrink-0 text-sm font-bold"><i class="ph-bold ph-plus"></i> Baru</button>`:''}
+              <div class="hidden lg:flex justify-between items-center mb-4"><h3 class="text-xs text-slate-400 font-bold uppercase tracking-wider">Level Hafalan</h3>${isAdmin?`<button onclick="window.App.modal='level';window.render()" class="w-6 h-6 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition"><i class="ph-bold ph-plus"></i></button>`:''}</div>
+              <div class="flex flex-row lg:flex-col gap-2 lg:gap-3" id="levels-box">
+                 <!-- Disuntik lewat updatePlayerDOM -->
               </div>
             </div>
 
-            <!-- MAIN CONTENT AREA -->
             <div class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden relative bg-slate-50 dark:bg-[#111c18]">
-               
-               <!-- VIDEO & TEXT -->
-               <div class="flex-1 p-4 lg:p-8 lg:overflow-y-auto relative" id="main-player-scroll">
+               <div class="flex-1 p-4 lg:p-8 lg:overflow-y-auto relative">
                  <div class="max-w-4xl mx-auto">
                     <div class="flex justify-between items-center mb-4 lg:mb-6">
                         <div>
-                          <div class="flex items-center gap-3 mb-1 lg:mb-2"><h1 class="text-2xl lg:text-4xl font-serif dark:text-white">${window.esc(sur?.title||'')}</h1>${isAdmin?`<button onclick="App.modal='video';window.render()" class="p-2 bg-white rounded-lg border border-slate-200 text-slate-400 hover:text-emerald-500 dark:bg-[#15241e] dark:border-transparent transition shadow-sm"><i class="ph ph-link text-lg"></i></button>`:''}</div>
+                          <div class="flex items-center gap-3 mb-1 lg:mb-2"><h1 class="text-2xl lg:text-4xl font-serif dark:text-white">${window.esc(sur?.title||'')}</h1>${isAdmin?`<button onclick="window.App.modal='video';window.render()" class="p-2 bg-white rounded-lg border border-slate-200 text-slate-400 hover:text-emerald-500 dark:bg-[#15241e] dark:border-transparent transition shadow-sm"><i class="ph ph-link text-lg"></i></button>`:''}</div>
                           <p class="text-xs lg:text-sm text-slate-500 flex gap-1 items-center"><i class="ph-fill ph-youtube-logo text-red-500"></i> YouTube Media</p>
                         </div>
                     </div>
                     
-                    <div class="relative rounded-2xl overflow-hidden bg-black aspect-video mb-6 shadow-xl" id="player-destination">
-                        <!-- IFRAME YOUTUBE AKAN DITUMPANGKAN DI ATAS KOTAK HITAM INI -->
+                    <div class="relative rounded-2xl overflow-hidden bg-black aspect-video mb-6 border border-slate-200 dark:border-transparent shadow-xl" id="yt-player-wrapper">
+                        <!-- YOUTUBE IFRAME AKAN DITANAM DI SINI -->
+                        <div id="player-destination" class="absolute inset-0 z-0"></div>
                         <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-4 lg:p-6 z-10 pointer-events-none">
                             <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                                <button id="big-play-btn" onclick="window.toggleYTPlay()" class="w-16 h-16 lg:w-24 lg:h-24 rounded-full bg-emerald-500/90 flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.5)] pointer-events-auto transition-all ${App.isPlay?'scale-95 opacity-0':'scale-100 opacity-100'}"><i class="ph-fill ph-play text-2xl lg:text-4xl text-white ml-1 lg:ml-2"></i></button>
+                                <button id="big-play-btn" onclick="window.toggleYTPlay()" class="w-16 h-16 lg:w-24 lg:h-24 rounded-full bg-emerald-500/90 flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.5)] pointer-events-auto transition-all ${window.App.isPlay?'scale-95 opacity-0':'scale-100 opacity-100'}"><i class="ph-fill ph-play text-2xl lg:text-4xl text-white ml-1 lg:ml-2"></i></button>
                             </div>
                             <div class="w-full mb-3 lg:mb-4 relative z-20">
-                                <div class="h-1.5 bg-gray-600/80 rounded-full overflow-hidden flex relative">${allSgs.map(s=>`<div id="seg-marker-${s.id}" class="absolute h-full ${s.id===App.actSegId?'bg-emerald-500':'bg-gray-400 opacity-30'} border-r border-black" style="left:${(s.start/td)*100}%; width:${((s.end-s.start)/td)*100}%"></div>`).join('')}</div>
+                                <div class="h-1.5 bg-gray-600/80 rounded-full overflow-hidden flex relative" id="progress-box"></div>
                                 <div id="current-time-indicator" class="absolute h-3 w-3 bg-white rounded-full top-1/2 -translate-y-1/2 shadow-[0_0_10px_white] transition-all" style="left:0%"></div>
                             </div>
                             <div class="flex justify-between items-center text-white relative z-20">
                                 <div class="flex gap-4 lg:gap-6 pointer-events-auto">
                                     <button onclick="window.nextSeg(-1)"><i class="ph-fill ph-skip-back text-lg lg:text-xl hover:text-emerald-400"></i></button>
-                                    <button id="play-pause-btn" onclick="window.toggleYTPlay()" class="hover:text-emerald-400"><i class="ph-fill ${App.isPlay?'ph-pause':'ph-play'} text-2xl lg:text-3xl hover:text-emerald-400"></i></button>
+                                    <button id="play-pause-btn" onclick="window.toggleYTPlay()" class="hover:text-emerald-400"><i class="ph-fill ${window.App.isPlay?'ph-pause':'ph-play'} text-2xl lg:text-3xl hover:text-emerald-400"></i></button>
                                     <button onclick="window.nextSeg(1)"><i class="ph-fill ph-skip-forward text-lg lg:text-xl hover:text-emerald-400"></i></button>
                                 </div>
-                                <div class="text-xs lg:text-sm font-mono" id="time-display">00:00 / ${window.fmtT(cSg?.end||0)}</div>
+                                <div class="text-xs lg:text-sm font-mono" id="time-display">00:00 / 00:00</div>
                             </div>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-3 lg:gap-4 mb-6">
-                        <div class="card-std !p-3 lg:!p-4"><span class="text-[10px] lg:text-xs text-emerald-600 font-bold mb-2">LOOP</span><div class="flex justify-between items-center"><div class="text-lg lg:text-xl font-bold dark:text-white"><span id="rep-target-val">${App.repTarget}x</span> <span id="rep-text" class="text-[10px] lg:text-xs text-emerald-500 font-normal ml-1">${App.isPlay && App.curRep > 0 ? `(Ke-${App.curRep+1})` : ''}</span></div><div class="flex gap-1 lg:gap-2"><button onclick="window.updateRepTarget(-1)" class="w-7 h-7 lg:w-8 lg:h-8 rounded bg-slate-100 font-bold hover:bg-emerald-500 hover:text-white dark:bg-[#0a120f] dark:text-white">-</button><button onclick="window.updateRepTarget(1)" class="w-7 h-7 lg:w-8 lg:h-8 rounded bg-slate-100 font-bold hover:bg-emerald-500 hover:text-white dark:bg-[#0a120f] dark:text-white">+</button></div></div></div>
-                        <div class="card-std !p-3 lg:!p-4"><span class="text-[10px] lg:text-xs text-emerald-600 font-bold mb-2">SPEED</span><div class="flex justify-between items-center bg-slate-50 dark:bg-[#0a120f] px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg"><span class="text-lg lg:text-xl font-bold dark:text-white" id="speed-val">${App.speed}x</span><div class="flex flex-col"><button onclick="window.updateSpeed(0.25)" class="text-slate-400 hover:text-emerald-500 text-[10px] lg:text-xs">▲</button><button onclick="window.updateSpeed(-0.25)" class="text-slate-400 hover:text-emerald-500 text-[10px] lg:text-xs">▼</button></div></div></div>
+                        <div class="card-std !p-3 lg:!p-4"><span class="text-[10px] lg:text-xs text-emerald-600 font-bold mb-2">LOOP</span><div class="flex justify-between items-center"><div class="text-lg lg:text-xl font-bold dark:text-white"><span id="rep-target-val">${window.App.repTarget}x</span> <span id="rep-text" class="text-[10px] lg:text-xs text-emerald-500 font-normal ml-1"></span></div><div class="flex gap-1 lg:gap-2"><button onclick="window.updateRepTarget(-1)" class="w-7 h-7 lg:w-8 lg:h-8 rounded bg-slate-100 font-bold hover:bg-emerald-500 hover:text-white dark:bg-[#0a120f] dark:text-white">-</button><button onclick="window.updateRepTarget(1)" class="w-7 h-7 lg:w-8 lg:h-8 rounded bg-slate-100 font-bold hover:bg-emerald-500 hover:text-white dark:bg-[#0a120f] dark:text-white">+</button></div></div></div>
+                        <div class="card-std !p-3 lg:!p-4"><span class="text-[10px] lg:text-xs text-emerald-600 font-bold mb-2">SPEED</span><div class="flex justify-between items-center bg-slate-50 dark:bg-[#0a120f] px-3 py-1.5 lg:px-4 lg:py-2 rounded-lg"><span class="text-lg lg:text-xl font-bold dark:text-white" id="speed-val">${window.App.speed}x</span><div class="flex flex-col"><button onclick="window.updateSpeed(0.25)" class="text-slate-400 hover:text-emerald-500 text-[10px] lg:text-xs">▲</button><button onclick="window.updateSpeed(-0.25)" class="text-slate-400 hover:text-emerald-500 text-[10px] lg:text-xs">▼</button></div></div></div>
                     </div>
 
-                    <div class="card-std !p-5 lg:!p-6 mb-4 lg:mb-0 ${cSg ? '' : 'hidden'}">
-                       <h3 id="quran-title" class="text-emerald-600 font-bold text-xs lg:text-sm uppercase border-b border-slate-100 dark:border-[#1a2e26] pb-2 mb-4">${window.esc(cSg?.title)}</h3>
-                       <p id="quran-arabic" class="text-3xl text-right font-arabic mb-6 dark:text-white" dir="rtl">${window.esc(cSg?.arabic)}</p>
-                       <p id="quran-trans" class="text-sm text-slate-500 dark:text-gray-400 italic">${window.esc(cSg?.translation)}</p>
+                    <div class="card-std !p-5 lg:!p-6 mb-4 lg:mb-0 hidden" id="quran-box">
+                       <h3 id="quran-title" class="text-emerald-600 font-bold text-xs lg:text-sm uppercase border-b border-slate-100 dark:border-[#1a2e26] pb-2 mb-4"></h3>
+                       <p id="quran-arabic" class="text-3xl text-right font-arabic mb-6 dark:text-white" dir="rtl"></p>
+                       <p id="quran-trans" class="text-sm text-slate-500 dark:text-gray-400 italic"></p>
                     </div>
                  </div>
                </div>
                
-               <!-- SEGMENTS LIST -->
                <div class="w-full lg:w-80 bg-slate-50 dark:bg-[#111c18] border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-[#1a2e26] flex flex-col shrink-0 lg:h-full z-10 pb-6 lg:pb-0">
                   <div class="p-4 lg:p-6 border-b border-slate-200 dark:border-[#1a2e26] bg-white dark:bg-transparent">
                      <div class="flex justify-between items-center mb-4">
                         <h2 class="text-base lg:text-lg font-bold dark:text-white">Segmen Hafalan</h2>
-                        ${isAdmin?`<button onclick="App.modal='segment';App.modalData=null;window.render();setTimeout(window.setupSegmentModal, 10);" class="text-[10px] lg:text-xs bg-emerald-100 text-emerald-600 px-3 py-1.5 rounded-full font-bold hover:bg-emerald-500 hover:text-white transition"><i class="ph-bold ph-plus"></i> Baru</button>`:''}
+                        ${isAdmin?`<button onclick="window.App.modal='segment';window.App.modalData=null;window.render();setTimeout(window.setupSegmentModal, 10);" class="text-[10px] lg:text-xs bg-emerald-100 text-emerald-600 px-3 py-1.5 rounded-full font-bold hover:bg-emerald-500 hover:text-white transition"><i class="ph-bold ph-plus"></i> Baru</button>`:''}
                      </div>
                      ${mobileSearchBar}
-                     ${!isAdmin ? `<button onclick="if(!App.actSegId){window.showAlert('Pilih segmen hafalan terlebih dahulu!');}else{App.rec.src='player';App.resubmitId=null;window.switchView('setoran');}" class="w-full py-3 lg:py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-500 hover:text-white rounded-xl font-bold flex items-center justify-center gap-2 transition dark:bg-emerald-900/30 dark:border-emerald-500/30 dark:text-emerald-400"><i class="ph-fill ph-microphone-stage text-lg"></i> Setor Segmen Ini</button>` : ''}
+                     ${!isAdmin ? `<button onclick="if(!window.App.actSegId){window.showAlert('Pilih segmen hafalan terlebih dahulu!');}else{window.App.rec.src='player';window.App.resubmitId=null;window.switchView('setoran');}" class="w-full py-3 lg:py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-500 hover:text-white rounded-xl font-bold flex items-center justify-center gap-2 transition dark:bg-emerald-900/30 dark:border-emerald-500/30 dark:text-emerald-400"><i class="ph-fill ph-microphone-stage text-lg"></i> Setor Segmen Ini</button>` : ''}
                   </div>
-                  <div class="flex-1 lg:overflow-y-auto p-4 space-y-3">${sgs.length?sgs.map(s=>`
-                      <div data-id="${s.id}" onclick="window.selectSeg(${s.id})" class="seg-item p-3 lg:p-4 rounded-xl border cursor-pointer transition shadow-sm ${s.id===App.actSegId?'bg-emerald-50 border-emerald-300 dark:bg-[#152b22] dark:border-emerald-500/50':'bg-white border-slate-200 hover:border-emerald-300 dark:bg-[#15241e] dark:border-[#1a2e26]'}">
-                          <div class="flex justify-between items-start">
-                              <div>
-                                  <h3 class="seg-title text-sm lg:text-base font-bold ${s.id===App.actSegId?'text-emerald-800 dark:text-white':'text-slate-700 dark:text-gray-300'}">${window.esc(s.title)}</h3>
-                                  <p class="text-[10px] lg:text-xs text-emerald-600 font-mono mt-0.5 lg:mt-1"><i class="ph ph-clock"></i> ${window.fmtT(s.start)} - ${window.fmtT(s.end)}</p>
-                              </div>
-                              <div class="flex gap-1 items-center">
-                                  ${isAdmin?`<button onclick="event.stopPropagation();App.modal='segment';App.modalData=${s.id};window.render();setTimeout(window.setupSegmentModal, 10);" class="p-1.5 text-slate-400 hover:text-blue-500 bg-slate-50 dark:bg-[#0a120f] rounded"><i class="ph-fill ph-pencil-simple"></i></button><button onclick="event.stopPropagation(); window.confirmDelete('segment', ${s.id})" class="p-1.5 text-slate-400 hover:text-red-500 bg-slate-50 dark:bg-[#0a120f] rounded"><i class="ph-fill ph-trash"></i></button>`:''}
-                                  <button class="play-btn-box p-1.5 rounded-md ${s.id===App.actSegId?'bg-emerald-500 text-white':'text-slate-300 hover:text-emerald-500 bg-slate-50 dark:bg-[#0a120f]'}"><i class="${s.id===App.actSegId?'ph-fill':'ph-bold'} ph-play play-icon"></i></button>
-                              </div>
-                          </div>
-                      </div>`).join(''):'<div class="text-center text-slate-500 text-sm mt-10">Pencarian tidak ditemukan.</div>'}
+                  <div class="flex-1 lg:overflow-y-auto p-4 space-y-3" id="segs-box">
+                     <!-- Disuntik lewat updatePlayerDOM -->
                   </div>
                </div>
             </div>
           </div>
         `;
       }
-
-      // VIEW: SETORAN
-      else if(App.view === 'setoran') {
-        const seg = App.segs.find(s=>s.id===App.actSegId);
-        const sur = App.surahs.find(s=>s.id===App.actSurahId);
-        const uId = App.hierSel.u||''; const hId = App.hierSel.h||''; const sId = App.hierSel.s||'';
-        const hList = App.halaqohs.filter(h=>h.ustadzId==uId);
-        const sList = App.siswas.filter(s=>s.halaqohId==hId);
-        const isResubmit = App.resubmitId !== null;
+      else if(window.App.view === 'setoran') {
+        const seg = window.App.segs.find(s=>s.id===window.App.actSegId);
+        const sur = window.App.surahs.find(s=>s.id===window.App.actSurahId);
+        const uId = window.App.hierSel.u||''; const hId = window.App.hierSel.h||''; const sId = window.App.hierSel.s||'';
+        const hList = window.App.halaqohs.filter(h=>h.ustadzId==uId);
+        const sList = window.App.siswas.filter(s=>s.halaqohId==hId);
+        const isResubmit = window.App.resubmitId !== null;
 
         html += `
           <div class="flex-1 flex flex-col w-full h-full bg-slate-50 dark:bg-[#111c18] overflow-y-auto">
             <header class="h-16 md:h-20 flex justify-between items-center px-4 md:px-8 bg-white border-b border-slate-200 dark:bg-[#0a120f] dark:border-[#1a2e26] shrink-0 sticky top-0 z-20">
-               <button onclick="if(App.rec.is){window.stopStudentRecord();} App.resubmitId=null;window.switchView(App.rec.src);" class="font-bold text-slate-500 hover:text-emerald-500 flex gap-2 items-center text-sm"><i class="ph-bold ph-arrow-left"></i> Batal</button>
+               <button onclick="if(window.App.rec.is){window.stopStudentRecord();} window.App.resubmitId=null;window.switchView(window.App.rec.src);" class="font-bold text-slate-500 hover:text-emerald-500 flex gap-2 items-center text-sm"><i class="ph-bold ph-arrow-left"></i> Batal</button>
                <div class="text-emerald-500 font-bold text-lg md:text-xl flex gap-2"><i class="ph-fill ph-microphone-stage"></i> ${isResubmit?'Setor Ulang':'Ujian'}</div>
                <div class="w-16 md:w-20"></div>
             </header>
@@ -682,46 +519,44 @@
                 <h2 class="text-emerald-600 font-bold tracking-widest text-[10px] md:text-xs uppercase mb-1">${window.esc(sur?.title||'')}</h2>
                 <h1 class="text-2xl md:text-3xl font-serif dark:text-white mb-6">${window.esc(seg?.title||'')}</h1>
                 <div class="text-left flex flex-col gap-3 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-100 dark:bg-[#0a120f] dark:border-[#1a2e26]">
-                  <div><label class="block text-[10px] text-slate-500 font-bold mb-1.5 uppercase flex items-center gap-1.5"><i class="ph-fill ph-chalkboard-teacher text-emerald-500"></i> Penguji</label><select onchange="App.hierSel.u=this.value;App.hierSel.h='';App.hierSel.s='';window.render()" class="input-std !bg-white dark:!bg-[#15241e] ${isResubmit?'opacity-50 pointer-events-none':''}" ${isResubmit?'disabled':''}><option value="" disabled ${!uId?'selected':''}>Pilih</option>${App.ustadz.map(u=>`<option value="${u.id}" ${uId==u.id?'selected':''}>${window.esc(u.name)}</option>`).join('')}</select></div>
+                  <div><label class="block text-[10px] text-slate-500 font-bold mb-1.5 uppercase flex items-center gap-1.5"><i class="ph-fill ph-chalkboard-teacher text-emerald-500"></i> Penguji</label><select onchange="window.App.hierSel.u=this.value;window.App.hierSel.h='';window.App.hierSel.s='';window.render(true)" class="input-std !bg-white dark:!bg-[#15241e] ${isResubmit?'opacity-50 pointer-events-none':''}" ${isResubmit?'disabled':''}><option value="" disabled ${!uId?'selected':''}>Pilih</option>${window.App.ustadz.map(u=>`<option value="${u.id}" ${uId==u.id?'selected':''}>${window.esc(u.name)}</option>`).join('')}</select></div>
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div><label class="block text-[10px] text-slate-500 font-bold mb-1.5 uppercase flex items-center gap-1.5"><i class="ph-fill ph-users-three text-blue-500"></i> Kelompok</label><select onchange="App.hierSel.h=this.value;App.hierSel.s='';window.render()" class="input-std !bg-white dark:!bg-[#15241e] ${!uId||isResubmit?'opacity-50 pointer-events-none':''}" ${!uId||isResubmit?'disabled':''}><option value="" disabled ${!hId?'selected':''}>Pilih</option>${hList.map(h=>`<option value="${h.id}" ${hId==h.id?'selected':''}>${window.esc(h.name)}</option>`).join('')}</select></div>
-                    <div><label class="block text-[10px] text-slate-500 font-bold mb-1.5 uppercase flex items-center gap-1.5"><i class="ph-fill ph-user-circle text-purple-500"></i> Santri</label><select onchange="App.hierSel.s=this.value;window.render()" class="input-std !bg-white dark:!bg-[#15241e] ${!hId||isResubmit?'opacity-50 pointer-events-none':''}" ${!hId||isResubmit?'disabled':''}><option value="" disabled ${!sId?'selected':''}>Pilih</option>${sList.map(s=>`<option value="${s.id}" ${sId==s.id?'selected':''}>${window.esc(s.name)} (${window.esc(s.kelas)})</option>`).join('')}</select></div>
+                    <div><label class="block text-[10px] text-slate-500 font-bold mb-1.5 uppercase flex items-center gap-1.5"><i class="ph-fill ph-users-three text-blue-500"></i> Kelompok</label><select onchange="window.App.hierSel.h=this.value;window.App.hierSel.s='';window.render(true)" class="input-std !bg-white dark:!bg-[#15241e] ${!uId||isResubmit?'opacity-50 pointer-events-none':''}" ${!uId||isResubmit?'disabled':''}><option value="" disabled ${!hId?'selected':''}>Pilih</option>${hList.map(h=>`<option value="${h.id}" ${hId==h.id?'selected':''}>${window.esc(h.name)}</option>`).join('')}</select></div>
+                    <div><label class="block text-[10px] text-slate-500 font-bold mb-1.5 uppercase flex items-center gap-1.5"><i class="ph-fill ph-user-circle text-purple-500"></i> Santri</label><select onchange="window.App.hierSel.s=this.value;window.render(true)" class="input-std !bg-white dark:!bg-[#15241e] ${!hId||isResubmit?'opacity-50 pointer-events-none':''}" ${!hId||isResubmit?'disabled':''}><option value="" disabled ${!sId?'selected':''}>Pilih</option>${sList.map(s=>`<option value="${s.id}" ${sId==s.id?'selected':''}>${window.esc(s.name)} (${window.esc(s.kelas)})</option>`).join('')}</select></div>
                   </div>
                 </div>
                 <div class="bg-white border-2 border-dashed border-emerald-200 p-5 md:p-6 rounded-2xl mb-4 dark:bg-transparent dark:border-emerald-500/30">
-                  <div class="relative w-20 h-20 md:w-24 md:h-24 mx-auto mb-3"><div class="absolute inset-0 bg-red-500/20 rounded-full animate-ping ${App.rec.is?'':'hidden'}"></div><button onclick="if(!App.hierSel.s){window.showAlert('Pilih identitas santri terlebih dahulu!');return;} if(!App.rec.is){window.startStudentRecord();}else{window.stopStudentRecord();}" class="relative w-full h-full ${App.rec.is?'bg-red-500':'bg-emerald-500 hover:bg-emerald-600 dark:hover:bg-emerald-400'} text-white rounded-full flex items-center justify-center shadow-lg transition-transform transform active:scale-95 hover:scale-105 dark:text-[#0a120f]"><i class="ph-fill ${App.rec.is?'ph-stop':'ph-microphone'} text-3xl md:text-4xl"></i></button></div>
-                  <div class="text-sm font-mono text-slate-600 dark:text-gray-300 font-bold">${App.rec.is ? window.fmtT(App.rec.secs) : App.rec.secs>0 ? 'Selesai: '+window.fmtT(App.rec.secs) : 'Ketuk untuk Merekam'}</div>
-                  ${!App.rec.is && App.rec.secs>0 ? `<div class="flex gap-2 mt-5 pt-5 border-t border-slate-100 dark:border-[#1a2e26]"><button onclick="App.rec.secs=0;App.currentStudentAudioUrl=null;window.render()" class="flex-1 py-3 bg-slate-100 rounded-xl text-slate-600 font-bold text-xs md:text-sm dark:bg-[#1a2e26] dark:text-gray-300 active:bg-slate-200">Ulangi</button><button onclick="window.submitRec('mic')" class="flex-[2] py-3 bg-emerald-500 text-white rounded-xl font-bold text-xs md:text-sm shadow-md flex items-center justify-center gap-2 dark:text-[#0a120f] active:bg-emerald-600"><i class="ph-bold ph-paper-plane-tilt"></i> Kirim Setoran</button></div>` : ''}
+                  <div class="relative w-20 h-20 md:w-24 md:h-24 mx-auto mb-3"><div class="absolute inset-0 bg-red-500/20 rounded-full animate-ping ${window.App.rec.is?'':'hidden'}"></div><button onclick="if(!window.App.hierSel.s){window.showAlert('Pilih identitas santri terlebih dahulu!');return;} if(!window.App.rec.is){window.startStudentRecord();}else{window.stopStudentRecord();}" class="relative w-full h-full ${window.App.rec.is?'bg-red-500':'bg-emerald-500 hover:bg-emerald-600 dark:hover:bg-emerald-400'} text-white rounded-full flex items-center justify-center shadow-lg transition-transform transform active:scale-95 hover:scale-105 dark:text-[#0a120f]"><i class="ph-fill ${window.App.rec.is?'ph-stop':'ph-microphone'} text-3xl md:text-4xl"></i></button></div>
+                  <div class="text-sm font-mono text-slate-600 dark:text-gray-300 font-bold">${window.App.rec.is ? window.fmtT(window.App.rec.secs) : window.App.rec.secs>0 ? 'Selesai: '+window.fmtT(window.App.rec.secs) : 'Ketuk untuk Merekam'}</div>
+                  ${!window.App.rec.is && window.App.rec.secs>0 ? `<div class="flex gap-2 mt-5 pt-5 border-t border-slate-100 dark:border-[#1a2e26]"><button onclick="window.App.rec.secs=0;window.App.currentStudentAudioUrl=null;window.render(true)" class="flex-1 py-3 bg-slate-100 rounded-xl text-slate-600 font-bold text-xs md:text-sm dark:bg-[#1a2e26] dark:text-gray-300 active:bg-slate-200">Ulangi</button><button onclick="window.submitRec('mic')" class="flex-[2] py-3 bg-emerald-500 text-white rounded-xl font-bold text-xs md:text-sm shadow-md flex items-center justify-center gap-2 dark:text-[#0a120f] active:bg-emerald-600"><i class="ph-bold ph-paper-plane-tilt"></i> Kirim Setoran</button></div>` : ''}
                 </div>
-                ${!App.rec.is && App.rec.secs===0 ? `<div class="pt-1"><div class="relative flex items-center py-2 mb-2"><div class="flex-grow border-t border-slate-200 dark:border-[#1a2e26]"></div><span class="mx-4 text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-widest">Atau</span><div class="flex-grow border-t border-slate-200 dark:border-[#1a2e26]"></div></div><input type="file" id="au-up" accept="audio/*" class="hidden" onchange="window.submitRec('file', event)"><button onclick="if(!App.hierSel.s){window.showAlert('Pilih identitas santri terlebih dahulu!');return;} document.getElementById('au-up').click()" class="w-full py-3 md:py-3.5 bg-slate-50 text-slate-600 border border-slate-200 rounded-xl font-bold flex justify-center items-center gap-2 hover:bg-white hover:border-emerald-300 transition dark:bg-[#0a120f] dark:border-[#1a2e26] dark:text-gray-400 text-xs md:text-sm"><i class="ph-bold ph-upload-simple text-lg"></i> Upload File Audio</button></div>` : ''}
+                ${!window.App.rec.is && window.App.rec.secs===0 ? `<div class="pt-1"><div class="relative flex items-center py-2 mb-2"><div class="flex-grow border-t border-slate-200 dark:border-[#1a2e26]"></div><span class="mx-4 text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-widest">Atau</span><div class="flex-grow border-t border-slate-200 dark:border-[#1a2e26]"></div></div><input type="file" id="au-up" accept="audio/*" class="hidden" onchange="window.submitRec('file', event)"><button onclick="if(!window.App.hierSel.s){window.showAlert('Pilih identitas santri terlebih dahulu!');return;} document.getElementById('au-up').click()" class="w-full py-3 md:py-3.5 bg-slate-50 text-slate-600 border border-slate-200 rounded-xl font-bold flex justify-center items-center gap-2 hover:bg-white hover:border-emerald-300 transition dark:bg-[#0a120f] dark:border-[#1a2e26] dark:text-gray-400 text-xs md:text-sm"><i class="ph-bold ph-upload-simple text-lg"></i> Upload File Audio</button></div>` : ''}
               </div>
             </div>
           </div>
         `;
       }
+      else if(window.App.view === 'hub') {
+        const oU = `<option value="all">Semua Ustadz/ah</option>`+window.App.ustadz.map(u=>`<option value="${u.id}" ${window.App.filter.u==u.id?'selected':''}>${window.esc(u.name)}</option>`).join('');
+        const hl = window.App.filter.u!=='all'?window.App.halaqohs.filter(h=>h.ustadzId==window.App.filter.u):window.App.halaqohs;
+        const oH = `<option value="all">Semua Halaqoh</option>`+hl.map(h=>`<option value="${h.id}" ${window.App.filter.h==h.id?'selected':''}>${window.esc(h.name)}</option>`).join('');
+        let sl = window.App.siswas; if(window.App.filter.h!=='all')sl=sl.filter(s=>s.halaqohId==window.App.filter.h);else if(window.App.filter.u!=='all'){let ids=hl.map(x=>x.id);sl=sl.filter(s=>ids.includes(s.halaqohId))}
+        const oS = `<option value="all">Semua Siswa</option>`+window.App.siswas.map(s=>`<option value="${s.id}" ${window.App.filter.s==s.id?'selected':''}>${window.esc(s.name)}</option>`).join('');
 
-      // VIEW: HUB
-      else if(App.view === 'hub') {
-        const oU = `<option value="all">Semua Ustadz/ah</option>`+App.ustadz.map(u=>`<option value="${u.id}" ${App.filter.u==u.id?'selected':''}>${window.esc(u.name)}</option>`).join('');
-        const hl = App.filter.u!=='all'?App.halaqohs.filter(h=>h.ustadzId==App.filter.u):App.halaqohs;
-        const oH = `<option value="all">Semua Halaqoh</option>`+hl.map(h=>`<option value="${h.id}" ${App.filter.h==h.id?'selected':''}>${window.esc(h.name)}</option>`).join('');
-        let sl = App.siswas; if(App.filter.h!=='all')sl=sl.filter(s=>s.halaqohId==App.filter.h);else if(App.filter.u!=='all'){let ids=hl.map(x=>x.id);sl=sl.filter(s=>ids.includes(s.halaqohId))}
-        const oS = `<option value="all">Semua Siswa</option>`+sl.map(s=>`<option value="${s.id}" ${App.filter.s==s.id?'selected':''}>${window.esc(s.name)}</option>`).join('');
+        let fs = window.App.subs;
+        if(window.App.filter.u!=='all')fs=fs.filter(s=>s.ustadzId==window.App.filter.u); if(window.App.filter.h!=='all')fs=fs.filter(s=>s.halaqohId==window.App.filter.h); if(window.App.filter.s!=='all')fs=fs.filter(s=>s.siswaId==window.App.filter.s);
+        if(window.App.search)fs=fs.filter(x=>{let su=window.App.surahs.find(y=>y.id===x.surahId); return (su&&su.title.toLowerCase().includes(window.App.search.toLowerCase()))||window.getSName(x.siswaId).toLowerCase().includes(window.App.search.toLowerCase())});
 
-        let fs = App.subs;
-        if(App.filter.u!=='all')fs=fs.filter(s=>s.ustadzId==App.filter.u); if(App.filter.h!=='all')fs=fs.filter(s=>s.halaqohId==App.filter.h); if(App.filter.s!=='all')fs=fs.filter(s=>s.siswaId==App.filter.s);
-        if(App.search)fs=fs.filter(x=>{let su=App.surahs.find(y=>y.id===x.surahId); return (su&&su.title.toLowerCase().includes(App.search.toLowerCase()))||window.getSName(x.siswaId).toLowerCase().includes(App.search.toLowerCase())});
-
-        html += `<div class="flex-1 overflow-y-auto p-4 md:p-8"><div class="max-w-6xl mx-auto flex flex-col h-full">${mobileSearchBar}<div class="mb-8 md:mb-14"><div class="flex flex-col md:flex-row justify-between md:items-end border-b border-slate-200 dark:border-[#1a2e26] pb-3 mb-6 gap-4 md:gap-0"><div><h2 class="text-xl md:text-2xl font-serif dark:text-white flex items-center gap-2"><i class="ph-fill ph-clipboard-text text-emerald-500"></i> Papan Riwayat</h2><p class="text-xs md:text-sm text-slate-500">Cek status setoran.</p></div><div class="flex flex-wrap md:flex-nowrap gap-2"><select onchange="App.filter.u=this.value;App.filter.h='all';App.filter.s='all';window.render()" class="input-std !w-full sm:!w-auto flex-1">${oU}</select><select onchange="App.filter.h=this.value;App.filter.s='all';window.render()" class="input-std !w-full sm:!w-auto flex-1">${oH}</select><select onchange="App.filter.s=this.value;window.render()" class="input-std !w-full sm:!w-auto flex-1">${oS}</select></div></div>`;
+        html += `<div class="flex-1 overflow-y-auto p-4 md:p-8"><div class="max-w-6xl mx-auto flex flex-col h-full">${mobileSearchBar}<div class="mb-8 md:mb-14"><div class="flex flex-col md:flex-row justify-between md:items-end border-b border-slate-200 dark:border-[#1a2e26] pb-3 mb-6 gap-4 md:gap-0"><div><h2 class="text-xl md:text-2xl font-serif dark:text-white flex items-center gap-2"><i class="ph-fill ph-clipboard-text text-emerald-500"></i> Papan Riwayat</h2><p class="text-xs md:text-sm text-slate-500">Cek status setoran.</p></div><div class="flex flex-wrap md:flex-nowrap gap-2"><select onchange="window.App.filter.u=this.value;window.App.filter.h='all';window.App.filter.s='all';window.render(true)" class="input-std !w-full sm:!w-auto flex-1">${oU}</select><select onchange="window.App.filter.h=this.value;window.App.filter.s='all';window.render(true)" class="input-std !w-full sm:!w-auto flex-1">${oH}</select><select onchange="window.App.filter.s=this.value;window.render(true)" class="input-std !w-full sm:!w-auto flex-1">${oS}</select></div></div>`;
         
-        if(!fs.length) html += `<div class="text-center text-slate-500 py-12 bg-white dark:bg-[#15241e] rounded-2xl border-dashed border-2 border-slate-200 dark:border-[#1a2e26]">${App.search?'Pencarian tidak ditemukan.':'Belum ada riwayat setoran.'}</div>`;
+        if(!fs.length) html += `<div class="text-center text-slate-500 py-12 bg-white dark:bg-[#15241e] rounded-2xl border-dashed border-2 border-slate-200 dark:border-[#1a2e26]">${window.App.search?'Pencarian tidak ditemukan.':'Belum ada riwayat setoran.'}</div>`;
         else {
             let strList = "";
             fs.sort((a,b)=>b.id-a.id).forEach(sb=>{
-                let su=App.surahs.find(x=>x.id===sb.surahId); let sg=App.segs.find(x=>x.id===sb.segmentId); let lv=sg?App.levels.find(l=>l.id===sg.levelId):null;
+                let su=window.App.surahs.find(x=>x.id===sb.surahId); let sg=window.App.segs.find(x=>x.id===sb.segmentId); let lv=sg?window.App.levels.find(l=>l.id===sg.levelId):null;
                 let sc=sb.status==='graded'?'text-emerald-600':sb.status==='need-repeat'?'text-red-600':'text-orange-600'; let st=sb.status==='graded'?`LULUS (${sb.grade})`:sb.status==='need-repeat'?'MINTA DIULANG':'MENUNGGU NILAI'; let ic=sb.status==='graded'?'ph-check-circle':sb.status==='need-repeat'?'ph-arrow-counter-clockwise':'ph-hourglass'; let bc=sb.status==='graded'?'border-emerald-200':sb.status==='need-repeat'?'border-red-200':'border-slate-200';
                 let nH=(sb.note||sb.voiceNote)?`<div class="mt-3 p-3 bg-orange-50 dark:bg-[#15241e] rounded-xl text-xs text-slate-600 dark:text-gray-300 border border-orange-100 dark:border-transparent"><span class="text-orange-600 font-bold block mb-1.5 flex items-center gap-1"><i class="ph-fill ph-chat-text"></i> Catatan Ustadz/ah:</span>${sb.note?`<p class="leading-relaxed mb-2">${window.esc(sb.note)}</p>`:''}${sb.voiceNote?`<audio controls class="w-full h-8 mt-1 rounded-full" src="${sb.voiceNote}"></audio>`:''}</div>`:'';
-                let rb=(sb.status==='need-repeat' && !isAdmin)?`<button onclick="App.actSurahId=${sb.surahId};App.actSegId=${sb.segmentId};App.resubmitId=${sb.id};App.hierSel={u:${sb.ustadzId},h:${sb.halaqohId},s:${sb.siswaId}};App.rec.src='hub';App.rec.secs=0;window.switchView('setoran');" class="text-[10px] md:text-xs bg-red-50 border border-red-200 text-red-600 px-3 py-1.5 rounded-lg flex items-center gap-1 font-bold hover:bg-red-500 hover:text-white transition dark:bg-[#15241e] dark:border-red-900"><i class="ph-bold ph-microphone"></i> Setor Ulang</button>`:'';
+                let rb=(sb.status==='need-repeat' && !isAdmin)?`<button onclick="window.App.actSurahId=${sb.surahId};window.App.actSegId=${sb.segmentId};window.App.resubmitId=${sb.id};window.App.hierSel={u:${sb.ustadzId},h:${sb.halaqohId},s:${sb.siswaId}};window.App.rec.src='hub';window.App.rec.secs=0;window.switchView('setoran');" class="text-[10px] md:text-xs bg-red-50 border border-red-200 text-red-600 px-3 py-1.5 rounded-lg flex items-center gap-1 font-bold hover:bg-red-500 hover:text-white transition dark:bg-[#15241e] dark:border-red-900"><i class="ph-bold ph-microphone"></i> Setor Ulang</button>`:'';
                 
                 let studentAudioPlayer = sb.audioUrl ? `<audio controls class="w-full h-8 md:h-10" src="${sb.audioUrl}"></audio>` : `<span class="text-[10px] md:text-xs text-slate-400 italic bg-slate-50 dark:bg-[#1a2e26] px-3 py-2 rounded-lg border border-dashed border-slate-200 dark:border-transparent w-full text-center inline-block">Rekaman tidak tersedia</span>`;
 
@@ -731,31 +566,28 @@
         }
         html += `</div></div></div>`;
       }
+      else if(window.App.view === 'admin') {
+        const oU = `<option value="all">Semua Ustadz/ah</option>`+window.App.ustadz.map(u=>`<option value="${u.id}" ${window.App.filter.u==u.id?'selected':''}>${window.esc(u.name)}</option>`).join('');
+        const hl = window.App.filter.u!=='all'?window.App.halaqohs.filter(h=>h.ustadzId==window.App.filter.u):window.App.halaqohs;
+        const oH = `<option value="all">Semua Halaqoh</option>`+hl.map(h=>`<option value="${h.id}" ${window.App.filter.h==h.id?'selected':''}>${window.esc(h.name)}</option>`).join('');
+        let sl = window.App.siswas; if(window.App.filter.h!=='all')sl=sl.filter(s=>s.halaqohId==window.App.filter.h);else if(window.App.filter.u!=='all'){let ids=hl.map(x=>x.id);sl=sl.filter(s=>ids.includes(s.halaqohId))}
+        const oS = `<option value="all">Semua Siswa</option>`+window.App.siswas.map(s=>`<option value="${s.id}" ${window.App.filter.s==s.id?'selected':''}>${window.esc(s.name)}</option>`).join('');
 
-      // VIEW: ADMIN SUBMISSIONS
-      else if(App.view === 'admin') {
-        const oU = `<option value="all">Semua Ustadz/ah</option>`+App.ustadz.map(u=>`<option value="${u.id}" ${App.filter.u==u.id?'selected':''}>${window.esc(u.name)}</option>`).join('');
-        const hl = App.filter.u!=='all'?App.halaqohs.filter(h=>h.ustadzId==App.filter.u):App.halaqohs;
-        const oH = `<option value="all">Semua Halaqoh</option>`+hl.map(h=>`<option value="${h.id}" ${App.filter.h==h.id?'selected':''}>${window.esc(h.name)}</option>`).join('');
-        let sl = App.siswas; if(App.filter.h!=='all')sl=sl.filter(s=>s.halaqohId==App.filter.h);else if(App.filter.u!=='all'){let ids=hl.map(x=>x.id);sl=sl.filter(s=>ids.includes(s.halaqohId))}
-        const oS = `<option value="all">Semua Siswa</option>`+sl.map(s=>`<option value="${s.id}" ${App.filter.s==s.id?'selected':''}>${window.esc(s.name)}</option>`).join('');
+        let fs = window.App.subs;
+        if(window.App.filter.u!=='all')fs=fs.filter(s=>s.ustadzId==window.App.filter.u); if(window.App.filter.h!=='all')fs=fs.filter(s=>s.halaqohId==window.App.filter.h); if(window.App.filter.s!=='all')fs=fs.filter(s=>s.siswaId==window.App.filter.s);
+        if(window.App.search)fs=fs.filter(x=>{let su=window.App.surahs.find(y=>y.id===x.surahId); return (su&&su.title.toLowerCase().includes(window.App.search.toLowerCase()))||window.getSName(x.siswaId).toLowerCase().includes(window.App.search.toLowerCase())});
 
-        let fs = App.subs;
-        if(App.filter.u!=='all')fs=fs.filter(s=>s.ustadzId==App.filter.u); if(App.filter.h!=='all')fs=fs.filter(s=>s.halaqohId==App.filter.h); if(App.filter.s!=='all')fs=fs.filter(s=>s.siswaId==App.filter.s);
-        if(App.search)fs=fs.filter(x=>{let su=App.surahs.find(y=>y.id===x.surahId); return (su&&su.title.toLowerCase().includes(App.search.toLowerCase()))||window.getSName(x.siswaId).toLowerCase().includes(App.search.toLowerCase())});
-
-        html += `<div class="flex-1 overflow-y-auto p-4 md:p-8"><div class="max-w-6xl mx-auto flex flex-col h-full">${mobileSearchBar}<div class="flex flex-col md:flex-row justify-between md:items-end mb-6 md:mb-8 gap-4 md:gap-0"><div><h1 class="text-2xl md:text-3xl font-serif text-orange-600 mb-1 md:mb-2 flex items-center gap-2"><i class="ph-fill ph-tray text-3xl"></i> Daftar Setoran Masuk</h1><p class="text-xs md:text-sm text-slate-500 dark:text-gray-400">Tinjau dan beri nilai hafalan santri.</p></div><div class="flex flex-wrap md:flex-nowrap gap-2 md:gap-3"><select onchange="App.filter.u=this.value;App.filter.h='all';App.filter.s='all';window.render()" class="input-std !w-full sm:!w-auto flex-1">${oU}</select><select onchange="App.filter.h=this.value;App.filter.s='all';window.render()" class="input-std !w-full sm:!w-auto flex-1">${oH}</select><select onchange="App.filter.s=this.value;window.render()" class="input-std !w-full sm:!w-auto flex-1">${oS}</select></div></div><div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-lg dark:bg-[#15241e] dark:border-[#1a2e26]"><div class="hidden md:grid grid-cols-12 gap-4 p-4 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider dark:border-[#1a2e26] dark:text-gray-500 bg-slate-50 dark:bg-[#0a120f]"><div class="col-span-4">Identitas Santri</div><div class="col-span-3">Materi Surah</div><div class="col-span-3">Rekaman</div><div class="col-span-2 text-right">Penilaian</div></div><div class="divide-y divide-slate-100 dark:divide-[#1a2e26] flex flex-col">`;
+        html += `<div class="flex-1 overflow-y-auto p-4 md:p-8"><div class="max-w-6xl mx-auto flex flex-col h-full">${mobileSearchBar}<div class="flex flex-col md:flex-row justify-between md:items-end mb-6 md:mb-8 gap-4 md:gap-0"><div><h1 class="text-2xl md:text-3xl font-serif text-orange-600 mb-1 md:mb-2 flex items-center gap-2"><i class="ph-fill ph-tray text-3xl"></i> Daftar Setoran Masuk</h1><p class="text-xs md:text-sm text-slate-500 dark:text-gray-400">Tinjau dan beri nilai hafalan santri.</p></div><div class="flex flex-wrap md:flex-nowrap gap-2 md:gap-3"><select onchange="window.App.filter.u=this.value;window.App.filter.h='all';window.App.filter.s='all';window.render(true)" class="input-std !w-full sm:!w-auto flex-1">${oU}</select><select onchange="window.App.filter.h=this.value;window.App.filter.s='all';window.render(true)" class="input-std !w-full sm:!w-auto flex-1">${oH}</select><select onchange="window.App.filter.s=this.value;window.render(true)" class="input-std !w-full sm:!w-auto flex-1">${oS}</select></div></div><div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-lg dark:bg-[#15241e] dark:border-[#1a2e26]"><div class="hidden md:grid grid-cols-12 gap-4 p-4 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider dark:border-[#1a2e26] dark:text-gray-500 bg-slate-50 dark:bg-[#0a120f]"><div class="col-span-4">Identitas Santri</div><div class="col-span-3">Materi Surah</div><div class="col-span-3">Rekaman</div><div class="col-span-2 text-right">Penilaian</div></div><div class="divide-y divide-slate-100 dark:divide-[#1a2e26] flex flex-col">`;
         
-        if(!fs.length) html += `<div class="p-10 text-center text-slate-500 italic bg-white dark:bg-transparent">${App.search?'Pencarian tidak ditemukan.':'Belum ada setoran masuk.'}</div>`;
+        if(!fs.length) html += `<div class="p-10 text-center text-slate-500 italic bg-white dark:bg-transparent">${window.App.search?'Pencarian tidak ditemukan.':'Belum ada setoran masuk.'}</div>`;
         else {
             let mStr = "";
             fs.sort((a,b)=>{if(a.status==='pending'&&b.status!=='pending')return -1;if(a.status!=='pending'&&b.status==='pending')return 1;return b.id-a.id;}).forEach(sb=>{
-                let su=App.surahs.find(x=>x.id===sb.surahId); let sg=App.segs.find(x=>x.id===sb.segmentId); let lv=sg?App.levels.find(l=>l.id===sg.levelId):null;
+                let su=window.App.surahs.find(x=>x.id===sb.surahId); let sg=window.App.segs.find(x=>x.id===sb.segmentId); let lv=sg?window.App.levels.find(l=>l.id===sg.levelId):null;
                 let sB=sb.status==='pending'?`<span class="bg-orange-100 text-orange-600 px-2 py-1 rounded text-[10px] lg:text-xs font-bold whitespace-nowrap"><i class="ph-bold ph-hourglass"></i> Menunggu</span>`:sb.status==='need-repeat'?`<span class="bg-red-100 text-red-600 px-2 py-1 rounded text-[10px] lg:text-xs font-bold whitespace-nowrap"><i class="ph-bold ph-arrow-counter-clockwise"></i> Diulang</span>`:`<span class="bg-emerald-100 text-emerald-600 px-2 py-1 rounded text-[10px] lg:text-xs font-bold whitespace-nowrap"><i class="ph-bold ph-check"></i> Lulus (${sb.grade})</span>`;
-                let aB=sb.status==='pending'?`<button onclick="App.modal='grade';App.modalData=${sb.id};window.render()" class="bg-blue-600 hover:bg-blue-50 text-white w-8 h-8 rounded-lg flex items-center justify-center transition shadow-md shrink-0"><i class="ph-fill ph-star"></i></button>`:`<button onclick="App.modal='grade';App.modalData=${sb.id};window.render()" class="bg-white hover:bg-blue-50 text-blue-600 border border-slate-200 w-8 h-8 rounded-lg flex items-center justify-center transition dark:bg-transparent dark:border-[#1a2e26] shrink-0"><i class="ph-bold ph-pencil-simple"></i></button>`;
+                let aB=sb.status==='pending'?`<button onclick="window.App.modal='grade';window.App.modalData=${sb.id};window.render(true)" class="bg-blue-600 hover:bg-blue-50 text-white w-8 h-8 rounded-lg flex items-center justify-center transition shadow-md shrink-0"><i class="ph-fill ph-star"></i></button>`:`<button onclick="window.App.modal='grade';window.App.modalData=${sb.id};window.render(true)" class="bg-white hover:bg-blue-50 text-blue-600 border border-slate-200 w-8 h-8 rounded-lg flex items-center justify-center transition dark:bg-transparent dark:border-[#1a2e26] shrink-0"><i class="ph-bold ph-pencil-simple"></i></button>`;
                 
-                // Keamanan Hapus: Hanya Admin Utama
-                let delB = App.adminLvl===1 ? `<button onclick="window.deleteSubmission(${sb.id})" class="bg-white hover:bg-red-50 text-red-500 border border-slate-200 w-8 h-8 rounded-lg flex items-center justify-center transition dark:bg-transparent dark:border-[#1a2e26] shrink-0" title="Hapus Setoran"><i class="ph-bold ph-trash text-lg"></i></button>` : '';
+                let delB = isAdmin ? `<button onclick="window.deleteSubmission(${sb.id})" class="bg-white hover:bg-red-50 text-red-500 border border-slate-200 w-8 h-8 rounded-lg flex items-center justify-center transition dark:bg-transparent dark:border-[#1a2e26] shrink-0" title="Hapus Setoran"><i class="ph-bold ph-trash text-lg"></i></button>` : '';
                 
                 let nI=(sb.note||sb.voiceNote)?`<div class="text-[9px] md:text-[10px] text-slate-400 mt-1.5 italic flex flex-wrap gap-2">${sb.note?'<span class="flex items-center gap-0.5"><i class="ph-fill ph-note"></i> Teks</span>':''}${sb.voiceNote?'<span class="flex items-center gap-0.5"><i class="ph-fill ph-microphone"></i> Suara</span>':''}</div>`:'';
                 
@@ -770,16 +602,14 @@
 
       // VIEW: MASTER
       else if(App.view === 'master') {
-        let sQ = App.search.toLowerCase();
-        let ul = App.ustadz;
+        let sQ = window.App.search.toLowerCase();
+        let ul = window.App.ustadz;
         if(sQ) ul = ul.filter(u => u.name.toLowerCase().includes(sQ) || u.username.toLowerCase().includes(sQ));
-        
-        let hl = sQ ? App.halaqohs.filter(h => h.name.toLowerCase().includes(sQ)) : (App.hierSel.u ? App.halaqohs.filter(h=>h.ustadzId==App.hierSel.u) : []);
-        
-        let sl = sQ ? App.siswas.filter(s => s.name.toLowerCase().includes(sQ) || s.kelas.toLowerCase().includes(sQ)) : (App.hierSel.h ? App.siswas.filter(s=>s.halaqohId==App.hierSel.h) : []);
+        let hl = sQ ? window.App.halaqohs.filter(h => h.name.toLowerCase().includes(sQ)) : (window.App.hierSel.u ? window.App.halaqohs.filter(h=>h.ustadzId==window.App.hierSel.u) : []);
+        let sl = sQ ? window.App.siswas.filter(s => s.name.toLowerCase().includes(sQ) || s.kelas.toLowerCase().includes(sQ)) : (window.App.hierSel.h ? window.App.siswas.filter(s=>s.halaqohId==window.App.hierSel.h) : []);
         
         html += `<div class="flex-1 overflow-hidden p-4 md:p-8 flex flex-col"><div class="max-w-7xl mx-auto w-full h-full flex flex-col">${mobileSearchBar}<div class="mb-6 flex flex-col gap-4 border-b border-slate-200 dark:border-[#1a2e26] pb-6 shrink-0"><div><h1 class="text-2xl md:text-3xl font-serif text-purple-600 mb-1 md:mb-2 flex items-center gap-2"><i class="ph-fill ph-database text-3xl"></i> Data Master</h1><p class="text-xs md:text-sm text-slate-500 dark:text-gray-400">Atur hierarki aplikasi.</p></div>`;
-        if(App.adminLvl===1) html += `<div class="flex flex-col md:flex-row gap-4"><div class="card-std !p-3 !flex-row items-center gap-4 !w-full md:!w-fit"><img src="${App.schLogo}" class="h-10 w-10 md:h-12 md:w-12 rounded object-contain bg-slate-100 p-1 ${App.schLogo?'':'hidden'}"><div class="h-10 w-10 md:h-12 md:w-12 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 ${App.schLogo?'hidden':''}"><i class="ph-fill ph-image text-xl md:text-2xl"></i></div><div class="flex-1"><p class="text-[9px] md:text-[10px] font-bold text-emerald-600 mb-1 uppercase tracking-wider">Logo Sekolah</p><input type="file" id="aup" accept="image/*" class="hidden" onchange="window.handleLogoUpload(event)"><div class="flex gap-1.5"><button onclick="document.getElementById('aup').click()" class="flex-1 md:flex-none text-[10px] md:text-xs font-bold bg-slate-50 border border-slate-200 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 px-3 py-1.5 rounded dark:bg-[#15241e] dark:border-transparent dark:text-gray-300 transition">Upload</button><button onclick="window.removeLogo()" class="text-[10px] md:text-xs font-bold bg-red-50 text-red-500 hover:bg-red-500 hover:text-white px-3 py-1.5 rounded dark:bg-red-900/20 transition">Hapus</button></div></div></div><div class="card-std !p-3 !flex-row items-center gap-4 flex-1"><div class="h-10 w-10 md:h-12 md:w-12 rounded bg-blue-100 text-blue-600 flex items-center justify-center shrink-0"><i class="ph-fill ph-text-t text-xl md:text-2xl"></i></div><div class="flex-1"><p class="text-[9px] md:text-[10px] font-bold text-blue-600 mb-1 uppercase tracking-wider">Nama Sekolah</p><div class="flex gap-2"><input type="text" id="i-sub" value="${App.schSub}" class="input-std !py-1.5 text-xs"><button onclick="window.saveSchoolSubtitle()" class="btn-std !w-auto !py-1.5 !px-4 !text-xs !rounded-lg">Simpan</button></div></div></div></div>`;
+        if(isAdmin) html += `<div class="flex flex-col md:flex-row gap-4"><div class="card-std !p-3 !flex-row items-center gap-4 !w-full md:!w-fit"><img src="${window.App.schLogo}" class="h-10 w-10 md:h-12 md:w-12 rounded object-contain bg-slate-100 p-1 ${window.App.schLogo?'':'hidden'}"><div class="h-10 w-10 md:h-12 md:w-12 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 ${window.App.schLogo?'hidden':''}"><i class="ph-fill ph-image text-xl md:text-2xl"></i></div><div class="flex-1"><p class="text-[9px] md:text-[10px] font-bold text-emerald-600 mb-1 uppercase tracking-wider">Logo Sekolah</p><input type="file" id="aup" accept="image/*" class="hidden" onchange="window.handleLogoUpload(event)"><div class="flex gap-1.5"><button onclick="document.getElementById('aup').click()" class="flex-1 md:flex-none text-[10px] md:text-xs font-bold bg-slate-50 border border-slate-200 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 px-3 py-1.5 rounded dark:bg-[#15241e] dark:border-transparent dark:text-gray-300 transition">Upload</button><button onclick="window.removeLogo()" class="text-[10px] md:text-xs font-bold bg-red-50 text-red-500 hover:bg-red-500 hover:text-white px-3 py-1.5 rounded dark:bg-red-900/20 transition">Hapus</button></div></div></div><div class="card-std !p-3 !flex-row items-center gap-4 flex-1"><div class="h-10 w-10 md:h-12 md:w-12 rounded bg-blue-100 text-blue-600 flex items-center justify-center shrink-0"><i class="ph-fill ph-text-t text-xl md:text-2xl"></i></div><div class="flex-1"><p class="text-[9px] md:text-[10px] font-bold text-blue-600 mb-1 uppercase tracking-wider">Nama Sekolah</p><div class="flex gap-2"><input type="text" id="i-sub" value="${window.App.schSub}" class="input-std !py-1.5 text-xs"><button onclick="window.saveSchoolSubtitle()" class="btn-std !w-auto !py-1.5 !px-4 !text-xs !rounded-lg">Simpan</button></div></div></div></div>`;
         
         html += `</div><div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 lg:min-h-0 overflow-y-auto lg:overflow-hidden pb-10 lg:pb-0">`;
         
@@ -787,154 +617,205 @@
         html += `<div class="card-std !p-0 h-[400px] lg:h-full flex flex-col"><div class="p-3 md:p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center dark:bg-[#15241e] dark:border-[#1a2e26] shrink-0"><h3 class="font-bold text-slate-800 dark:text-white flex items-center gap-2 text-sm md:text-base"><i class="ph-fill ph-chalkboard-teacher text-purple-500 text-lg md:text-xl"></i> Ustadz/ah</h3><span class="text-[10px] md:text-xs font-bold bg-white border border-slate-200 px-2 py-0.5 rounded dark:bg-[#0a120f] dark:border-transparent dark:text-gray-400">${ul.length}</span></div><div class="flex-1 overflow-y-auto p-3 flex flex-col gap-2">`;
         if(!ul.length) html += `<div class="text-xs text-slate-500 italic p-6 text-center bg-slate-50 dark:bg-[#15241e] rounded-xl border border-dashed border-slate-200 dark:border-[#1a2e26]">${sQ?'Tidak ditemukan.':'Belum ada Ustadz/ah.'}</div>`;
         else {
-            html += ul.map(u=>`<div onclick="App.hierSel.u=${u.id};App.hierSel.h=null;App.editingUstadzId=null;App.search='';window.render()" class="flex items-center justify-between p-3 rounded-xl border border-slate-200 cursor-pointer shadow-sm transition-all ${App.hierSel.u===u.id?'bg-purple-50 border-purple-300 dark:bg-[#15241e] dark:border-purple-500/50 scale-[1.02]':'bg-white hover:bg-slate-50 dark:bg-[#0a120f] dark:border-[#1a2e26]'}"><div><span class="text-sm font-bold ${App.hierSel.u===u.id?'text-purple-700 dark:text-purple-400':'text-slate-800 dark:text-white'} block">${window.esc(u.name)}</span><span class="text-[10px] text-slate-500 font-mono mt-0.5 flex items-center gap-1"><i class="ph-fill ph-user"></i> ${window.esc(u.username)}</span></div>${App.adminLvl===1?`<div class="flex items-center gap-1.5"><button onclick="event.stopPropagation();App.editingUstadzId=${u.id};window.render()" class="p-1.5 text-slate-400 hover:text-blue-500 bg-slate-50 dark:bg-[#15241e] rounded"><i class="ph-fill ph-pencil-simple"></i></button><button onclick="event.stopPropagation();window.confirmDelete('ustadz', ${u.id})" class="p-1.5 text-slate-400 hover:text-red-500 bg-slate-50 dark:bg-[#15241e] rounded"><i class="ph-fill ph-trash"></i></button></div>`:''}</div>`).join('');
+            html += ul.map(u=>`<div onclick="window.App.hierSel.u=${u.id};window.App.hierSel.h=null;window.App.editingUstadzId=null;window.App.search='';window.render(true)" class="flex items-center justify-between p-3 rounded-xl border border-slate-200 cursor-pointer shadow-sm transition-all ${window.App.hierSel.u===u.id?'bg-purple-50 border-purple-300 dark:bg-[#15241e] dark:border-purple-500/50 scale-[1.02]':'bg-white hover:bg-slate-50 dark:bg-[#0a120f] dark:border-[#1a2e26]'}"><div><span class="text-sm font-bold ${window.App.hierSel.u===u.id?'text-purple-700 dark:text-purple-400':'text-slate-800 dark:text-white'} block">${window.esc(u.name)}</span><span class="text-[10px] text-slate-500 font-mono mt-0.5 flex items-center gap-1"><i class="ph-fill ph-user"></i> ${window.esc(u.username)}</span></div>${isAdmin?`<div class="flex items-center gap-1.5"><button onclick="event.stopPropagation();window.App.editingUstadzId=${u.id};window.render(true)" class="p-1.5 text-slate-400 hover:text-blue-500 bg-slate-50 dark:bg-[#15241e] rounded"><i class="ph-fill ph-pencil-simple"></i></button><button onclick="event.stopPropagation();window.confirmDelete('ustadz', ${u.id})" class="p-1.5 text-slate-400 hover:text-red-500 bg-slate-50 dark:bg-[#15241e] rounded"><i class="ph-fill ph-trash"></i></button></div>`:''}</div>`).join('');
         }
         html += `</div>`;
-        if(App.adminLvl===1) {
-            let eu = App.editingUstadzId ? App.ustadz.find(x=>x.id===App.editingUstadzId) : null;
-            html += `<div class="p-3 border-t border-slate-200 bg-slate-50 dark:bg-[#15241e] dark:border-[#1a2e26] shrink-0"><form onsubmit="event.preventDefault();let id=${App.editingUstadzId||'null'};let n=window.val('iu_n').trim(),u=window.val('iu_u').trim(),p=window.val('iu_p').trim();if(n&&u&&p){if(id){let o=App.ustadz.find(x=>x.id===id);if(o){o.name=n;o.username=u;o.password=p;window.dbSave('ustadz',id,o);}App.editingUstadzId=null;}else{let nid=Date.now();window.dbSave('ustadz',nid,{id:nid,name:n,username:u,password:p});}window.render()}"><input type="text" id="iu_n" required placeholder="Nama..." value="${eu?eu.name:''}" class="input-std mb-2 !text-xs"><div class="flex gap-2 mb-2"><input type="text" id="iu_u" required placeholder="User" value="${eu?eu.username:''}" class="input-std !text-xs"><input type="password" id="iu_p" required placeholder="Pass" value="${eu?eu.password:''}" class="input-std !text-xs font-mono"></div><div class="flex gap-2">${eu?`<button type="button" onclick="App.editingUstadzId=null;window.render()" class="btn-std !bg-slate-500 !py-2 !text-xs">Batal</button>`:''}<button type="submit" class="btn-std ${eu?'!bg-blue-600':'!bg-purple-600'} !py-2 !text-xs flex items-center justify-center gap-1"><i class="ph-bold ${eu?'ph-check':'ph-plus'}"></i> ${eu?'Simpan':'Tambah'}</button></div></form></div>`;
+        if(isAdmin) {
+            let eu = window.App.editingUstadzId ? window.App.ustadz.find(x=>x.id===window.App.editingUstadzId) : null;
+            html += `<div class="p-3 border-t border-slate-200 bg-slate-50 dark:bg-[#15241e] dark:border-[#1a2e26] shrink-0"><form onsubmit="event.preventDefault();let id=${window.App.editingUstadzId||'null'};let n=window.val('iu_n').trim(),u=window.val('iu_u').trim(),p=window.val('iu_p').trim();if(n&&u&&p){if(id){let o=window.App.ustadz.find(x=>x.id===id);if(o){o.name=n;o.username=u;o.password=p;window.dbSave('ustadz',id,o);}window.App.editingUstadzId=null;}else{let nid=Date.now();window.dbSave('ustadz',nid,{id:nid,name:n,username:u,password:p});}window.render(true)}"><input type="text" id="iu_n" required placeholder="Nama..." value="${eu?eu.name:''}" class="input-std mb-2 !text-xs"><div class="flex gap-2 mb-2"><input type="text" id="iu_u" required placeholder="User" value="${eu?eu.username:''}" class="input-std !text-xs"><input type="password" id="iu_p" required placeholder="Pass" value="${eu?eu.password:''}" class="input-std !text-xs font-mono"></div><div class="flex gap-2">${eu?`<button type="button" onclick="window.App.editingUstadzId=null;window.render(true)" class="btn-std !bg-slate-500 !py-2 !text-xs">Batal</button>`:''}<button type="submit" class="btn-std ${eu?'!bg-blue-600':'!bg-purple-600'} !py-2 !text-xs flex items-center justify-center gap-1"><i class="ph-bold ${eu?'ph-check':'ph-plus'}"></i> ${eu?'Simpan':'Tambah'}</button></div></form></div>`;
         }
         html += `</div>`;
 
         // Col 2: Halaqoh
         html += `<div class="card-std !p-0 h-[400px] lg:h-full flex flex-col"><div class="p-3 md:p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center dark:bg-[#15241e] dark:border-[#1a2e26] shrink-0"><h3 class="font-bold text-slate-800 dark:text-white flex items-center gap-2 text-sm md:text-base"><i class="ph-fill ph-users-three text-blue-500 text-lg md:text-xl"></i> Halaqoh</h3><span class="text-[10px] md:text-xs font-bold bg-white border border-slate-200 px-2 py-0.5 rounded dark:bg-[#0a120f] dark:border-transparent dark:text-gray-400">${hl.length}</span></div><div class="flex-1 overflow-y-auto p-3 flex flex-col gap-2">`;
-        if(!App.hierSel.u && !sQ) html += `<div class="text-xs text-slate-400 font-bold uppercase tracking-wider text-center p-10 bg-slate-50 dark:bg-[#15241e] rounded-xl border border-dashed border-slate-200 dark:border-[#1a2e26]">Pilih Ustadz/ah<br>di sebelah kiri</div>`;
+        if(!window.App.hierSel.u && !sQ) html += `<div class="text-xs text-slate-400 font-bold uppercase tracking-wider text-center p-10 bg-slate-50 dark:bg-[#15241e] rounded-xl border border-dashed border-slate-200 dark:border-[#1a2e26]">Pilih Ustadz/ah<br>di sebelah kiri</div>`;
         else if(!hl.length) html += `<div class="text-xs text-slate-500 italic p-6 text-center bg-slate-50 dark:bg-[#15241e] rounded-xl border border-dashed border-slate-200 dark:border-[#1a2e26]">${sQ?'Tidak ditemukan.':'Belum ada Halaqoh.'}</div>`;
         else {
-            html += hl.map(h=>`<div onclick="App.hierSel.h=${h.id};App.editingHalaqohId=null;App.search='';window.render()" class="flex items-center justify-between p-3 rounded-xl border border-slate-200 cursor-pointer shadow-sm transition-all ${App.hierSel.h===h.id?'bg-blue-50 border-blue-300 dark:bg-[#15241e] dark:border-blue-500/50 scale-[1.02]':'bg-white hover:bg-slate-50 dark:bg-[#0a120f] dark:border-[#1a2e26]'}"><span class="text-sm font-bold ${App.hierSel.h===h.id?'text-blue-700 dark:text-blue-400':'text-slate-800 dark:text-white'}">${window.esc(h.name)}</span><div class="flex items-center gap-1.5"><button onclick="event.stopPropagation();App.editingHalaqohId=${h.id};window.render()" class="text-slate-400 hover:text-purple-500 bg-slate-50 dark:bg-[#15241e] rounded"><i class="ph-fill ph-pencil-simple"></i></button><button onclick="event.stopPropagation();window.confirmDelete('halaqoh', ${h.id})" class="text-slate-400 hover:text-red-500 bg-slate-50 dark:bg-[#15241e] rounded"><i class="ph-fill ph-trash"></i></button></div></div>`).join('');
+            html += hl.map(h=>`<div onclick="window.App.hierSel.h=${h.id};window.App.editingHalaqohId=null;window.App.search='';window.render(true)" class="flex items-center justify-between p-3 rounded-xl border border-slate-200 cursor-pointer shadow-sm transition-all ${window.App.hierSel.h===h.id?'bg-blue-50 border-blue-300 dark:bg-[#15241e] dark:border-blue-500/50 scale-[1.02]':'bg-white hover:bg-slate-50 dark:bg-[#0a120f] dark:border-[#1a2e26]'}"><span class="text-sm font-bold ${window.App.hierSel.h===h.id?'text-blue-700 dark:text-blue-400':'text-slate-800 dark:text-white'}">${window.esc(h.name)}</span><div class="flex items-center gap-1.5"><button onclick="event.stopPropagation();window.App.editingHalaqohId=${h.id};window.render(true)" class="text-slate-400 hover:text-purple-500 bg-slate-50 dark:bg-[#15241e] rounded"><i class="ph-fill ph-pencil-simple"></i></button><button onclick="event.stopPropagation();window.confirmDelete('halaqoh', ${h.id})" class="text-slate-400 hover:text-red-500 bg-slate-50 dark:bg-[#15241e] rounded"><i class="ph-fill ph-trash"></i></button></div></div>`).join('');
         }
         html += `</div>`;
-        if(App.hierSel.u && !sQ) {
-            let eh = App.editingHalaqohId ? App.halaqohs.find(x=>x.id===App.editingHalaqohId) : null;
-            html += `<div class="p-3 border-t border-slate-200 bg-slate-50 dark:bg-[#15241e] dark:border-[#1a2e26] shrink-0"><form onsubmit="event.preventDefault();let v=window.val('ih_n').trim();let id=${App.editingHalaqohId||'null'};if(v){if(id){let o=App.halaqohs.find(x=>x.id===id);if(o){o.name=v;window.dbSave('halaqohs',id,o);}App.editingHalaqohId=null}else{let nid=Date.now();window.dbSave('halaqohs',nid,{id:nid,ustadzId:${App.hierSel.u||'null'},name:v});}window.render()}" class="flex gap-2"><input type="text" id="ih_n" required placeholder="Nama Halaqoh..." value="${eh?eh.name:''}" class="input-std !text-xs">${eh?`<button type="button" onclick="App.editingHalaqohId=null;window.render()" class="btn-std !bg-slate-500 !w-10 !p-0 rounded-lg"><i class="ph-bold ph-x"></i></button>`:''}<button type="submit" class="btn-std ${eh?'!bg-purple-600':'!bg-blue-600'} !w-12 !p-0 rounded-lg flex items-center justify-center"><i class="ph-bold ${eh?'ph-check':'ph-plus'} text-lg"></i></button></form></div>`;
+        if(window.App.hierSel.u && !sQ) {
+            let eh = window.App.editingHalaqohId ? window.App.halaqohs.find(x=>x.id===window.App.editingHalaqohId) : null;
+            html += `<div class="p-3 border-t border-slate-200 bg-slate-50 dark:bg-[#15241e] dark:border-[#1a2e26] shrink-0"><form onsubmit="event.preventDefault();let v=window.val('ih_n').trim();let id=${window.App.editingHalaqohId||'null'};if(v){if(id){let o=window.App.halaqohs.find(x=>x.id===id);if(o){o.name=v;window.dbSave('halaqohs',id,o);}window.App.editingHalaqohId=null}else{let nid=Date.now();window.dbSave('halaqohs',nid,{id:nid,ustadzId:${window.App.hierSel.u||'null'},name:v});}window.render(true)}" class="flex gap-2"><input type="text" id="ih_n" required placeholder="Nama Halaqoh..." value="${eh?eh.name:''}" class="input-std !text-xs">${eh?`<button type="button" onclick="window.App.editingHalaqohId=null;window.render(true)" class="btn-std !bg-slate-500 !w-10 !p-0 rounded-lg"><i class="ph-bold ph-x"></i></button>`:''}<button type="submit" class="btn-std ${eh?'!bg-purple-600':'!bg-blue-600'} !w-12 !p-0 rounded-lg flex items-center justify-center"><i class="ph-bold ${eh?'ph-check':'ph-plus'} text-lg"></i></button></form></div>`;
         }
         html += `</div>`;
 
         // Col 3: Siswa
         html += `<div class="card-std !p-0 h-[400px] lg:h-full flex flex-col"><div class="p-3 md:p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center dark:bg-[#15241e] dark:border-[#1a2e26] shrink-0"><h3 class="font-bold text-slate-800 dark:text-white flex items-center gap-2 text-sm md:text-base"><i class="ph-fill ph-user-circle text-emerald-500 text-lg md:text-xl"></i> Siswa</h3><span class="text-[10px] md:text-xs font-bold bg-white border border-slate-200 px-2 py-0.5 rounded dark:bg-[#0a120f] dark:border-transparent dark:text-gray-400">${sl.length}</span></div><div class="flex-1 overflow-y-auto p-3 flex flex-col gap-2">`;
-        if(!App.hierSel.h && !sQ) html += `<div class="text-xs text-slate-400 font-bold uppercase tracking-wider text-center p-10 bg-slate-50 dark:bg-[#15241e] rounded-xl border border-dashed border-slate-200 dark:border-[#1a2e26]">Pilih Halaqoh<br>di sebelah kiri</div>`;
+        if(!window.App.hierSel.h && !sQ) html += `<div class="text-xs text-slate-400 font-bold uppercase tracking-wider text-center p-10 bg-slate-50 dark:bg-[#15241e] rounded-xl border border-dashed border-slate-200 dark:border-[#1a2e26]">Pilih Halaqoh<br>di sebelah kiri</div>`;
         else if(!sl.length) html += `<div class="text-xs text-slate-500 italic p-6 text-center bg-slate-50 dark:bg-[#15241e] rounded-xl border border-dashed border-slate-200 dark:border-[#1a2e26]">${sQ?'Tidak ditemukan.':'Belum ada Siswa.'}</div>`;
         else {
-            html += sl.map(es=>`<div class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-white shadow-sm dark:bg-[#0a120f] dark:border-[#1a2e26] transition-all hover:border-emerald-300"><div><span class="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-1.5"><i class="ph-fill ph-user-circle text-emerald-500"></i> ${window.esc(es.name)}</span><span class="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase tracking-wider ml-5 mt-0.5 inline-block"><i class="ph-fill ph-chalkboard"></i> Kelas ${window.esc(es.kelas)}</span></div><div class="flex items-center gap-1.5"><button onclick="App.editingSiswaId=${es.id};window.render()" class="p-1.5 text-slate-400 hover:text-blue-500 bg-slate-50 dark:bg-[#15241e] rounded"><i class="ph-fill ph-pencil-simple"></i></button><button onclick="window.confirmDelete('siswa', ${es.id})" class="p-1.5 text-slate-400 hover:text-red-500 bg-slate-50 dark:bg-[#15241e] rounded"><i class="ph-fill ph-trash"></i></button></div></div>`).join('');
+            html += sl.map(es=>`<div class="flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-white shadow-sm dark:bg-[#0a120f] dark:border-[#1a2e26] transition-all hover:border-emerald-300"><div><span class="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-1.5"><i class="ph-fill ph-user-circle text-emerald-500"></i> ${window.esc(es.name)}</span><span class="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase tracking-wider ml-5 mt-0.5 inline-block"><i class="ph-fill ph-chalkboard"></i> Kelas ${window.esc(es.kelas)}</span></div><div class="flex items-center gap-1.5"><button onclick="window.App.editingSiswaId=${es.id};window.render(true)" class="p-1.5 text-slate-400 hover:text-blue-500 bg-slate-50 dark:bg-[#15241e] rounded"><i class="ph-fill ph-pencil-simple"></i></button><button onclick="window.confirmDelete('siswa', ${es.id})" class="p-1.5 text-slate-400 hover:text-red-500 bg-slate-50 dark:bg-[#15241e] rounded"><i class="ph-fill ph-trash"></i></button></div></div>`).join('');
         }
         html += `</div>`;
-        if(App.hierSel.h && !sQ) {
-            let es = App.editingSiswaId ? App.siswas.find(x=>x.id===App.editingSiswaId) : null;
-            html += `<div class="p-3 border-t border-slate-200 bg-slate-50 dark:bg-[#15241e] dark:border-[#1a2e26] shrink-0"><form onsubmit="event.preventDefault();let n=window.val('is_n').trim(),k=window.val('is_k').trim();let id=${App.editingSiswaId||'null'};if(n&&k){if(id){let o=App.siswas.find(y=>y.id===id);if(o){o.name=n;o.kelas=k;window.dbSave('siswas',id,o);}App.editingSiswaId=null}else{let nid=Date.now();window.dbSave('siswas',nid,{id:nid,halaqohId:${App.hierSel.h||'null'},name:n,kelas:k});}window.render()}" class="flex flex-col gap-2"><input type="text" id="is_n" required placeholder="Nama Siswa..." value="${es?es.name:''}" class="input-std !text-xs"><div class="flex gap-2"><input type="text" id="is_k" required placeholder="Kelas..." value="${es?es.kelas:''}" class="input-std !text-xs w-2/3">${es?`<button type="button" onclick="App.editingSiswaId=null;window.render()" class="btn-std !bg-slate-500 !w-10 !p-0 rounded-lg"><i class="ph-bold ph-x"></i></button>`:''}<button type="submit" class="btn-std ${es?'!bg-blue-600':'!bg-emerald-500'} flex-1 !p-0 rounded-lg flex items-center justify-center"><i class="ph-bold ${es?'ph-check':'ph-plus'} text-lg"></i></button></div></form></div>`;
+        if(window.App.hierSel.h && !sQ) {
+            let es = window.App.editingSiswaId ? window.App.siswas.find(x=>x.id===window.App.editingSiswaId) : null;
+            html += `<div class="p-3 border-t border-slate-200 bg-slate-50 dark:bg-[#15241e] dark:border-[#1a2e26] shrink-0"><form onsubmit="event.preventDefault();let n=window.val('is_n').trim(),k=window.val('is_k').trim();let id=${window.App.editingSiswaId||'null'};if(n&&k){if(id){let o=window.App.siswas.find(y=>y.id===id);if(o){o.name=n;o.kelas=k;window.dbSave('siswas',id,o);}window.App.editingSiswaId=null}else{let nid=Date.now();window.dbSave('siswas',nid,{id:nid,halaqohId:${window.App.hierSel.h||'null'},name:n,kelas:k});}window.render(true)}" class="flex flex-col gap-2"><input type="text" id="is_n" required placeholder="Nama Siswa..." value="${es?es.name:''}" class="input-std !text-xs"><div class="flex gap-2"><input type="text" id="is_k" required placeholder="Kelas..." value="${es?es.kelas:''}" class="input-std !text-xs w-2/3">${es?`<button type="button" onclick="window.App.editingSiswaId=null;window.render(true)" class="btn-std !bg-slate-500 !w-10 !p-0 rounded-lg"><i class="ph-bold ph-x"></i></button>`:''}<button type="submit" class="btn-std ${es?'!bg-blue-600':'!bg-emerald-500'} flex-1 !p-0 rounded-lg flex items-center justify-center"><i class="ph-bold ${es?'ph-check':'ph-plus'} text-lg"></i></button></div></form></div>`;
         }
         html += `</div></div></div></div>`;
       }
       
       html += `</div>`; // End main view container
-
-      // FOOTER
+      
       html += `<footer class="shrink-0 py-3 text-center text-[10px] md:text-xs font-medium text-slate-400 dark:text-slate-500 bg-white dark:bg-[#0a120f] border-t border-slate-200 dark:border-[#1a2e26] transition-colors z-40 relative">Copyright &copy; 2026 Juman Jayyidin</footer>`;
 
-      // MODALS
-      if(App.modal==='login') {
-          html += `<div class="modal-overlay !flex"><div class="modal-box text-center"><div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 dark:bg-emerald-900/30"><i class="ph-fill ph-lock-key text-3xl"></i></div><h2 class="text-xl font-bold mb-4 dark:text-white">Akses Admin</h2>${App.loginError ? `<div class="mb-4 text-[11px] font-bold text-red-500 bg-red-50 p-3 rounded-lg border border-red-200 dark:bg-red-900/20 dark:border-transparent animate-pulse">${App.loginError}</div>` : ''}<input type="text" id="m_u" onkeydown="if(event.key==='Enter')window.getEl('m_btn').click()" class="input-std mb-3 text-center" placeholder="Username"><input type="password" id="m_p" onkeydown="if(event.key==='Enter')window.getEl('m_btn').click()" class="input-std mb-4 text-center tracking-widest" placeholder="Password"><button id="m_btn" onclick="window.handleAdminLogin(window.val('m_u'), window.val('m_p'))" class="btn-std mb-2">Login</button><button onclick="App.modal=null;App.loginError='';window.render()" class="w-full py-3 text-slate-500 font-bold hover:text-slate-800 dark:text-gray-400 dark:hover:text-white transition">Batal</button></div></div>`;
-      } else if(App.modal==='juz') {
-          let j = App.modalData ? App.juzs.find(x=>x.id===App.modalData) : null;
-          html += `<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">${j?'Edit':'Tambah'} Juz</h2><button onclick="App.modal=null;window.render()" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let id=${App.modalData||'null'};let v=window.val('m_v');if(id){let o=App.juzs.find(x=>x.id===id);if(o){o.name=v;window.dbSave('juzs',id,o);}}else{let nid=Date.now();window.dbSave('juzs',nid,{id:nid,name:v});App.actJuzId=nid;}App.modal=null;window.render()"><input type="text" id="m_v" required value="${j?window.esc(j.name):''}" class="input-std mb-6" placeholder="Nama Juz"><button type="submit" class="btn-std">Simpan</button></form></div></div>`;
-      } else if(App.modal==='surah') {
-          let s = App.modalData ? App.surahs.find(x=>x.id===App.modalData) : null;
-          html += `<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">${s?'Edit':'Tambah'} Surah</h2><button onclick="App.modal=null;window.render()" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let id=${App.modalData||'null'};let t=window.val('m_t'),v=window.val('m_v');v=window.extractVideoId(v)||v||'';if(id){let o=App.surahs.find(x=>x.id===id);if(o){o.title=t;o.videoId=v;window.dbSave('surahs',id,o);}}else{let nid=Date.now();window.dbSave('surahs',nid,{id:nid,juzId:App.actJuzId,title:t,videoId:v});let lid=Date.now()+1;window.dbSave('levels',lid,{id:lid,surahId:nid,name:'Level 1',active:true});}App.modal=null;window.render()"><select id="m_t" required class="input-std cursor-pointer mb-4">${s?`<option value="${window.esc(s.title)}" selected>${window.esc(s.title)}</option>`:'<option value="" disabled selected>Pilih Surah</option>'}${Q_SURAHS.map(q=>`<option value="Surah ${q.name}">${q.no}. Surah ${q.name}</option>`).join('')}</select><input type="text" id="m_v" value="${s&&s.videoId?`https://youtu.be/${s.videoId}`:''}" placeholder="Link YouTube (Opsional)" class="input-std mb-6"><button type="submit" class="btn-std">Simpan</button></form></div></div>`;
-      } else if(App.modal==='video') {
-          let s = App.surahs.find(x=>x.id===App.actSurahId);
-          html += `<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">Ganti Video</h2><button onclick="App.modal=null;window.render()" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let sid=${App.actSurahId||'null'};let v=window.val('m_v');let id=window.extractVideoId(v)||v;if(id&&id.length>=10){let o=App.surahs.find(x=>x.id===sid);if(o){o.videoId=id;window.dbSave('surahs',sid,o);}if(App.yt&&typeof App.yt.loadVideoById==='function'){App.yt.loadVideoById(id);App.isPlay=false;}App.modal=null;window.render()}else window.showAlert('Tautan URL YouTube tidak valid!')"><input type="text" id="m_v" required value="${s.videoId?`https://youtu.be/${s.videoId}`:''}" class="input-std mb-6" placeholder="Paste link YouTube di sini..."><button type="submit" class="btn-std">Simpan</button></form></div></div>`;
-      } else if(App.modal==='level') {
-          html += `<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">Level Baru</h2><button onclick="App.modal=null;window.render()" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let nid=Date.now();window.dbSave('levels',nid,{id:nid,surahId:${App.actSurahId||'null'},name:window.val('m_v'),active:false});App.modal=null;window.render()"><input type="text" id="m_v" required class="input-std mb-6" placeholder="Contoh: Level 3: Muraja'ah"><button type="submit" class="btn-std">Simpan</button></form></div></div>`;
-      } else if(App.modal==='segment') {
-          let sg = App.modalData ? App.segs.find(x=>x.id===App.modalData) : null;
-          html += `<div class="modal-overlay !flex"><div class="modal-box !w-full sm:!max-w-[550px] !p-0 overflow-hidden flex flex-col h-[90vh] sm:h-auto"><div class="p-4 md:p-6 border-b border-slate-100 dark:border-[#1a2e26] flex justify-between items-center shrink-0 bg-white dark:bg-[#15241e]"><h2 class="text-lg md:text-xl font-bold dark:text-white">${sg?'Edit':'Tambah'} Segmen</h2><button onclick="App.modal=null;window.render()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white"><i class="ph ph-x text-xl"></i></button></div><div class="p-4 md:p-6 overflow-y-auto flex-1"><div id="segment-loading" class="hidden text-center py-10 text-emerald-500 font-bold animate-pulse">Memuat data ayat Al-Qur'an...</div><form id="sf" onsubmit="event.preventDefault();let id=${App.modalData||'null'};let sm=window.val('sm'),ss=window.val('ss'),em=window.val('em'),es=window.val('es');let start=parseInt(sm||0)*60+parseInt(ss||0),end=parseInt(em||0)*60+parseInt(es||0);let t=window.val('st'),a=window.val('sa'),tr=window.val('str');if(id){let o=App.segs.find(x=>x.id===id);if(o){o.title=t;o.start=start;o.end=end;o.arabic=a;o.translation=tr;window.dbSave('segs',id,o);}}else{let nid=Date.now();window.dbSave('segs',nid,{id:nid,surahId:${App.actSurahId||'null'},levelId:${window.getLvl()||'null'},title:t,start:start,end:end,arabic:a,translation:tr});}App.modal=null;window.render()"><div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mb-4"><div><label class="block text-[10px] text-emerald-600 font-bold mb-1">AWAL AYAT</label><select id="seg-start-ayat" onchange="window.autoFillAyat()" class="input-std cursor-pointer"></select></div><div><label class="block text-[10px] text-emerald-600 font-bold mb-1">AKHIR AYAT</label><select id="seg-end-ayat" onchange="window.autoFillAyat()" class="input-std cursor-pointer"></select></div></div><div class="mb-4"><label class="block text-[10px] text-emerald-600 font-bold mb-1">JUDUL</label><input type="text" id="st" required value="${sg?window.esc(sg.title):''}" class="input-std bg-slate-100 dark:bg-[#1a2e26] pointer-events-none text-slate-500" readonly></div><div class="mb-4"><label class="block text-[10px] text-slate-500 font-bold mb-1">TEKS ARAB</label><textarea id="sa" rows="4" dir="rtl" class="input-std font-arabic text-xl">${sg?window.esc(sg.arabic):''}</textarea></div><div class="mb-4"><label class="block text-[10px] text-slate-500 font-bold mb-1">TERJEMAH</label><textarea id="str" rows="2" class="input-std text-xs md:text-sm">${sg?window.esc(sg.translation):''}</textarea></div><div class="grid grid-cols-2 gap-3 md:gap-4"><div class="bg-slate-50 p-3 md:p-4 rounded-xl dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26]"><label class="block text-[10px] md:text-xs text-slate-500 font-bold text-center mb-2">MULAI (M:D)</label><div class="flex justify-center items-center gap-1 md:gap-2"><input type="number" id="sm" value="${sg?Math.floor(sg.start/60):'0'}" class="input-std !w-12 md:!w-16 !p-1.5 md:!p-2.5 text-center"><span class="font-bold">:</span><input type="number" id="ss" value="${sg?sg.start%60:'0'}" class="input-std !w-12 md:!w-16 !p-1.5 md:!p-2.5 text-center"></div></div><div class="bg-slate-50 p-3 md:p-4 rounded-xl dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26]"><label class="block text-[10px] md:text-xs text-slate-500 font-bold text-center mb-2">AKHIR (M:D)</label><div class="flex justify-center items-center gap-1 md:gap-2"><input type="number" id="em" value="${sg?Math.floor(sg.end/60):'0'}" class="input-std !w-12 md:!w-16 !p-1.5 md:!p-2.5 text-center"><span class="font-bold">:</span><input type="number" id="es" value="${sg?sg.end%60:'0'}" class="input-std !w-12 md:!w-16 !p-1.5 md:!p-2.5 text-center"></div></div></div></form></div><div class="p-4 md:p-6 border-t border-slate-100 dark:border-[#1a2e26] shrink-0 bg-white dark:bg-[#15241e]"><button type="submit" form="sf" class="btn-std w-full">Simpan Segmen</button></div></div></div>`;
-      } else if(App.modal==='grade') {
-          let sb = App.subs.find(x=>x.id===App.modalData);
-          let btns = '';
-          ['A+','A','B+','B','C'].forEach(g=>{
-              btns += `<button onclick="window.submitGrade(${sb.id}, '${g}')" class="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 font-bold hover:bg-emerald-500 hover:text-white dark:bg-[#0a120f] dark:border-[#1a2e26] dark:text-white transition shadow-sm">${g}</button>`;
-          });
-          html += `<div class="modal-overlay !flex"><div class="modal-box text-center"><div class="w-12 h-12 md:w-14 md:h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3"><i class="ph-fill ph-star text-2xl md:text-3xl"></i></div><h2 class="text-lg md:text-xl font-bold mb-1 dark:text-white">Beri Nilai</h2><p class="text-xs md:text-sm text-emerald-600 font-bold mb-4 md:mb-6">${window.getSName(sb.siswaId)}</p><div class="text-left mb-4"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Teks:</label><textarea id="gn" class="input-std" rows="2">${window.esc(sb.note||'')}</textarea></div>`;
+      // --- LOGIKA UPDATE LAYAR: FULL RENDER VS SURGICAL UPDATE ---
+      // Jika ustadz sedang memutar video, kita JANGAN hancurkan layar penuh!
+      // Kita hanya update bagian pinggirnya saja (Surgical Update)
+      let isForced = arguments[0] === true;
+      let pWrap = window.getEl('persistent-player-wrapper');
+      
+      if (window.App.view === 'player' && pWrap && pWrap.parentNode.id === 'player-destination' && !isForced && !window.App.modal) {
+          window.updatePlayerDOM();
+      } else {
+          // Full Render
+          window.getEl('app-root').innerHTML = html;
           
-          let audioHTML = App.currentGradingAudioUrl ? `<audio controls class="w-full h-8 md:h-10 rounded-full" src="${App.currentGradingAudioUrl}"></audio>` : `<span class="text-[10px] md:text-xs text-slate-500 dark:text-gray-400 truncate">${App.isGradingRecording ? 'Merekam...' : 'Ketuk Mic untuk merekam suara'}</span>`;
-          let deleteBtn = App.currentGradingAudioUrl ? `<button onclick="window.deleteGradingAudio()" class="w-8 h-8 rounded-full bg-red-100 text-red-600 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all shadow-sm shrink-0"><i class="ph-bold ph-trash"></i></button>` : '';
-          html += `<div class="text-left mb-6"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Suara (Opsional):</label><div class="flex items-center gap-3 bg-slate-50 dark:bg-[#0a120f] border border-slate-200 dark:border-[#1a2e26] p-2 md:p-3 rounded-xl"><button onclick="window.toggleGradingRecord()" class="w-8 h-8 md:w-10 md:h-10 rounded-full ${App.isGradingRecording ? 'bg-red-500 text-white animate-pulse shadow-lg' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400'} flex items-center justify-center transition-all shrink-0"><i class="ph-fill ${App.isGradingRecording ? 'ph-stop' : 'ph-microphone'} text-lg md:text-xl"></i></button><div class="flex-1 flex items-center gap-2 overflow-hidden">${audioHTML}</div>${deleteBtn}</div></div>`;
-
-          html += `<div class="flex justify-center gap-1.5 md:gap-2 mb-4 md:mb-5">${btns}</div><button onclick="window.submitGrade(${sb.id}, 'repeat')" class="w-full py-2.5 md:py-3 bg-red-50 text-red-600 border border-red-100 rounded-xl font-bold text-xs md:text-sm mb-3 md:mb-4 hover:bg-red-500 hover:text-white transition dark:bg-red-900/20 dark:border-transparent">Minta Ulangi</button><button onclick="App.currentGradingAudioUrl=null;App.modal=null;window.render()" class="w-full py-2 text-slate-500 font-bold text-xs md:text-sm hover:text-slate-800 transition">Batal</button></div></div>`;
+          if(window.App.view === 'player') {
+              let pDest = window.getEl('player-destination');
+              if (pWrap && pDest) {
+                  pWrap.classList.remove('hidden');
+                  pWrap.classList.add('absolute', 'inset-0', 'pointer-events-none', 'opacity-50', 'z-0');
+                  if (pWrap.parentNode !== pDest) {
+                      pDest.appendChild(pWrap);
+                  }
+                  if(!window.App.yt) { window.initYTPlayer(); }
+              }
+          } else {
+              if(pWrap && pWrap.parentNode !== document.body) {
+                  pWrap.classList.add('hidden');
+                  pWrap.classList.remove('absolute', 'inset-0', 'pointer-events-none', 'opacity-50', 'z-0');
+                  document.body.appendChild(pWrap); // Kembalikan ke body agar aman
+              }
+          }
       }
 
-      // CUSTOM DIALOG PINTAR FRIDAY
-      let dialogHtml = '';
-      if (App.customDialog && App.customDialog.show) {
-          let isConf = App.customDialog.type === 'confirm';
-          dialogHtml = `
+      // --- KEMBALIKAN KURSOR (Untuk Form/Search) ---
+      if (focusedId) {
+          let el = document.getElementById(focusedId);
+          if (el) {
+              el.focus();
+              try { el.setSelectionRange(selStart, selEnd); } catch(e){}
+          }
+      }
+
+      // --- PENGGAMBARAN MODAL (TERPISAH DARI APLIKASI UTAMA) ---
+      let modalHtml = '';
+      if(window.App.modal==='login') {
+          modalHtml += `<div class="modal-overlay !flex"><div class="modal-box text-center"><div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 dark:bg-emerald-900/30"><i class="ph-fill ph-lock-key text-3xl"></i></div><h2 class="text-xl font-bold mb-4 dark:text-white">Akses Admin</h2>${window.App.loginError ? `<div class="mb-4 text-[11px] font-bold text-red-500 bg-red-50 p-3 rounded-lg border border-red-200 dark:bg-red-900/20 dark:border-transparent animate-pulse">${window.App.loginError}</div>` : ''}<input type="text" id="m_u" onkeydown="if(event.key==='Enter')window.getEl('m_btn').click()" class="input-std mb-3 text-center" placeholder="Username"><input type="password" id="m_p" onkeydown="if(event.key==='Enter')window.getEl('m_btn').click()" class="input-std mb-4 text-center tracking-widest" placeholder="Password"><button id="m_btn" onclick="window.handleAdminLogin(window.val('m_u'), window.val('m_p'))" class="btn-std mb-2">Login</button><button onclick="window.App.modal=null;window.App.loginError='';window.render(true)" class="w-full py-3 text-slate-500 font-bold hover:text-slate-800 dark:text-gray-400 dark:hover:text-white transition">Batal</button></div></div>`;
+      } else if(window.App.modal==='juz') {
+          let j = window.App.modalData ? window.App.juzs.find(x=>x.id===window.App.modalData) : null;
+          modalHtml += `<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">${j?'Edit':'Tambah'} Juz</h2><button onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let id=${window.App.modalData||'null'};let v=window.val('m_v');if(id){let o=window.App.juzs.find(x=>x.id===id);if(o){o.name=v;window.dbSave('juzs',id,o);}}else{let nid=Date.now();window.dbSave('juzs',nid,{id:nid,name:v});window.App.actJuzId=nid;}window.App.modal=null;window.render(true)"><input type="text" id="m_v" required value="${j?window.esc(j.name):''}" class="input-std mb-6" placeholder="Nama Juz"><button type="submit" class="btn-std">Simpan</button></form></div></div>`;
+      } else if(window.App.modal==='surah') {
+          let s = window.App.modalData ? window.App.surahs.find(x=>x.id===window.App.modalData) : null;
+          modalHtml += `<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">${s?'Edit':'Tambah'} Surah</h2><button onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let id=${window.App.modalData||'null'};let t=window.val('m_t'),v=window.val('m_v');v=window.extractVideoId(v)||v||'';if(id){let o=window.App.surahs.find(x=>x.id===id);if(o){o.title=t;o.videoId=v;window.dbSave('surahs',id,o);}}else{let nid=Date.now();window.dbSave('surahs',nid,{id:nid,juzId:window.App.actJuzId,title:t,videoId:v});let lid=Date.now()+1;window.dbSave('levels',lid,{id:lid,surahId:nid,name:'Level 1',active:true});}window.App.modal=null;window.render(true)"><select id="m_t" required class="input-std cursor-pointer mb-4">${s?`<option value="${window.esc(s.title)}" selected>${window.esc(s.title)}</option>`:'<option value="" disabled selected>Pilih Surah</option>'}${Q_SURAHS.map(q=>`<option value="Surah ${q.name}">${q.no}. Surah ${q.name}</option>`).join('')}</select><input type="text" id="m_v" value="${s&&s.videoId?`https://youtu.be/${s.videoId}`:''}" placeholder="Link YouTube (Opsional)" class="input-std mb-6"><button type="submit" class="btn-std">Simpan</button></form></div></div>`;
+      } else if(window.App.modal==='video') {
+          let s = window.App.surahs.find(x=>x.id===window.App.actSurahId);
+          modalHtml += `<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">Ganti Video</h2><button onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let sid=${window.App.actSurahId||'null'};let v=window.val('m_v');let id=window.extractVideoId(v)||v;if(id&&id.length>=10){let o=window.App.surahs.find(x=>x.id===sid);if(o){o.videoId=id;window.dbSave('surahs',sid,o);}if(window.App.yt&&typeof window.App.yt.loadVideoById==='function'){window.App.yt.loadVideoById(id);window.App.isPlay=false;}window.App.modal=null;window.render(true)}else window.showAlert('Tautan URL YouTube tidak valid!')"><input type="text" id="m_v" required value="${s.videoId?`https://youtu.be/${s.videoId}`:''}" class="input-std mb-6" placeholder="Paste link YouTube di sini..."><button type="submit" class="btn-std">Simpan</button></form></div></div>`;
+      } else if(window.App.modal==='level') {
+          modalHtml += `<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">Level Baru</h2><button onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let nid=Date.now();window.dbSave('levels',nid,{id:nid,surahId:${window.App.actSurahId||'null'},name:window.val('m_v'),active:false});window.App.modal=null;window.render(true)"><input type="text" id="m_v" required class="input-std mb-6" placeholder="Contoh: Level 3: Muraja'ah"><button type="submit" class="btn-std">Simpan</button></form></div></div>`;
+      } else if(window.App.modal==='segment') {
+          let sg = window.App.modalData ? window.App.segs.find(x=>x.id===window.App.modalData) : null;
+          modalHtml += `<div class="modal-overlay !flex"><div class="modal-box !w-full sm:!max-w-[550px] !p-0 overflow-hidden flex flex-col h-[90vh] sm:h-auto"><div class="p-4 md:p-6 border-b border-slate-100 dark:border-[#1a2e26] flex justify-between items-center shrink-0 bg-white dark:bg-[#15241e]"><h2 class="text-lg md:text-xl font-bold dark:text-white">${sg?'Edit':'Tambah'} Segmen</h2><button onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white"><i class="ph ph-x text-xl"></i></button></div><div class="p-4 md:p-6 overflow-y-auto flex-1"><div id="segment-loading" class="hidden text-center py-10 text-emerald-500 font-bold animate-pulse">Memuat data ayat Al-Qur'an...</div><form id="sf" onsubmit="event.preventDefault();let id=${window.App.modalData||'null'};let sm=window.val('sm'),ss=window.val('ss'),em=window.val('em'),es=window.val('es');let start=parseInt(sm||0)*60+parseInt(ss||0),end=parseInt(em||0)*60+parseInt(es||0);let t=window.val('st'),a=window.val('sa'),tr=window.val('str');if(id){let o=window.App.segs.find(x=>x.id===id);if(o){o.title=t;o.start=start;o.end=end;o.arabic=a;o.translation=tr;window.dbSave('segs',id,o);}}else{let nid=Date.now();window.dbSave('segs',nid,{id:nid,surahId:${window.App.actSurahId||'null'},levelId:${window.getLvl()||'null'},title:t,start:start,end:end,arabic:a,translation:tr});}window.App.modal=null;window.render(true)"><div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mb-4"><div><label class="block text-[10px] text-emerald-600 font-bold mb-1">AWAL AYAT</label><select id="seg-start-ayat" onchange="window.autoFillAyat()" class="input-std cursor-pointer"></select></div><div><label class="block text-[10px] text-emerald-600 font-bold mb-1">AKHIR AYAT</label><select id="seg-end-ayat" onchange="window.autoFillAyat()" class="input-std cursor-pointer"></select></div></div><div class="mb-4"><label class="block text-[10px] text-emerald-600 font-bold mb-1">JUDUL</label><input type="text" id="st" required value="${sg?window.esc(sg.title):''}" class="input-std bg-slate-100 dark:bg-[#1a2e26] pointer-events-none text-slate-500" readonly></div><div class="mb-4"><label class="block text-[10px] text-slate-500 font-bold mb-1">TEKS ARAB</label><textarea id="sa" rows="4" dir="rtl" class="input-std font-arabic text-xl">${sg?window.esc(sg.arabic):''}</textarea></div><div class="mb-4"><label class="block text-[10px] text-slate-500 font-bold mb-1">TERJEMAH</label><textarea id="str" rows="2" class="input-std text-xs md:text-sm">${sg?window.esc(sg.translation):''}</textarea></div><div class="grid grid-cols-2 gap-3 md:gap-4"><div class="bg-slate-50 p-3 md:p-4 rounded-xl dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26]"><label class="block text-[10px] md:text-xs text-slate-500 font-bold text-center mb-2">MULAI (M:D)</label><div class="flex justify-center items-center gap-1 md:gap-2"><input type="number" id="sm" value="${sg?Math.floor(sg.start/60):'0'}" class="input-std !w-12 md:!w-16 !p-1.5 md:!p-2.5 text-center"><span class="font-bold">:</span><input type="number" id="ss" value="${sg?sg.start%60:'0'}" class="input-std !w-12 md:!w-16 !p-1.5 md:!p-2.5 text-center"></div></div><div class="bg-slate-50 p-3 md:p-4 rounded-xl dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26]"><label class="block text-[10px] md:text-xs text-slate-500 font-bold text-center mb-2">AKHIR (M:D)</label><div class="flex justify-center items-center gap-1 md:gap-2"><input type="number" id="em" value="${sg?Math.floor(sg.end/60):'0'}" class="input-std !w-12 md:!w-16 !p-1.5 md:!p-2.5 text-center"><span class="font-bold">:</span><input type="number" id="es" value="${sg?sg.end%60:'0'}" class="input-std !w-12 md:!w-16 !p-1.5 md:!p-2.5 text-center"></div></div></div></form></div><div class="p-4 md:p-6 border-t border-slate-100 dark:border-[#1a2e26] shrink-0 bg-white dark:bg-[#15241e]"><button type="submit" form="sf" class="btn-std w-full">Simpan Segmen</button></div></div></div>`;
+      } else if(window.App.modal==='grade') {
+          let sb = window.App.subs.find(x=>x.id===window.App.modalData);
+          let btns = '';
+          ['A+','A','B+','B','C'].forEach(g=>{
+              btns += `<button onclick="window.submitGrade(${sb.id}, '${g}')" class="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 font-bold hover:bg-emerald-50 hover:text-white dark:bg-[#0a120f] dark:border-[#1a2e26] dark:text-white transition shadow-sm">${g}</button>`;
+          });
+          modalHtml += `<div class="modal-overlay !flex"><div class="modal-box text-center"><div class="w-12 h-12 md:w-14 md:h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3"><i class="ph-fill ph-star text-2xl md:text-3xl"></i></div><h2 class="text-lg md:text-xl font-bold mb-1 dark:text-white">Beri Nilai</h2><p class="text-xs md:text-sm text-emerald-600 font-bold mb-4 md:mb-6">${window.getSName(sb.siswaId)}</p><div class="text-left mb-4"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Teks:</label><textarea id="gn" class="input-std" rows="2">${window.esc(sb.note||'')}</textarea></div>`;
+          
+          let audioHTML = window.App.currentGradingAudioUrl ? `<audio controls class="w-full h-8 md:h-10 rounded-full" src="${window.App.currentGradingAudioUrl}"></audio>` : `<span class="text-[10px] md:text-xs text-slate-500 dark:text-gray-400 truncate">${window.App.isGradingRecording ? 'Merekam...' : 'Ketuk Mic untuk merekam suara'}</span>`;
+          let deleteBtn = window.App.currentGradingAudioUrl ? `<button onclick="window.deleteGradingAudio()" class="w-8 h-8 rounded-full bg-red-100 text-red-600 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all shadow-sm shrink-0"><i class="ph-bold ph-trash"></i></button>` : '';
+          modalHtml += `<div class="text-left mb-6"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Suara (Opsional):</label><div class="flex items-center gap-3 bg-slate-50 dark:bg-[#0a120f] border border-slate-200 dark:border-[#1a2e26] p-2 md:p-3 rounded-xl"><button onclick="window.toggleGradingRecord()" class="w-8 h-8 md:w-10 md:h-10 rounded-full ${window.App.isGradingRecording ? 'bg-red-500 text-white animate-pulse shadow-lg' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400'} flex items-center justify-center transition-all shrink-0"><i class="ph-fill ${window.App.isGradingRecording ? 'ph-stop' : 'ph-microphone'} text-lg md:text-xl"></i></button><div class="flex-1 flex items-center gap-2 overflow-hidden">${audioHTML}</div>${deleteBtn}</div></div>`;
+
+          modalHtml += `<div class="flex justify-center gap-1.5 md:gap-2 mb-4 md:mb-5">${btns}</div><button onclick="window.submitGrade(${sb.id}, 'repeat')" class="w-full py-2.5 md:py-3 bg-red-50 text-red-600 border border-red-100 rounded-xl font-bold text-xs md:text-sm mb-3 md:mb-4 hover:bg-red-500 hover:text-white transition dark:bg-red-900/20 dark:border-transparent">Minta Ulangi</button><button onclick="window.App.currentGradingAudioUrl=null;window.App.modal=null;window.render(true)" class="w-full py-2 text-slate-500 font-bold text-xs md:text-sm hover:text-slate-800 transition">Batal</button></div></div>`;
+      }
+
+      if (window.App.customDialog && window.App.customDialog.show) {
+          let isConf = window.App.customDialog.type === 'confirm';
+          modalHtml += `
           <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
               <div class="bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-3xl w-full max-w-sm p-6 shadow-2xl text-center">
                   <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${isConf ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400' : 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400'}">
                       <i class="ph-fill ${isConf ? 'ph-warning-circle' : 'ph-info'} text-3xl"></i>
                   </div>
                   <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-2">${isConf ? 'Konfirmasi' : 'Informasi'}</h3>
-                  <p class="text-sm text-slate-500 dark:text-gray-300 mb-6">${App.customDialog.message}</p>
+                  <p class="text-sm text-slate-500 dark:text-gray-300 mb-6">${window.App.customDialog.message}</p>
                   <div class="flex gap-3 justify-center">
                       ${isConf ? `<button onclick="window.closeDialog()" class="flex-1 py-3 rounded-xl font-bold text-sm bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-[#0a120f] dark:text-gray-400 dark:hover:bg-[#1a2e26] transition">Batal</button>` : ''}
-                      <button onclick="if(App.customDialog.onConfirm) App.customDialog.onConfirm(); window.closeDialog();" class="flex-1 py-3 rounded-xl font-bold text-sm text-white transition ${isConf ? 'bg-red-500 hover:bg-red-600 shadow-md shadow-red-500/20' : 'bg-blue-500 hover:bg-blue-600 shadow-md shadow-blue-500/20'}">${isConf ? 'Ya, Lanjutkan' : 'Mengerti'}</button>
+                      <button onclick="if(window.App.customDialog.onConfirm) window.App.customDialog.onConfirm(); window.closeDialog();" class="flex-1 py-3 rounded-xl font-bold text-sm text-white transition ${isConf ? 'bg-red-500 hover:bg-red-600 shadow-md shadow-red-500/20' : 'bg-blue-500 hover:bg-blue-600 shadow-md shadow-blue-500/20'}">${isConf ? 'Ya, Lanjutkan' : 'Mengerti'}</button>
                   </div>
               </div>
           </div>`;
       }
-      html += dialogHtml;
       
-      window.getEl('app-root').innerHTML = html;
-      
-      if (focusedId) {
-          let el = document.getElementById(focusedId);
-          if (el) {
-              el.focus();
-              if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-                  try { el.setSelectionRange(selStart, selEnd); } catch(e){}
-              }
-          }
-      }
-      
-      // Mengurus Penempatan YouTube Iframe agar tak hancur saat re-render
-      if(App.view === 'player') {
-          let pWrap = window.getEl('persistent-player-wrapper');
-          let pDest = window.getEl('player-destination');
-          if (pWrap && pDest) {
-              pWrap.classList.remove('hidden');
-              pWrap.classList.add('absolute', 'inset-0', 'pointer-events-none', 'opacity-50', 'z-0');
-              if (pWrap.parentNode !== pDest) {
-                  // Hanya pindahkan jika belum ada di sana untuk mencegah iframe reload otomatis
-                  pDest.appendChild(pWrap);
-              }
-              if(!App.yt) { window.initYTPlayer(); }
-          }
-      } else {
-          let pWrap = window.getEl('persistent-player-wrapper');
-          if(pWrap && pWrap.parentNode !== document.body) {
-              pWrap.classList.add('hidden');
-              pWrap.classList.remove('absolute', 'inset-0', 'pointer-events-none', 'opacity-50', 'z-0');
-              document.body.appendChild(pWrap); // Kembalikan ke body agar aman
-          }
-      }
+      window.getEl('modal-root').innerHTML = modalHtml;
+    };
+
+    window.updatePlayerDOM = function() {
+        const isAdmin = window.App.adminLvl > 0;
+        const ml = window.App.levels.filter(l=>l.surahId===window.App.actSurahId);
+        let allSgs = window.getSgs();
+        const sgs = window.App.search ? allSgs.filter(s => s.title.toLowerCase().includes(window.App.search.toLowerCase()) || (s.translation && s.translation.toLowerCase().includes(window.App.search.toLowerCase()))) : allSgs;
+        const cSg = window.getActSeg();
+        const td = allSgs.length ? allSgs[allSgs.length-1].end : 1;
+
+        let lvlsBox = window.getEl('levels-box');
+        if (lvlsBox) {
+            lvlsBox.innerHTML = ml.map((l,i)=>`<button onclick="window.App.levels.forEach(x=>{if(x.surahId===window.App.actSurahId){let a=(x.id===${l.id}); if(x.active!==a){x.active=a;window.dbSave('levels',x.id,x);}}});window.App.actSegId=null;window.render(true)" class="flex items-center gap-2 lg:gap-3 p-2 lg:p-3 rounded-xl shrink-0 whitespace-nowrap transition ${l.active?'bg-emerald-500 text-white shadow-md shadow-emerald-500/20':'bg-slate-50 border border-slate-200 dark:bg-[#15241e] dark:border-[#1a2e26] dark:text-gray-300 hover:border-emerald-300'}"><div class="w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${l.active?'bg-white/20':'bg-white dark:bg-[#0a120f] text-slate-500'}">${i+1}</div><span class="text-sm font-bold lg:font-medium">${window.esc(l.name)}</span>${isAdmin?`<div onclick="event.stopPropagation();window.confirmDelete('level', ${l.id})" class="text-red-300 hover:text-red-500 hidden lg:block ml-auto"><i class="ph-bold ph-trash"></i></div>`:''}</button>`).join('') + (isAdmin?`<button onclick="window.App.modal='level';window.render()" class="lg:hidden flex items-center gap-1 px-4 py-2 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 text-emerald-600 shrink-0 text-sm font-bold"><i class="ph-bold ph-plus"></i> Baru</button>`:'');
+        }
+
+        let segsBox = window.getEl('segs-box');
+        if (segsBox) {
+            segsBox.innerHTML = sgs.length ? sgs.map(s=>`
+                <div data-id="${s.id}" onclick="window.selectSeg(${s.id})" class="seg-item p-3 lg:p-4 rounded-xl border cursor-pointer transition shadow-sm ${s.id===window.App.actSegId?'bg-emerald-50 border-emerald-300 dark:bg-[#152b22] dark:border-emerald-500/50':'bg-white border-slate-200 hover:border-emerald-300 dark:bg-[#15241e] dark:border-[#1a2e26]'}">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="seg-title text-sm lg:text-base font-bold ${s.id===window.App.actSegId?'text-emerald-800 dark:text-white':'text-slate-700 dark:text-gray-300'}">${window.esc(s.title)}</h3>
+                            <p class="text-[10px] lg:text-xs text-emerald-600 font-mono mt-0.5 lg:mt-1"><i class="ph ph-clock"></i> ${window.fmtT(s.start)} - ${window.fmtT(s.end)}</p>
+                        </div>
+                        <div class="flex gap-1 items-center">
+                            ${isAdmin?`<button onclick="event.stopPropagation();window.App.modal='segment';window.App.modalData=${s.id};window.render();setTimeout(window.setupSegmentModal, 10);" class="p-1.5 text-slate-400 hover:text-blue-500 bg-slate-50 dark:bg-[#0a120f] rounded"><i class="ph-fill ph-pencil-simple"></i></button><button onclick="event.stopPropagation(); window.confirmDelete('segment', ${s.id})" class="p-1.5 text-slate-400 hover:text-red-500 bg-slate-50 dark:bg-[#0a120f] rounded"><i class="ph-fill ph-trash"></i></button>`:''}
+                            <button class="play-btn-box p-1.5 rounded-md ${s.id===window.App.actSegId?'bg-emerald-500 text-white':'text-slate-300 hover:text-emerald-500 bg-slate-50 dark:bg-[#0a120f]'}"><i class="${s.id===window.App.actSegId?'ph-fill':'ph-bold'} ph-play play-icon"></i></button>
+                        </div>
+                    </div>
+                </div>`).join('') : '<div class="text-center text-slate-500 text-sm mt-10">Pencarian tidak ditemukan.</div>';
+        }
+
+        let progBox = window.getEl('progress-box');
+        if (progBox) {
+            progBox.innerHTML = allSgs.map(s=>`<div id="seg-marker-${s.id}" class="absolute h-full ${s.id===window.App.actSegId?'bg-emerald-500':'bg-gray-400 opacity-30'} border-r border-black transition-colors" style="left:${(s.start/td)*100}%; width:${((s.end-s.start)/td)*100}%"></div>`).join('');
+        }
+
+        let qbox = window.getEl('quran-box');
+        if (cSg) {
+            if(qbox) qbox.classList.remove('hidden');
+            let qt = window.getEl('quran-title'); if(qt) qt.innerText = cSg.title;
+            let qa = window.getEl('quran-arabic'); if(qa) qa.innerText = cSg.arabic;
+            let qtr = window.getEl('quran-trans'); if(qtr) qtr.innerText = cSg.translation;
+        } else {
+            if(qbox) qbox.classList.add('hidden');
+        }
     };
 
     // --- ASYNC & COMPONENT FUNCS ---
     window.setupSegmentModal = async function() {
-        var sur = App.surahs.find(s=>s.id===App.actSurahId); if(!sur)return;
+        var sur = window.App.surahs.find(s=>s.id===window.App.actSurahId); if(!sur)return;
         var cT = sur.title.replace("Surah ","").trim(); var qD = Q_SURAHS.find(q=>q.name===cT);
         if(qD){
             window.show('segment-loading'); window.hide('sf');
             try{
                 var r = await fetch(`https://api.alquran.cloud/v1/surah/${qD.no}/editions/quran-uthmani,id.indonesian`);
-                var js = await r.json(); App.currentSurahAyatData = js.data;
+                var js = await r.json(); window.App.currentSurahAyatData = js.data;
                 var tA = js.data[0].ayahs.length;
                 var sS = window.getEl('seg-start-ayat'); var eS = window.getEl('seg-end-ayat');
                 
                 if(sS && eS) {
                     sS.innerHTML=''; eS.innerHTML='';
                     for(var i=1;i<=tA;i++){sS.innerHTML+=`<option value="${i}">Ayat ${i}</option>`;eS.innerHTML+=`<option value="${i}">Ayat ${i}</option>`;}
-                    if (App.modalData) {
-                        let sg = App.segs.find(x=>x.id===App.modalData);
+                    if (window.App.modalData) {
+                        let sg = window.App.segs.find(x=>x.id===window.App.modalData);
                         if (sg && sg.title.startsWith('Ayat ')) {
                             let nums = sg.title.replace('Ayat ', '').split('-');
                             if (nums.length === 1) { sS.value = nums[0].trim(); eS.value = nums[0].trim(); } 
@@ -944,16 +825,16 @@
                         setTimeout(window.autoFillAyat, 50);
                     }
                 }
-            }catch(e){App.currentSurahAyatData=null;}finally{window.hide('segment-loading'); window.show('sf');}
+            }catch(e){window.App.currentSurahAyatData=null;}finally{window.hide('segment-loading'); window.show('sf');}
         }
     };
     
     window.autoFillAyat = function() {
-        if(!App.currentSurahAyatData)return;
+        if(!window.App.currentSurahAyatData)return;
         var s=parseInt(window.val('seg-start-ayat')); var e=parseInt(window.val('seg-end-ayat'));
         if(e<s){e=s;window.val('seg-end-ayat',e);}
         var aT=[]; var iT=[];
-        for(var i=s;i<=e;i++){var id=i-1;aT.push(App.currentSurahAyatData[0].ayahs[id].text+' ۝'+window.toArabicNumeral(i));iT.push(`(${i}) `+App.currentSurahAyatData[1].ayahs[id].text);}
+        for(var i=s;i<=e;i++){var id=i-1;aT.push(window.App.currentSurahAyatData[0].ayahs[id].text+' ۝'+window.toArabicNumeral(i));iT.push(`(${i}) `+window.App.currentSurahAyatData[1].ayahs[id].text);}
         var gt=s===e?`Ayat ${s}`:`Ayat ${s}-${e}`; 
         window.val('st',gt); window.val('sa',aT.join(' ')); window.val('str',iT.join(' '));
     };
@@ -966,7 +847,7 @@
     import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 
-    // ⚠️ USTADZ, SILAKAN GANTI KODE DI BAWAH INI DENGAN CONFIG FIREBASE MILIKMU SAAT PUBLISH KE GITHUB PAGES ⚠️
+    // ⚠️ CONFIG FIREBASE MILIK USTADZ ⚠️
     const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
         apiKey: "AIzaSyCdfYQeAiBMfAPsBGuzS7qWIoi_u3CaSvE",
         authDomain: "tahfidzqu-7c937.firebaseapp.com",
@@ -974,11 +855,10 @@
         storageBucket: "tahfidzqu-7c937.firebasestorage.app",
         messagingSenderId: "596320735782",
         appId: "1:596320735782:web:340387094ff61f31fecce7",
-        databaseURL: "https://tahfidzqu-7c937-default-rtdb.asia-southeast1.firebasedatabase.app/" // PENTING: Tambahkan URL ini jika menggunakan Realtime Database
+        databaseURL: "https://tahfidzqu-7c937-default-rtdb.asia-southeast1.firebasedatabase.app/" 
     };
 
     const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'tahfidzqu-cloud-2026';
-    // Membersihkan karakter yang tidak diizinkan oleh Firebase Realtime Database (. # $ [ ])
     const safeAppId = rawAppId.replace(/[.#$\[\]]/g, '_');
     
     const fApp = initializeApp(firebaseConfig);
@@ -986,25 +866,20 @@
     const db = getDatabase(fApp);
     let fbUser = null;
 
-    // Fungsi Pembantu Global untuk Realtime Database
     window.dbSave = async function(col, id, data) {
        if(!fbUser) { window.showAlert('Gagal menyimpan. Tidak terhubung ke Cloud.'); return; }
-       try {
-           await set(ref(db, `artifacts/${safeAppId}/public/data/${col}/${id}`), data);
-       } catch(e) { console.error(e); window.showAlert('Error Cloud: '+e.message); }
+       try { await set(ref(db, `artifacts/${safeAppId}/public/data/${col}/${id}`), data); } 
+       catch(e) { console.error(e); window.showAlert('Error Cloud: '+e.message); }
     };
 
     window.dbDelete = async function(col, id) {
        if(!fbUser) { window.showAlert('Gagal menghapus. Tidak terhubung ke Cloud.'); return; }
-       try {
-           await remove(ref(db, `artifacts/${safeAppId}/public/data/${col}/${id}`));
-       } catch(e) { console.error(e); window.showAlert('Error Cloud: '+e.message); }
+       try { await remove(ref(db, `artifacts/${safeAppId}/public/data/${col}/${id}`)); } 
+       catch(e) { console.error(e); window.showAlert('Error Cloud: '+e.message); }
     };
 
-    // Render layar pertama dengan data kosong sebagai "Loading" State
-    window.render();
+    window.render(true); // Initial Render Loading
 
-    // 1. Lakukan Otentikasi Khusus
     const initAuth = async () => {
         try {
             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -1012,13 +887,10 @@
             } else {
                 await signInAnonymously(auth);
             }
-        } catch (e) {
-            console.error('Auth fail:', e);
-        }
+        } catch (e) { console.error('Auth fail:', e); }
     };
     initAuth();
 
-    // 2. Tunggu sampai Login Berhasil, lalu tarik semua data dari Realtime Database
     onAuthStateChanged(auth, (u) => {
        fbUser = u;
        if(u) {
@@ -1026,16 +898,12 @@
           cols.forEach(c => {
              onValue(ref(db, `artifacts/${safeAppId}/public/data/${c}`), (snapshot) => {
                 const dataObj = snapshot.val();
-                // Ubah data JSON pohon dari Realtime DB menjadi susunan Array untuk aplikasi kita
                 window.App[c] = dataObj ? Object.keys(dataObj).map(key => ({
                     id: isNaN(key) ? key : Number(key), 
                     ...dataObj[key]
                 })) : [];
-                // Segarkan Layar
-                window.render();
-             }, (error) => {
-                 console.error("Izin Ditolak/Error:", error);
-             });
+                window.render(); // Aman dipanggil berkali-kali karena fitur bedah DOM
+             }, (error) => { console.error("Izin Ditolak/Error:", error); });
           });
 
           // Memulai Loop Timer Video jika diperlukan
