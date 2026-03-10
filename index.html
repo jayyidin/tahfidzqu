@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TahfidzQu</title>
+  <title>TahfidzQu Cloud</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>tailwind.config = { darkMode: 'class' }</script>
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -445,8 +445,10 @@
                     </div>
                     
                     <div class="relative rounded-2xl overflow-hidden bg-black aspect-video mb-6 border border-slate-200 dark:border-transparent shadow-xl">
-                        <div class="absolute inset-0 opacity-50 pointer-events-none"><div id="youtube-player" class="w-full h-full"></div></div>
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-4 lg:p-6">
+                        <div class="absolute inset-0 pointer-events-none opacity-50 z-0">
+                             <div id="youtube-player" class="w-full h-full"></div>
+                        </div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-4 lg:p-6 z-10 pointer-events-none">
                             <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
                                 <button onclick="if(App.yt&&typeof App.yt.playVideo==='function'){if(App.isPlay){if(typeof App.yt.pauseVideo==='function')App.yt.pauseVideo();}else{if(typeof App.yt.getCurrentTime==='function'&&typeof App.yt.seekTo==='function'){if(App.yt.getCurrentTime()<${cSg?.start||0}||App.yt.getCurrentTime()>=${cSg?.end||100}){App.yt.seekTo(${cSg?.start||0});App.curRep=0;}}App.yt.playVideo()}}" class="w-16 h-16 lg:w-24 lg:h-24 rounded-full bg-emerald-500/90 flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.5)] pointer-events-auto transition-all ${App.isPlay?'scale-95 opacity-0':'scale-100 opacity-100'}"><i class="ph-fill ph-play text-2xl lg:text-4xl text-white ml-1 lg:ml-2"></i></button>
                             </div>
@@ -584,7 +586,7 @@
             fs.sort((a,b)=>{if(a.status==='pending'&&b.status!=='pending')return -1;if(a.status!=='pending'&&b.status==='pending')return 1;return b.id-a.id;}).forEach(sb=>{
                 let su=App.surahs.find(x=>x.id===sb.surahId); let sg=App.segs.find(x=>x.id===sb.segmentId); let lv=sg?App.levels.find(l=>l.id===sg.levelId):null;
                 let sB=sb.status==='pending'?`<span class="bg-orange-100 text-orange-600 px-2 py-1 rounded text-[10px] lg:text-xs font-bold whitespace-nowrap"><i class="ph-bold ph-hourglass"></i> Menunggu</span>`:sb.status==='need-repeat'?`<span class="bg-red-100 text-red-600 px-2 py-1 rounded text-[10px] lg:text-xs font-bold whitespace-nowrap"><i class="ph-bold ph-arrow-counter-clockwise"></i> Diulang</span>`:`<span class="bg-emerald-100 text-emerald-600 px-2 py-1 rounded text-[10px] lg:text-xs font-bold whitespace-nowrap"><i class="ph-bold ph-check"></i> Lulus (${sb.grade})</span>`;
-                let aB=sb.status==='pending'?`<button onclick="App.modal='grade';App.modalData=${sb.id};window.render()" class="bg-blue-600 hover:bg-blue-50 text-white w-8 h-8 rounded-lg flex items-center justify-center transition shadow-md shrink-0"><i class="ph-fill ph-star"></i></button>`:`<button onclick="App.modal='grade';App.modalData=${sb.id};window.render()" class="bg-white hover:bg-blue-50 text-blue-600 border border-slate-200 w-8 h-8 rounded-lg flex items-center justify-center transition dark:bg-transparent dark:border-[#1a2e26] shrink-0"><i class="ph-bold ph-pencil-simple"></i></button>`;
+                let aB=sb.status==='pending'?`<button onclick="App.modal='grade';App.modalData=${sb.id};window.render()" class="bg-blue-600 hover:bg-blue-500 text-white w-8 h-8 rounded-lg flex items-center justify-center transition shadow-md shrink-0"><i class="ph-fill ph-star"></i></button>`:`<button onclick="App.modal='grade';App.modalData=${sb.id};window.render()" class="bg-white hover:bg-blue-50 text-blue-600 border border-slate-200 w-8 h-8 rounded-lg flex items-center justify-center transition dark:bg-transparent dark:border-[#1a2e26] shrink-0"><i class="ph-bold ph-pencil-simple"></i></button>`;
                 
                 // Keamanan Hapus: Hanya Admin Utama (Cloud Ready)
                 let delB = App.adminLvl===1 ? `<button onclick="window.deleteSubmission(${sb.id})" class="bg-white hover:bg-red-50 text-red-500 border border-slate-200 w-8 h-8 rounded-lg flex items-center justify-center transition dark:bg-transparent dark:border-[#1a2e26] shrink-0" title="Hapus Setoran"><i class="ph-bold ph-trash text-lg"></i></button>` : '';
@@ -729,6 +731,9 @@
       
       if(App.view==='player' && !App.yt) {
           window.onYouTubeIframeAPIReady();
+      } else if (App.view==='player' && App.yt && document.getElementById('youtube-player') && document.getElementById('youtube-player').tagName === 'DIV') {
+          // Jika elemen YouTube ter-render ulang jadi DIV biasa, kita paksa inisialisasi ulang
+          window.onYouTubeIframeAPIReady();
       }
     };
 
@@ -774,18 +779,38 @@
 
     // --- INIT ---
     window.onYouTubeIframeAPIReady = function() {
-        if(!window.YT) return;
+        if(!window.YT || !window.YT.Player) return;
         var sur = App.surahs.find(s=>s.id===App.actSurahId);
+        
+        // Pastikan container ada sebelum inisialisasi
+        if(!document.getElementById('youtube-player')) return;
+
+        // Cegah memory leak jika YT player sudah ada, destroy dulu
+        if (App.yt && typeof App.yt.destroy === 'function') {
+            App.yt.destroy();
+        }
+
         App.yt = new YT.Player('youtube-player', {
-            host: 'https://www.youtube.com', videoId: sur?.videoId||'', playerVars: { controls:0, disablekb:1, rel:0, modestbranding:1, playsinline:1 },
+            host: 'https://www.youtube.com', 
+            videoId: sur?.videoId||'', 
+            playerVars: { controls:0, disablekb:1, rel:0, modestbranding:1, playsinline:1 },
             events: {
-                onReady: e => {e.target.setPlaybackRate(App.speed);},
+                onReady: e => {
+                    e.target.setPlaybackRate(App.speed);
+                },
                 onStateChange: e => {
-                    if(e.data===YT.PlayerState.PLAYING){App.isPlay=true;window.hide('error-message');window.hide('big-play-btn');}
-                    else if(e.data===YT.PlayerState.PAUSED||e.data===YT.PlayerState.ENDED){App.isPlay=false;window.show('big-play-btn');}
+                    if(e.data===YT.PlayerState.PLAYING){
+                        App.isPlay=true;
+                        window.render(); // Render untuk update state tombol Play/Pause
+                    }
+                    else if(e.data===YT.PlayerState.PAUSED||e.data===YT.PlayerState.ENDED){
+                        App.isPlay=false;
+                        window.render();
+                    }
                 },
                 onError: e => {
-                    App.isPlay=false;window.show('error-message');window.hide('big-play-btn');window.text('error-text','Gagal memuat video.');
+                    App.isPlay=false;
+                    console.error("YouTube Error", e);
                 }
             }
         });
@@ -802,11 +827,11 @@
     // ⚠️ USTADZ, SILAKAN GANTI KODE DI BAWAH INI DENGAN CONFIG FIREBASE MILIKMU SAAT PUBLISH KE GITHUB PAGES ⚠️
     const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
         apiKey: "AIzaSyCdfYQeAiBMfAPsBGuzS7qWIoi_u3CaSvE",
-  authDomain: "tahfidzqu-7c937.firebaseapp.com",
-  projectId: "tahfidzqu-7c937",
-  storageBucket: "tahfidzqu-7c937.firebasestorage.app",
-  messagingSenderId: "596320735782",
-  appId: "1:596320735782:web:340387094ff61f31fecce7",
+        authDomain: "tahfidzqu-7c937.firebaseapp.com",
+        projectId: "tahfidzqu-7c937",
+        storageBucket: "tahfidzqu-7c937.firebasestorage.app",
+        messagingSenderId: "596320735782",
+        appId: "1:596320735782:web:340387094ff61f31fecce7",
         databaseURL: "https://tahfidzqu-7c937-default-rtdb.asia-southeast1.firebasedatabase.app/" // PENTING: Tambahkan URL ini jika menggunakan Realtime Database
     };
 
@@ -873,11 +898,11 @@
 
           // Memulai Loop Video jika diperlukan
           setInterval(function() {
-            if (window.App.isPlay && window.App.yt && typeof window.App.yt.getCurrentTime === 'function' && window.App.actSurahId) {
+            if (window.App.view === 'player' && window.App.isPlay && window.App.yt && typeof window.App.yt.getCurrentTime === 'function' && window.App.actSurahId) {
                 var t = window.App.yt.getCurrentTime(); var sg = window.getActSeg();
-                if (!sg) { if(typeof window.App.yt.pauseVideo==='function')window.App.yt.pauseVideo(); window.App.isPlay = false; window.text('time-display', '00:00 / 00:00'); if(window.getEl('current-time-indicator'))window.getEl('current-time-indicator').style.left = '0%'; window.render(); return; }
+                if (!sg) { if(typeof window.App.yt.pauseVideo==='function')window.App.yt.pauseVideo(); window.App.isPlay = false; if(window.getEl('time-display')) window.text('time-display', '00:00 / 00:00'); if(window.getEl('current-time-indicator'))window.getEl('current-time-indicator').style.left = '0%'; return; }
                 
-                window.text('time-display', `${window.fmtT(t)} / ${window.fmtT(sg.end)}`);
+                if(window.getEl('time-display')) window.text('time-display', `${window.fmtT(t)} / ${window.fmtT(sg.end)}`);
                 var as = window.getSgs(); var td = as.length > 0 ? as[as.length-1].end : 200;
                 var pct = Math.min(100, (t / td) * 100);
                 var ind = window.getEl('current-time-indicator');
