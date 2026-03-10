@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TahfidzQu Cloud</title>
+  <title>TahfidzQu</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>tailwind.config = { darkMode: 'class' }</script>
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -525,7 +525,7 @@
                   <div class="text-sm font-mono text-slate-600 dark:text-gray-300 font-bold">${App.rec.is ? window.fmtT(App.rec.secs) : App.rec.secs>0 ? 'Selesai: '+window.fmtT(App.rec.secs) : 'Ketuk untuk Merekam'}</div>
                   ${!App.rec.is && App.rec.secs>0 ? `<div class="flex gap-2 mt-5 pt-5 border-t border-slate-100 dark:border-[#1a2e26]"><button onclick="App.rec.secs=0;App.currentStudentAudioUrl=null;window.render()" class="flex-1 py-3 bg-slate-100 rounded-xl text-slate-600 font-bold text-xs md:text-sm dark:bg-[#1a2e26] dark:text-gray-300 active:bg-slate-200">Ulangi</button><button onclick="window.submitRec('mic')" class="flex-[2] py-3 bg-emerald-500 text-white rounded-xl font-bold text-xs md:text-sm shadow-md flex items-center justify-center gap-2 dark:text-[#0a120f] active:bg-emerald-600"><i class="ph-bold ph-paper-plane-tilt"></i> Kirim Setoran</button></div>` : ''}
                 </div>
-                ${!App.rec.is && App.rec.secs===0 ? `<div class="pt-1"><div class="relative flex items-center py-2 mb-2"><div class="flex-grow border-t border-slate-200 dark:border-[#1a2e26]"></div><span class="mx-4 text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-widest">Atau</span><div class="flex-grow border-t border-slate-200 dark:border-[#1a2e26]"></div></div><input type="file" id="au-up" accept="audio/*" class="hidden" onchange="window.handleStudentFileUpload(event)"><button onclick="if(!App.hierSel.s){window.showAlert('Pilih identitas santri terlebih dahulu!');return;} document.getElementById('au-up').click()" class="w-full py-3 md:py-3.5 bg-slate-50 text-slate-600 border border-slate-200 rounded-xl font-bold flex justify-center items-center gap-2 hover:bg-white hover:border-emerald-300 transition dark:bg-[#0a120f] dark:border-[#1a2e26] dark:text-gray-400 text-xs md:text-sm"><i class="ph-bold ph-upload-simple text-lg"></i> Upload File Audio</button></div>` : ''}
+                ${!App.rec.is && App.rec.secs===0 ? `<div class="pt-1"><div class="relative flex items-center py-2 mb-2"><div class="flex-grow border-t border-slate-200 dark:border-[#1a2e26]"></div><span class="mx-4 text-slate-400 text-[10px] md:text-xs font-bold uppercase tracking-widest">Atau</span><div class="flex-grow border-t border-slate-200 dark:border-[#1a2e26]"></div></div><input type="file" id="au-up" accept="audio/*" class="hidden" onchange="window.submitRec('file', event)"><button onclick="if(!App.hierSel.s){window.showAlert('Pilih identitas santri terlebih dahulu!');return;} document.getElementById('au-up').click()" class="w-full py-3 md:py-3.5 bg-slate-50 text-slate-600 border border-slate-200 rounded-xl font-bold flex justify-center items-center gap-2 hover:bg-white hover:border-emerald-300 transition dark:bg-[#0a120f] dark:border-[#1a2e26] dark:text-gray-400 text-xs md:text-sm"><i class="ph-bold ph-upload-simple text-lg"></i> Upload File Audio</button></div>` : ''}
               </div>
             </div>
           </div>
@@ -584,7 +584,7 @@
             fs.sort((a,b)=>{if(a.status==='pending'&&b.status!=='pending')return -1;if(a.status!=='pending'&&b.status==='pending')return 1;return b.id-a.id;}).forEach(sb=>{
                 let su=App.surahs.find(x=>x.id===sb.surahId); let sg=App.segs.find(x=>x.id===sb.segmentId); let lv=sg?App.levels.find(l=>l.id===sg.levelId):null;
                 let sB=sb.status==='pending'?`<span class="bg-orange-100 text-orange-600 px-2 py-1 rounded text-[10px] lg:text-xs font-bold whitespace-nowrap"><i class="ph-bold ph-hourglass"></i> Menunggu</span>`:sb.status==='need-repeat'?`<span class="bg-red-100 text-red-600 px-2 py-1 rounded text-[10px] lg:text-xs font-bold whitespace-nowrap"><i class="ph-bold ph-arrow-counter-clockwise"></i> Diulang</span>`:`<span class="bg-emerald-100 text-emerald-600 px-2 py-1 rounded text-[10px] lg:text-xs font-bold whitespace-nowrap"><i class="ph-bold ph-check"></i> Lulus (${sb.grade})</span>`;
-                let aB=sb.status==='pending'?`<button onclick="App.modal='grade';App.modalData=${sb.id};window.render()" class="bg-blue-600 hover:bg-blue-500 text-white w-8 h-8 rounded-lg flex items-center justify-center transition shadow-md shrink-0"><i class="ph-fill ph-star"></i></button>`:`<button onclick="App.modal='grade';App.modalData=${sb.id};window.render()" class="bg-white hover:bg-blue-50 text-blue-600 border border-slate-200 w-8 h-8 rounded-lg flex items-center justify-center transition dark:bg-transparent dark:border-[#1a2e26] shrink-0"><i class="ph-bold ph-pencil-simple"></i></button>`;
+                let aB=sb.status==='pending'?`<button onclick="App.modal='grade';App.modalData=${sb.id};window.render()" class="bg-blue-600 hover:bg-blue-50 text-white w-8 h-8 rounded-lg flex items-center justify-center transition shadow-md shrink-0"><i class="ph-fill ph-star"></i></button>`:`<button onclick="App.modal='grade';App.modalData=${sb.id};window.render()" class="bg-white hover:bg-blue-50 text-blue-600 border border-slate-200 w-8 h-8 rounded-lg flex items-center justify-center transition dark:bg-transparent dark:border-[#1a2e26] shrink-0"><i class="ph-bold ph-pencil-simple"></i></button>`;
                 
                 // Keamanan Hapus: Hanya Admin Utama (Cloud Ready)
                 let delB = App.adminLvl===1 ? `<button onclick="window.deleteSubmission(${sb.id})" class="bg-white hover:bg-red-50 text-red-500 border border-slate-200 w-8 h-8 rounded-lg flex items-center justify-center transition dark:bg-transparent dark:border-[#1a2e26] shrink-0" title="Hapus Setoran"><i class="ph-bold ph-trash text-lg"></i></button>` : '';
@@ -793,47 +793,51 @@
 
   </script>
 
-  <!-- FIREBASE CLOUD SCRIPT -->
+  <!-- FIREBASE CLOUD SCRIPT (REALTIME DATABASE) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 
     // ⚠️ USTADZ, SILAKAN GANTI KODE DI BAWAH INI DENGAN CONFIG FIREBASE MILIKMU SAAT PUBLISH KE GITHUB PAGES ⚠️
-    const firebaseConfig = {
-  apiKey: "AIzaSyCdfYQeAiBMfAPsBGuzS7qWIoi_u3CaSvE",
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+        apiKey: "AIzaSyCdfYQeAiBMfAPsBGuzS7qWIoi_u3CaSvE",
   authDomain: "tahfidzqu-7c937.firebaseapp.com",
   projectId: "tahfidzqu-7c937",
   storageBucket: "tahfidzqu-7c937.firebasestorage.app",
   messagingSenderId: "596320735782",
   appId: "1:596320735782:web:340387094ff61f31fecce7"
-};
+        databaseURL: "https://tahfidzqu-7c937-default-rtdb.asia-southeast1.firebasedatabase.app/" // PENTING: Tambahkan URL ini jika menggunakan Realtime Database
+    };
 
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'tahfidzqu-cloud-2026';
+    const rawAppId = typeof __app_id !== 'undefined' ? __app_id : 'tahfidzqu-cloud-2026';
+    // Membersihkan karakter yang tidak diizinkan oleh Firebase Realtime Database (. # $ [ ])
+    const safeAppId = rawAppId.replace(/[.#$\[\]]/g, '_');
+    
     const fApp = initializeApp(firebaseConfig);
     const auth = getAuth(fApp);
-    const db = getFirestore(fApp);
+    const db = getDatabase(fApp);
     let fbUser = null;
 
-    // Fungsi Pembantu Global untuk Firestore (Agar aman dipanggil dari mana saja)
+    // Fungsi Pembantu Global untuk Realtime Database
     window.dbSave = async function(col, id, data) {
        if(!fbUser) { window.showAlert('Gagal menyimpan. Tidak terhubung ke Cloud.'); return; }
        try {
-           await setDoc(doc(db, 'artifacts', appId, 'public', 'data', col, id.toString()), data);
+           await set(ref(db, `artifacts/${safeAppId}/public/data/${col}/${id}`), data);
        } catch(e) { console.error(e); window.showAlert('Error Cloud: '+e.message); }
     };
 
     window.dbDelete = async function(col, id) {
        if(!fbUser) { window.showAlert('Gagal menghapus. Tidak terhubung ke Cloud.'); return; }
        try {
-           await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', col, id.toString()));
+           await remove(ref(db, `artifacts/${safeAppId}/public/data/${col}/${id}`));
        } catch(e) { console.error(e); window.showAlert('Error Cloud: '+e.message); }
     };
 
     // Render layar pertama dengan data kosong sebagai "Loading" State
     window.render();
 
-    // 1. Lakukan Otentikasi Khusus Sesuai Lingkungan Sistem
+    // 1. Lakukan Otentikasi Khusus
     const initAuth = async () => {
         try {
             if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -847,15 +851,19 @@
     };
     initAuth();
 
-    // 2. Tunggu sampai Login Berhasil, lalu tarik semua data
+    // 2. Tunggu sampai Login Berhasil, lalu tarik semua data dari Realtime Database
     onAuthStateChanged(auth, (u) => {
        fbUser = u;
        if(u) {
           const cols = ['juzs', 'surahs', 'levels', 'segs', 'ustadz', 'halaqohs', 'siswas', 'subs'];
           cols.forEach(c => {
-             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', c), (ss) => {
-                // Perbarui memori aplikasi dengan data langsung dari Cloud
-                window.App[c] = ss.docs.map(d => ({id: isNaN(d.id)?d.id:Number(d.id), ...d.data()}));
+             onValue(ref(db, `artifacts/${safeAppId}/public/data/${c}`), (snapshot) => {
+                const dataObj = snapshot.val();
+                // Ubah data JSON pohon dari Realtime DB menjadi susunan Array untuk aplikasi kita
+                window.App[c] = dataObj ? Object.keys(dataObj).map(key => ({
+                    id: isNaN(key) ? key : Number(key), 
+                    ...dataObj[key]
+                })) : [];
                 // Segarkan Layar
                 window.render();
              }, (error) => {
