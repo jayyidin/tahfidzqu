@@ -201,6 +201,12 @@
     };
 
     window.openSurah = function(surahId, videoId) {
+        // Hentikan video lama agar suara tidak tabrakan
+        if (window.App.yt && typeof window.App.yt.stopVideo === 'function') {
+            window.App.yt.stopVideo();
+        }
+        window.App.isPlay = false;
+
         window.App.actSurahId = surahId;
         window.App.actSegId = null;
         if(!window.App.levels.some(l => l.surahId == surahId)){
@@ -211,20 +217,28 @@
             if(m){ m.active = true; if(window.dbSave) window.dbSave('levels', m.id, m); }
         }
         
-        // Trik Friday: Pastikan video YouTube memuat video milik surah yang baru dipilih
-        if (window.App.yt && typeof window.App.yt.cueVideoById === 'function') {
-            if (videoId) window.App.yt.cueVideoById(videoId);
-            else window.App.yt.stopVideo();
-            window.App.isPlay = false;
-        }
-
         window.switchView('player');
+        
+        // Panggil ulang initYTPlayer untuk menghancurkan pemutar lama dan membuat yang baru khusus untuk surah ini
+        window.initYTPlayer();
     };
 
     window.initYTPlayer = function() {
         if(!window.YT || !window.YT.Player) return;
         var sur = window.App.surahs.find(s=>s.id===window.App.actSurahId);
-        if (window.App.yt && typeof window.App.yt.destroy === 'function') { try { window.App.yt.destroy(); } catch(e){} }
+        
+        // Hancurkan pemutar yang lama sampai bersih
+        if (window.App.yt && typeof window.App.yt.destroy === 'function') { 
+            try { window.App.yt.destroy(); } catch(e){} 
+            window.App.yt = null; 
+        }
+        
+        // Suntik ulang div kosong untuk diisi iframe YouTube baru
+        let pWrap = window.getEl('persistent-player-wrapper');
+        if (pWrap) {
+            pWrap.innerHTML = '<div id="youtube-player" class="w-full h-full"></div>';
+        }
+
         window.App.yt = new window.YT.Player('youtube-player', {
             host: 'https://www.youtube-nocookie.com', videoId: sur?.videoId||'', 
             playerVars: { controls:0, disablekb:1, rel:0, modestbranding:1, playsinline:1 },
