@@ -104,23 +104,38 @@
 
     window.fmtT = s => `${Math.floor(s/60).toString().padStart(2,'0')}:${Math.floor(s%60).toString().padStart(2,'0')}`;
     
-    // Logika Pemutar Audio Kustom buatan Friday
+    // Logika Pemutar Audio Kustom buatan Friday yang Anti-Bug untuk HP
     if (!window.App.audioObj) {
         window.App.audioObj = new Audio();
+        
         window.App.audioObj.addEventListener('timeupdate', () => {
             let id = window.App.activeAudioId;
             if(!id) return;
+            
             let elTime = window.getEl('ca_time_' + id);
             let elBar = window.getEl('ca_bar_' + id);
             let a = window.App.audioObj;
-            if(elTime) elTime.innerText = window.fmtT(a.currentTime);
+            
+            let ct = a.currentTime;
+            
+            // Filter pelindung: Jika HP membaca durasi "gila" atau korup (misal tiba-tiba 1:41 tanpa alasan),
+            // kita pangkas menjadi 0 agar UI tidak rusak.
+            if (!ct || isNaN(ct) || ct === Infinity || ct < 0 || ct > 3600) ct = 0;
+            
+            if(elTime) elTime.innerText = window.fmtT(ct);
+            
             if(elBar) {
-                // Gunakan 10 detik sebagai estimasi agar progress bar tetap jalan jika metadata durasi error
-                let d = (a.duration && a.duration !== Infinity) ? a.duration : 10;
-                let pct = Math.min(100, (a.currentTime / d) * 100);
+                let d = a.duration;
+                // Jika browser gagal mendapat total durasi (sering di HP),
+                // kita biarkan bar berjalan estimasi mengikuti waktu agar tetap terlihat "hidup".
+                if (!d || isNaN(d) || d === Infinity || d <= 0) {
+                    d = Math.max(10, ct + 2); 
+                }
+                let pct = Math.min(100, (ct / d) * 100);
                 elBar.style.width = pct + '%';
             }
         });
+        
         window.App.audioObj.addEventListener('ended', () => {
             let id = window.App.activeAudioId;
             if(!id) return;
@@ -131,6 +146,16 @@
             if(elBar) elBar.style.width = '0%';
             if(elTime) elTime.innerText = '00:00';
             window.App.activeAudioId = null;
+        });
+
+        window.App.audioObj.addEventListener('error', () => {
+            let id = window.App.activeAudioId;
+            if(id) {
+                let elIcon = window.getEl('ca_icon_' + id);
+                if(elIcon) elIcon.className = 'ph-fill ph-play ml-0.5 text-lg';
+                window.App.activeAudioId = null;
+            }
+            window.showAlert('Gagal memutar audio. Format tidak didukung penuh oleh browser HP ini.');
         });
     }
 
@@ -149,10 +174,17 @@
         if (window.App.activeAudioId) {
             let oldIcon = window.getEl('ca_icon_' + window.App.activeAudioId);
             if(oldIcon) oldIcon.className = 'ph-fill ph-play ml-0.5 text-lg';
+            
+            let oldBar = window.getEl('ca_bar_' + window.App.activeAudioId);
+            let oldTime = window.getEl('ca_time_' + window.App.activeAudioId);
+            if(oldBar) oldBar.style.width = '0%';
+            if(oldTime) oldTime.innerText = '00:00';
         }
         window.App.activeAudioId = id;
         a.src = url;
-        a.play();
+        a.play().catch(e => {
+            window.showAlert('Browser memblokir pemutaran otomatis. Sentuh lagi untuk memutar.');
+        });
         let newIcon = window.getEl('ca_icon_' + id);
         if(newIcon) newIcon.className = 'ph-fill ph-pause text-lg';
     };
@@ -369,13 +401,31 @@
 
     window.startStudentRecord = async function() {
         try {
-            var stream = await navigator.mediaDevices.getUserMedia({audio: true}); window.App.studentMediaRecorder = new MediaRecorder(stream); window.App.studentAudioChunks = [];
+            var stream = await navigator.mediaDevices.getUserMedia({audio: true}); 
+            
+            // Pilihan format rekaman yang lebih ramah di HP (terutama iPhone)
+            let mimeType = '';
+            if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4'; 
+            else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mimeType = 'audio/webm;codecs=opus';
+            else if (MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
+            
+            var options = mimeType ? { mimeType: mimeType } : {};
+            window.App.studentMediaRecorder = new MediaRecorder(stream, options); 
+            window.App.studentAudioChunks = [];
+            
             window.App.studentMediaRecorder.ondataavailable = e => { if(e.data.size > 0) window.App.studentAudioChunks.push(e.data); };
-            window.App.studentMediaRecorder.onstop = async () => { var b = new Blob(window.App.studentAudioChunks, { type: 'audio/webm' }); window.App.currentStudentAudioUrl = await window.blobToBase64(b); stream.getTracks().forEach(t => t.stop()); window.render(true); };
+            window.App.studentMediaRecorder.onstop = async () => { 
+                var b = new Blob(window.App.studentAudioChunks, { type: mimeType || 'audio/webm' }); 
+                window.App.currentStudentAudioUrl = await window.blobToBase64(b); 
+                stream.getTracks().forEach(t => t.stop()); 
+                window.render(true); 
+            };
+            
             window.App.studentMediaRecorder.start(); 
             window.App.rec.is = true; 
             window.App.rec.secs = 0; 
             window.render(true);
+            
             window.App.rec.int = setInterval(()=>{ 
                 window.App.rec.secs++; 
                 let tEl = window.getEl('rec-timer-display');
@@ -418,9 +468,24 @@
         if(window.App.isGradingRecording) { window.App.gradingMediaRecorder.stop(); window.App.isGradingRecording=false; window.render(); } 
         else {
             try {
-                var s = await navigator.mediaDevices.getUserMedia({audio:true}); window.App.gradingMediaRecorder = new MediaRecorder(s); window.App.gradingAudioChunks = [];
+                var s = await navigator.mediaDevices.getUserMedia({audio:true}); 
+                
+                let mimeType = '';
+                if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
+                else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mimeType = 'audio/webm;codecs=opus';
+                else if (MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
+                
+                var options = mimeType ? { mimeType: mimeType } : {};
+                window.App.gradingMediaRecorder = new MediaRecorder(s, options); 
+                window.App.gradingAudioChunks = [];
+                
                 window.App.gradingMediaRecorder.ondataavailable = e => {if(e.data.size>0)window.App.gradingAudioChunks.push(e.data);};
-                window.App.gradingMediaRecorder.onstop = async () => { var b = new Blob(window.App.gradingAudioChunks,{type:'audio/webm'}); window.App.currentGradingAudioUrl = await window.blobToBase64(b); window.render(); s.getTracks().forEach(t=>t.stop()); };
+                window.App.gradingMediaRecorder.onstop = async () => { 
+                    var b = new Blob(window.App.gradingAudioChunks,{type: mimeType || 'audio/webm'}); 
+                    window.App.currentGradingAudioUrl = await window.blobToBase64(b); 
+                    window.render(); 
+                    s.getTracks().forEach(t=>t.stop()); 
+                };
                 window.App.gradingMediaRecorder.start(); window.App.isGradingRecording = true; window.render();
             } catch(e) { window.showAlert("Akses mikrofon ditolak oleh browser."); }
         }
@@ -595,7 +660,7 @@
                 
                 let delB = isSuper ? '<button onclick="window.deleteSubmission(' + sb.id + ')" class="bg-slate-50 hover:bg-red-50 text-red-500 border border-slate-200 w-12 h-12 rounded-2xl flex items-center justify-center transition-all dark:bg-[#0a120f] dark:border-[#1a2e26] dark:hover:border-red-500/50 shrink-0" title="Hapus Setoran"><i class="ph-bold ph-trash text-xl"></i></button>' : '';
                 
-                let nI=(sb.note||sb.voiceNote)?'<div class="text-[10px] text-slate-400 mt-2 italic flex flex-wrap gap-3">' + (sb.note?'<span class="flex items-center gap-1"><i class="ph-fill ph-note text-emerald-500"></i> Teks</span>':'') + (sb.voiceNote?'<span class="flex items-center gap-1"><i class="ph-fill ph-microphone text-blue-500"></i> Suara</span>':'') + '</div>':'';
+                let nI=(sb.note||sb.voiceNote)?'<div class="text-[10px] text-slate-400 mt-2 italic flex flex-wrap gap-3">' + (sb.note?'<span class="flex items-center gap-1"><i class="ph-fill ph-note text-emerald-500"></i> Teks</span>':'') + (sb.voiceNote?('<div class="mt-1">' + window.renderCustomAudio('adm_ust_' + sb.id, sb.voiceNote) + '</div>'):'') + '</div>':'';
                 
                 let studentAudioPlayer = window.renderCustomAudio('adm_stu_' + sb.id, sb.audioUrl);
 
