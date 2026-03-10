@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TahfidzQu</title>
+  <title>TahfidzQu Cloud</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>tailwind.config = { darkMode: 'class' }</script>
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -89,7 +89,15 @@
 
     // --- GETTERS ---
     window.fmtT = s => `${Math.floor(s/60).toString().padStart(2,'0')}:${Math.floor(s%60).toString().padStart(2,'0')}`;
-    window.getLvl = () => window.App.levels.find(l=>l.surahId===window.App.actSurahId&&l.active)?.id;
+    
+    // PENYEMPURNAAN GETTER LEVEL AGAR TIDAK UNDEFINED
+    window.getLvl = () => {
+        var lvls = window.App.levels.filter(l=>l.surahId===window.App.actSurahId);
+        var activeLvl = lvls.find(l=>l.active);
+        if (activeLvl) return activeLvl.id;
+        return lvls.length > 0 ? lvls[0].id : null;
+    };
+    
     window.getSgs = () => window.App.segs.filter(s=>s.surahId===window.App.actSurahId&&s.levelId===window.getLvl()).sort((a,b)=>a.start-b.start);
     window.getActSeg = () => { var s=window.getSgs(); if(s.length===0)return null; return s.find(x=>x.id===window.App.actSegId)||s[0]; };
     window.getUName = id => window.esc(window.App.ustadz.find(x=>x.id==id)?.name||"-");
@@ -255,7 +263,6 @@
         if (window.App && window.App.view === 'player') window.initYTPlayer();
     };
 
-    // Muat Script API YouTube
     var tag = document.createElement('script');
     tag.src = "https://www.youtube.com/iframe_api";
     document.head.appendChild(tag);
@@ -320,7 +327,6 @@
         }
     };
 
-    // --- CONVERT BLOB KE BASE64 (Untuk Firebase) ---
     window.blobToBase64 = function(blob) {
         return new Promise((resolve) => {
             const reader = new FileReader();
@@ -466,6 +472,7 @@
 
     // --- ENGINE PENGGAMBAR UI ---
     window.render = function() {
+      let isForced = arguments[0] === true;
       let activeEl = document.activeElement;
       let focusedId = activeEl ? activeEl.id : null;
       let selStart = 0, selEnd = 0;
@@ -546,20 +553,22 @@
         
         html += `
           <div class="flex flex-col lg:flex-row w-full h-full overflow-hidden">
+            <!-- Sidebar Kiri -->
             <div class="w-full lg:w-64 bg-white border-b lg:border-b-0 lg:border-r border-slate-200 p-4 lg:p-6 flex flex-row lg:flex-col shrink-0 dark:bg-[#0a120f] dark:border-[#1a2e26] overflow-x-auto hide-scrollbar items-center lg:items-stretch gap-4 lg:gap-0 z-10 shadow-sm lg:shadow-none">
               <button onclick="window.switchView('home')" class="flex items-center gap-2 text-slate-500 hover:text-emerald-500 font-bold text-sm lg:mb-8 whitespace-nowrap shrink-0"><i class="ph-bold ph-arrow-left"></i> Kembali</button>
-              <div class="hidden lg:flex justify-between items-center mb-4"><h3 class="text-xs text-slate-400 font-bold uppercase tracking-wider">Level Hafalan</h3>${isAdmin?`<button onclick="window.App.modal='level';window.render()" class="w-6 h-6 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition"><i class="ph-bold ph-plus"></i></button>`:''}</div>
+              <div class="hidden lg:flex justify-between items-center mb-4"><h3 class="text-xs text-slate-400 font-bold uppercase tracking-wider">Level Hafalan</h3>${isAdmin?`<button onclick="window.App.modal='level';window.render(true)" class="w-6 h-6 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition"><i class="ph-bold ph-plus"></i></button>`:''}</div>
               <div class="flex flex-row lg:flex-col gap-2 lg:gap-3" id="levels-box">
                  <!-- Disuntik lewat updatePlayerDOM -->
               </div>
             </div>
 
+            <!-- Konten Tengah -->
             <div class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden relative bg-slate-50 dark:bg-[#111c18]">
                <div class="flex-1 p-4 lg:p-8 lg:overflow-y-auto relative">
                  <div class="max-w-4xl mx-auto">
                     <div class="flex justify-between items-center mb-4 lg:mb-6">
                         <div>
-                          <div class="flex items-center gap-3 mb-1 lg:mb-2"><h1 class="text-2xl lg:text-4xl font-serif dark:text-white">${window.esc(sur?.title||'')}</h1>${isAdmin?`<button onclick="window.App.modal='video';window.render()" class="p-2 bg-white rounded-lg border border-slate-200 text-slate-400 hover:text-emerald-500 dark:bg-[#15241e] dark:border-transparent transition shadow-sm"><i class="ph ph-link text-lg"></i></button>`:''}</div>
+                          <div class="flex items-center gap-3 mb-1 lg:mb-2"><h1 class="text-2xl lg:text-4xl font-serif dark:text-white">${window.esc(sur?.title||'')}</h1>${isAdmin?`<button onclick="window.App.modal='video';window.render(true)" class="p-2 bg-white rounded-lg border border-slate-200 text-slate-400 hover:text-emerald-500 dark:bg-[#15241e] dark:border-transparent transition shadow-sm"><i class="ph ph-link text-lg"></i></button>`:''}</div>
                           <p class="text-xs lg:text-sm text-slate-500 flex gap-1 items-center"><i class="ph-fill ph-youtube-logo text-red-500"></i> YouTube Media</p>
                         </div>
                     </div>
@@ -599,11 +608,12 @@
                  </div>
                </div>
                
+               <!-- Sidebar Kanan -->
                <div class="w-full lg:w-80 bg-slate-50 dark:bg-[#111c18] border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-[#1a2e26] flex flex-col shrink-0 lg:h-full z-10 pb-6 lg:pb-0">
                   <div class="p-4 lg:p-6 border-b border-slate-200 dark:border-[#1a2e26] bg-white dark:bg-transparent">
                      <div class="flex justify-between items-center mb-4">
                         <h2 class="text-base lg:text-lg font-bold dark:text-white">Segmen Hafalan</h2>
-                        ${isAdmin?`<button onclick="window.App.modal='segment';window.App.modalData=null;window.render();setTimeout(window.setupSegmentModal, 10);" class="text-[10px] lg:text-xs bg-emerald-100 text-emerald-600 px-3 py-1.5 rounded-full font-bold hover:bg-emerald-500 hover:text-white transition"><i class="ph-bold ph-plus"></i> Baru</button>`:''}
+                        ${isAdmin?`<button onclick="window.App.modal='segment';window.App.modalData=null;window.render(true);setTimeout(window.setupSegmentModal, 10);" class="text-[10px] lg:text-xs bg-emerald-100 text-emerald-600 px-3 py-1.5 rounded-full font-bold hover:bg-emerald-500 hover:text-white transition"><i class="ph-bold ph-plus"></i> Baru</button>`:''}
                      </div>
                      ${mobileSearchBar}
                      ${!isAdmin ? `<button onclick="if(!window.App.actSegId){window.showAlert('Pilih segmen hafalan terlebih dahulu!');}else{window.App.rec.src='player';window.App.resubmitId=null;window.switchView('setoran');}" class="w-full py-3 lg:py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 hover:bg-emerald-500 hover:text-white rounded-xl font-bold flex items-center justify-center gap-2 transition dark:bg-emerald-900/30 dark:border-emerald-500/30 dark:text-emerald-400"><i class="ph-fill ph-microphone-stage text-lg"></i> Setor Segmen Ini</button>` : ''}
@@ -704,7 +714,7 @@
             fs.sort((a,b)=>{if(a.status==='pending'&&b.status!=='pending')return -1;if(a.status!=='pending'&&b.status==='pending')return 1;return b.id-a.id;}).forEach(sb=>{
                 let su=window.App.surahs.find(x=>x.id===sb.surahId); let sg=window.App.segs.find(x=>x.id===sb.segmentId); let lv=sg?window.App.levels.find(l=>l.id===sg.levelId):null;
                 let sB=sb.status==='pending'?`<span class="bg-orange-100 text-orange-600 px-2 py-1 rounded text-[10px] lg:text-xs font-bold whitespace-nowrap"><i class="ph-bold ph-hourglass"></i> Menunggu</span>`:sb.status==='need-repeat'?`<span class="bg-red-100 text-red-600 px-2 py-1 rounded text-[10px] lg:text-xs font-bold whitespace-nowrap"><i class="ph-bold ph-arrow-counter-clockwise"></i> Diulang</span>`:`<span class="bg-emerald-100 text-emerald-600 px-2 py-1 rounded text-[10px] lg:text-xs font-bold whitespace-nowrap"><i class="ph-bold ph-check"></i> Lulus (${sb.grade})</span>`;
-                let aB=sb.status==='pending'?`<button onclick="window.App.modal='grade';window.App.modalData=${sb.id};window.render(true)" class="bg-blue-600 hover:bg-blue-50 text-white w-8 h-8 rounded-lg flex items-center justify-center transition shadow-md shrink-0"><i class="ph-fill ph-star"></i></button>`:`<button onclick="window.App.modal='grade';window.App.modalData=${sb.id};window.render(true)" class="bg-white hover:bg-blue-50 text-blue-600 border border-slate-200 w-8 h-8 rounded-lg flex items-center justify-center transition dark:bg-transparent dark:border-[#1a2e26] shrink-0"><i class="ph-bold ph-pencil-simple"></i></button>`;
+                let aB=sb.status==='pending'?`<button onclick="window.App.modal='grade';window.App.modalData=${sb.id};window.render(true)" class="bg-blue-600 hover:bg-blue-500 text-white w-8 h-8 rounded-lg flex items-center justify-center transition shadow-md shrink-0"><i class="ph-fill ph-star"></i></button>`:`<button onclick="window.App.modal='grade';window.App.modalData=${sb.id};window.render(true)" class="bg-white hover:bg-blue-50 text-blue-600 border border-slate-200 w-8 h-8 rounded-lg flex items-center justify-center transition dark:bg-transparent dark:border-[#1a2e26] shrink-0"><i class="ph-bold ph-pencil-simple"></i></button>`;
                 
                 let delB = isAdmin ? `<button onclick="window.deleteSubmission(${sb.id})" class="bg-white hover:bg-red-50 text-red-500 border border-slate-200 w-8 h-8 rounded-lg flex items-center justify-center transition dark:bg-transparent dark:border-[#1a2e26] shrink-0" title="Hapus Setoran"><i class="ph-bold ph-trash text-lg"></i></button>` : '';
                 
@@ -775,13 +785,17 @@
       html += `</div>`;
       html += `<footer class="shrink-0 py-3 text-center text-[10px] md:text-xs font-medium text-slate-400 dark:text-slate-500 bg-white dark:bg-[#0a120f] border-t border-slate-200 dark:border-[#1a2e26] transition-colors z-40 relative">Copyright &copy; 2026 Juman Jayyidin</footer>`;
 
-      // --- LOGIKA UPDATE LAYAR: FULL RENDER VS SURGICAL UPDATE ---
-      let isForced = arguments[0] === true;
+      // --- LOGIKA UPDATE LAYAR ---
       let pWrap = window.getEl('persistent-player-wrapper');
       
-      if (window.App.view === 'player' && pWrap && pWrap.parentNode.id === 'player-destination' && !isForced && !window.App.modal) {
+      if (window.App.view === 'player' && pWrap && pWrap.parentNode && pWrap.parentNode.id === 'player-destination' && !isForced && !window.App.modal) {
           window.updatePlayerDOM();
       } else {
+          // Amankan Pemutar YouTube sebelum merender ulang aplikasi
+          if (pWrap && pWrap.parentNode !== document.body) {
+              document.body.appendChild(pWrap);
+          }
+          
           window.getEl('app-root').innerHTML = html;
           
           if(window.App.view === 'player') {
@@ -792,6 +806,8 @@
                   if (pWrap.parentNode !== pDest) pDest.appendChild(pWrap);
                   if(!window.App.yt) window.initYTPlayer();
               }
+              // FIX: Panggil ini untuk memastikan daftar segmen langsung terisi di layar baru
+              window.updatePlayerDOM();
           } else {
               if(pWrap && pWrap.parentNode !== document.body) {
                   pWrap.classList.add('hidden');
@@ -872,7 +888,7 @@
 
         let lvlsBox = window.getEl('levels-box');
         if (lvlsBox) {
-            lvlsBox.innerHTML = ml.map((l,i)=>`<button onclick="window.App.levels.forEach(x=>{if(x.surahId===window.App.actSurahId){let a=(x.id===${l.id}); if(x.active!==a){x.active=a;window.dbSave('levels',x.id,x);}}});window.App.actSegId=null;window.render(true)" class="flex items-center gap-2 lg:gap-3 p-2 lg:p-3 rounded-xl shrink-0 whitespace-nowrap transition ${l.active?'bg-emerald-500 text-white shadow-md shadow-emerald-500/20':'bg-slate-50 border border-slate-200 dark:bg-[#15241e] dark:border-[#1a2e26] dark:text-gray-300 hover:border-emerald-300'}"><div class="w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${l.active?'bg-white/20':'bg-white dark:bg-[#0a120f] text-slate-500'}">${i+1}</div><span class="text-sm font-bold lg:font-medium">${window.esc(l.name)}</span>${isAdmin?`<div onclick="event.stopPropagation();window.confirmDelete('level', ${l.id})" class="text-red-300 hover:text-red-500 hidden lg:block ml-auto"><i class="ph-bold ph-trash"></i></div>`:''}</button>`).join('') + (isAdmin?`<button onclick="window.App.modal='level';window.render()" class="lg:hidden flex items-center gap-1 px-4 py-2 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 text-emerald-600 shrink-0 text-sm font-bold"><i class="ph-bold ph-plus"></i> Baru</button>`:'');
+            lvlsBox.innerHTML = ml.map((l,i)=>`<button onclick="window.App.levels.forEach(x=>{if(x.surahId===window.App.actSurahId){let a=(x.id===${l.id}); if(x.active!==a){x.active=a;window.dbSave('levels',x.id,x);}}});window.App.actSegId=null;window.render(true)" class="flex items-center gap-2 lg:gap-3 p-2 lg:p-3 rounded-xl shrink-0 whitespace-nowrap transition ${l.active?'bg-emerald-500 text-white shadow-md shadow-emerald-500/20':'bg-slate-50 border border-slate-200 dark:bg-[#15241e] dark:border-[#1a2e26] dark:text-gray-300 hover:border-emerald-300'}"><div class="w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${l.active?'bg-white/20':'bg-white dark:bg-[#0a120f] text-slate-500'}">${i+1}</div><span class="text-sm font-bold lg:font-medium">${window.esc(l.name)}</span>${isAdmin?`<div onclick="event.stopPropagation();window.confirmDelete('level', ${l.id})" class="text-red-300 hover:text-red-500 hidden lg:block ml-auto"><i class="ph-bold ph-trash"></i></div>`:''}</button>`).join('') + (isAdmin?`<button onclick="window.App.modal='level';window.render(true)" class="lg:hidden flex items-center gap-1 px-4 py-2 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 text-emerald-600 shrink-0 text-sm font-bold"><i class="ph-bold ph-plus"></i> Baru</button>`:'');
         }
 
         let segsBox = window.getEl('segs-box');
@@ -885,7 +901,7 @@
                             <p class="text-[10px] lg:text-xs text-emerald-600 font-mono mt-0.5 lg:mt-1"><i class="ph ph-clock"></i> ${window.fmtT(s.start)} - ${window.fmtT(s.end)}</p>
                         </div>
                         <div class="flex gap-1 items-center">
-                            ${isAdmin?`<button onclick="event.stopPropagation();window.App.modal='segment';window.App.modalData=${s.id};window.render();setTimeout(window.setupSegmentModal, 10);" class="p-1.5 text-slate-400 hover:text-blue-500 bg-slate-50 dark:bg-[#0a120f] rounded"><i class="ph-fill ph-pencil-simple"></i></button><button onclick="event.stopPropagation(); window.confirmDelete('segment', ${s.id})" class="p-1.5 text-slate-400 hover:text-red-500 bg-slate-50 dark:bg-[#0a120f] rounded"><i class="ph-fill ph-trash"></i></button>`:''}
+                            ${isAdmin?`<button onclick="event.stopPropagation();window.App.modal='segment';window.App.modalData=${s.id};window.render(true);setTimeout(window.setupSegmentModal, 10);" class="p-1.5 text-slate-400 hover:text-blue-500 bg-slate-50 dark:bg-[#0a120f] rounded"><i class="ph-fill ph-pencil-simple"></i></button><button onclick="event.stopPropagation(); window.confirmDelete('segment', ${s.id})" class="p-1.5 text-slate-400 hover:text-red-500 bg-slate-50 dark:bg-[#0a120f] rounded"><i class="ph-fill ph-trash"></i></button>`:''}
                             <button class="play-btn-box p-1.5 rounded-md ${s.id===window.App.actSegId?'bg-emerald-500 text-white':'text-slate-300 hover:text-emerald-500 bg-slate-50 dark:bg-[#0a120f]'}"><i class="${s.id===window.App.actSegId?'ph-fill':'ph-bold'} ph-play play-icon"></i></button>
                         </div>
                     </div>
@@ -1015,7 +1031,7 @@
              }, (error) => { console.error("Izin Ditolak/Error:", error); });
           });
 
-          // Memulai Loop Timer Video jika diperlukan
+          // Memulai Loop Timer Video
           setInterval(function() {
             if (window.App.view === 'player' && window.App.isPlay && window.App.yt && typeof window.App.yt.getCurrentTime === 'function' && window.App.actSurahId) {
                 var t = window.App.yt.getCurrentTime(); var sg = window.getActSeg();
