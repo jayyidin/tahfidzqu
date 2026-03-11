@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>TahfidzQur</title>
+  <title>TahfidzQu</title>
   
   <!-- LOAD FONT ARABIC (AMIRI) PERMANEN -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -32,6 +32,7 @@
       overflow: hidden;
       margin: 0;
       padding: 0;
+      overscroll-behavior-y: none;
     }
     @supports (-webkit-touch-callout: none) {
       html, body {
@@ -65,7 +66,7 @@
 
   <div id="app-root" class="flex flex-col w-full h-full relative z-10"></div>
   
-  <div id="modal-root" class="relative z-[300]"></div>
+  <div id="modal-root" class="relative z-[300] hidden"></div>
 
   <div id="persistent-player-wrapper" class="hidden pointer-events-none">
       <div id="youtube-player" class="w-full h-full"></div>
@@ -83,7 +84,6 @@
     window.val = function(id, v) { var e = window.getEl(id); if(!e) return ''; if(v !== undefined) e.value = v; return e.value; };
     window.text = function(id, t) { var e = window.getEl(id); if(e) e.innerText = t; };
 
-    // Trik rahasia Friday untuk mengkalibrasi durasi audio bawaan browser secara otomatis!
     window.fixAudio = function(el) {
         if (el.dataset.fixed === "true") return;
         
@@ -125,12 +125,11 @@
       currentGradingAudioUrl: null, isGradingRecording: false, gradingMediaRecorder: null, gradingAudioChunks: [],
       studentMediaRecorder: null, studentAudioChunks: [], currentStudentAudioUrl: null,
       audioObj: null, activeAudioId: null, activeAudioDur: 0,
-      firebaseError: '' // PENYIMPAN ERROR FIREBASE
+      firebaseError: '' 
     };
 
     window.fmtT = s => `${Math.floor(s/60).toString().padStart(2,'0')}:${Math.floor(s%60).toString().padStart(2,'0')}`;
     
-    // PEMUTAR AUDIO KUSTOM ANTI-BUG (DIBUAT OLEH FRIDAY)
     if (!window.App.audioObj) {
         window.App.audioObj = new Audio();
         
@@ -145,7 +144,7 @@
             let ct = a.currentTime;
             if (!ct || isNaN(ct)) ct = 0;
             
-            if(elTime) elTime.innerText = window.fmtT(ct);
+            if(elTime) elTime.innerText = window.fmtT(ct); 
             
             if(elBar) {
                 let d = window.App.activeAudioDur || a.duration;
@@ -232,7 +231,7 @@
         let iconSize = isUstadz ? 'text-xs' : 'text-sm';
         let btnSize = isUstadz ? 'w-8 h-8 md:w-9 md:h-9' : 'w-10 h-10 md:w-11 md:h-11';
         
-        return '<div class="flex items-center gap-2 md:gap-3 bg-slate-50 dark:bg-[#0a120f] border border-slate-200 dark:border-[#1a2e26] p-1.5 md:p-2 rounded-full w-full shadow-sm"><button id="audio-btn-' + id + '" onclick="window.playCustomAudio(\'' + id + '\', \'' + url + '\', ' + duration + '); event.stopPropagation();" class="' + btnSize + ' rounded-full ' + btnColor + ' text-white flex items-center justify-center shrink-0 transition-colors shadow-md active:scale-95"><i class="ph-fill ' + ic + ' ' + iconSize + '"></i></button><div class="flex-1 flex items-center gap-2 pr-2 md:pr-3"><div class="h-1.5 flex-1 bg-slate-200 dark:bg-[#15241e] rounded-full overflow-hidden relative"><div id="audio-bar-' + id + '" class="absolute left-0 top-0 h-full ' + barColor + ' rounded-full transition-all duration-100" style="width: ' + (isPlay?'auto':'0%') + '"></div></div><span id="audio-time-' + id + '" class="text-[9px] md:text-[10px] font-mono font-medium text-slate-500 dark:text-gray-400 w-8 text-right">00:00</span></div></div>';
+        return '<div class="flex items-center gap-2 md:gap-3 bg-slate-50 dark:bg-[#0a120f] border border-slate-200 dark:border-[#1a2e26] p-1.5 md:p-2 rounded-full w-full shadow-sm"><button type="button" id="audio-btn-' + id + '" onclick="window.playCustomAudio(\'' + id + '\', \'' + url + '\', ' + duration + '); event.stopPropagation();" class="' + btnSize + ' rounded-full ' + btnColor + ' text-white flex items-center justify-center shrink-0 transition-colors shadow-md active:scale-95"><i class="ph-fill ' + ic + ' ' + iconSize + '"></i></button><div class="flex-1 flex items-center gap-2 pr-2 md:pr-3"><div class="h-1.5 flex-1 bg-slate-200 dark:bg-[#15241e] rounded-full overflow-hidden relative"><div id="audio-bar-' + id + '" class="absolute left-0 top-0 h-full ' + barColor + ' rounded-full transition-all duration-100" style="width: ' + (isPlay?'auto':'0%') + '"></div></div><span id="audio-time-' + id + '" class="text-[9px] md:text-[10px] font-mono font-medium text-slate-500 dark:text-gray-400 w-8 text-right">00:00</span></div></div>';
     };
 
     window.getLvl = () => {
@@ -276,7 +275,9 @@
             }, 15 * 60 * 1000);
         }
     };
-    document.onmousemove = window.resetTimer; document.onkeypress = window.resetTimer; document.ontouchstart = window.resetTimer;
+    document.addEventListener('mousemove', window.resetTimer, {passive: true});
+    document.addEventListener('keypress', window.resetTimer, {passive: true});
+    document.addEventListener('touchstart', window.resetTimer, {passive: true});
 
     window.showAlert = function(msg) { window.App.customDialog = { show: true, type: 'alert', message: msg, onConfirm: null }; window.render(); };
     window.showConfirm = function(msg, cb) { window.App.customDialog = { show: true, type: 'confirm', message: msg, onConfirm: cb }; window.render(); };
@@ -577,7 +578,6 @@
       } else {
           if (pWrap) {
               pWrap.classList.add('hidden');
-              pWrap.classList.add('pointer-events-none');
               if (pWrap.parentNode !== document.body) {
                   document.body.appendChild(pWrap);
               }
@@ -588,7 +588,7 @@
           if(window.App.view === 'player') {
               let pDest = window.getEl('player-destination');
               if (pWrap && pDest) {
-                  pWrap.classList.remove('hidden', 'pointer-events-none');
+                  pWrap.classList.remove('hidden');
                   pWrap.classList.add('absolute', 'inset-0', 'z-0');
                   if (pWrap.parentNode !== pDest) pDest.appendChild(pWrap);
                   if(!window.App.yt) window.initYTPlayer();
@@ -613,8 +613,7 @@
       if (window.App.view === 'home') searchPh = 'Cari Judul Surah...'; else if (window.App.view === 'hub' || window.App.view === 'admin') searchPh = 'Cari Nama Santri atau Surah...'; else if (window.App.view === 'master') searchPh = 'Cari Ustadz / Halaqoh / Santri...'; else if (window.App.view === 'player') searchPh = 'Cari Ayat / Arti...';
       const mobileSearchBar = '<div class="md:hidden mb-6"><div class="relative"><i class="ph-bold ph-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i><input id="search-mobile" type="text" placeholder="' + searchPh + '" value="' + window.esc(window.App.search) + '" oninput="window.App.search=this.value;window.render()" class="input-std !w-full !rounded-full !pl-14 py-3.5 shadow-sm"></div></div>';
 
-      // BANNER ERROR FIREBASE: Membantu deteksi masalah di Web Pribadi
-      let errorBanner = window.App.firebaseError ? '<div class="bg-red-500 text-white text-[10px] md:text-xs font-bold p-3 text-center w-full z-[999] relative shadow-md animate-pulse"><i class="ph-bold ph-warning-circle text-lg align-middle mr-1"></i> ' + window.App.firebaseError + '</div>' : '';
+      let errorBanner = window.App.firebaseError ? '<div class="bg-red-500 text-white text-[10px] md:text-xs font-bold p-3 text-center w-full shadow-md animate-pulse"><i class="ph-bold ph-warning-circle text-lg align-middle mr-1"></i> ' + window.App.firebaseError + '</div>' : '';
 
       let html = errorBanner + '<header class="shrink-0 border-b border-slate-200/60 dark:border-[#1a2e26] sticky top-0 z-50 backdrop-blur-xl bg-white/90 dark:bg-[#0a120f]/90 shadow-sm"><div class="flex items-center justify-between px-5 md:px-8 py-3.5 md:py-4"><div class="flex items-center gap-3 text-emerald-500 font-extrabold cursor-pointer transition-transform hover:scale-[1.02]" onclick="window.switchView(\'home\')">';
       html += window.App.schLogo ? '<img src="' + window.App.schLogo + '" class="h-8 md:h-10 max-w-[120px] object-contain">' : '<i class="ph-fill ph-monitor-play text-[2rem] md:text-4xl"></i>';
@@ -631,7 +630,7 @@
           html += '<button onclick="window.switchView(\'admin\')" class="' + (window.App.view==='admin'?'text-orange-500 border-b-[3px] border-orange-500':'text-slate-400 hover:text-slate-800 dark:text-gray-400 dark:hover:text-white') + ' pb-3 transition whitespace-nowrap flex items-center gap-1.5"><i class="ph-fill ph-tray text-lg"></i> Antrean ' + (pend>0?'<span class="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full shadow-md">' + pend + '</span>':'') + '</button>';
           html += '<button onclick="window.switchView(\'master\')" class="' + (window.App.view==='master'?'text-purple-600 border-b-[3px] border-purple-500':'text-slate-400 hover:text-slate-800 dark:text-gray-400 dark:hover:text-white') + ' pb-3 transition whitespace-nowrap flex items-center gap-1.5"><i class="ph-fill ph-database text-lg"></i> Data Master</button>';
       }
-      html += '</div></header><div class="flex-1 overflow-hidden flex flex-col w-full relative bg-slate-50/50 dark:bg-[#111c18]">';
+      html += '</div></header><div class="flex-1 overflow-hidden flex flex-col w-full bg-slate-50/50 dark:bg-[#111c18]">';
 
       if(window.App.view === 'home') {
         const jName = window.App.juzs.find(j=>j.id===window.App.actJuzId)?.name||'';
@@ -671,25 +670,89 @@
         if(window.App.filter.u!=='all')fs=fs.filter(s=>s.ustadzId==window.App.filter.u); if(window.App.filter.h!=='all')fs=fs.filter(s=>s.halaqohId==window.App.filter.h); if(window.App.filter.s!=='all')fs=fs.filter(s=>s.siswaId==window.App.filter.s);
         if(window.App.search)fs=fs.filter(x=>{let su=window.App.surahs.find(y=>y.id===x.surahId); return (su&&su.title.toLowerCase().includes(window.App.search.toLowerCase()))||window.getSName(x.siswaId).toLowerCase().includes(window.App.search.toLowerCase())});
 
-        html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10 min-h-0"><div class="max-w-6xl mx-auto w-full">' + mobileSearchBar + '<div class="mb-8 md:mb-14"><div class="flex flex-col md:flex-row justify-between md:items-end border-b border-slate-200 dark:border-[#1a2e26] pb-4 mb-6 gap-4 md:gap-0"><div><h1 class="text-2xl md:text-3xl font-serif dark:text-white mb-1 flex items-center gap-2"><i class="ph-fill ph-clipboard-text text-emerald-500"></i> Papan Riwayat</h1><p class="text-xs md:text-sm text-slate-500">Pantau status hafalan dan progres santri secara real-time.</p></div><div class="flex flex-wrap md:flex-nowrap gap-2"><select onchange="window.App.filter.u=this.value;window.App.filter.h=\'all\';window.App.filter.s=\'all\';window.render(true)" class="input-std !w-full sm:!w-auto flex-1 cursor-pointer">' + oU + '</select><select onchange="window.App.filter.h=this.value;window.App.filter.s=\'all\';window.render(true)" class="input-std !w-full sm:!w-auto flex-1 cursor-pointer">' + oH + '</select><select onchange="window.App.filter.s=this.value;window.render(true)" class="input-std !w-full sm:!w-auto flex-1 cursor-pointer">' + oS + '</select></div></div>';
+        html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-10 min-h-0 relative"><div class="max-w-6xl mx-auto w-full">';
+        html += mobileSearchBar;
+        html += '<div class="mb-8 md:mb-12"><div class="flex flex-col md:flex-row justify-between md:items-end border-b border-slate-200 dark:border-[#1a2e26] pb-4 mb-6 gap-4 md:gap-0"><div><h1 class="text-3xl md:text-4xl font-serif dark:text-white mb-2 flex items-center gap-3 tracking-tight"><i class="ph-fill ph-clipboard-text text-emerald-500"></i> Papan Riwayat</h1><p class="text-xs md:text-sm text-slate-500">Pantau status hafalan dan progres santri secara real-time.</p></div></div>';
         
-        if(!fs.length) html += '<div class="text-center text-slate-500 py-12 bg-white dark:bg-[#15241e] rounded-2xl border-dashed border-2 border-slate-200 dark:border-[#1a2e26]">' + (window.App.search?'Pencarian tidak ditemukan.':'Belum ada riwayat setoran.') + '</div>';
-        else {
+        // Filter Bar Baru yang Bersih
+        html += '<div class="bg-white dark:bg-[#15241e] border border-slate-100 dark:border-[#1a2e26] p-2 md:p-3 rounded-[2rem] shadow-soft flex flex-col md:flex-row gap-2 relative z-20">';
+        html += '<div class="flex-1 relative"><i class="ph-fill ph-chalkboard-teacher absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select onchange="window.App.filter.u=this.value;window.App.filter.h=\'all\';window.App.filter.s=\'all\';window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oU + '</select></div>';
+        html += '<div class="flex-1 relative"><i class="ph-fill ph-users-three absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select onchange="window.App.filter.h=this.value;window.App.filter.s=\'all\';window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oH + '</select></div>';
+        html += '<div class="flex-1 relative"><i class="ph-fill ph-user-circle absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select onchange="window.App.filter.s=this.value;window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oS + '</select></div>';
+        html += '</div></div>';
+        
+        if(!fs.length) {
+            html += '<div class="flex flex-col items-center justify-center py-20 text-center bg-white dark:bg-[#15241e] rounded-[2rem] border border-dashed border-slate-200 dark:border-[#1a2e26]"><div class="w-20 h-20 bg-slate-50 dark:bg-[#0a120f] rounded-full flex items-center justify-center text-slate-300 mb-4"><i class="ph-fill ph-clipboard-text text-4xl"></i></div><p class="text-slate-500 font-medium">' + (window.App.search?'Pencarian tidak ditemukan.':'Belum ada riwayat setoran di sini.') + '</p></div>';
+        } else {
             let strList = "";
             fs.sort((a,b)=>b.id-a.id).forEach(sb=>{
                 let su=window.App.surahs.find(x=>x.id===sb.surahId); let sg=window.App.segs.find(x=>x.id===sb.segmentId); let lv=sg?window.App.levels.find(l=>l.id===sg.levelId):null;
-                let sc=sb.status==='graded'?'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-transparent':sb.status==='need-repeat'?'text-red-600 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-transparent':'text-orange-600 bg-orange-50 dark:bg-orange-500/10 border-orange-200 dark:border-transparent'; 
-                let bc=sb.status==='graded'?'border-emerald-100 dark:border-emerald-900/50':sb.status==='need-repeat'?'border-red-100 dark:border-red-900/50':'border-slate-100 dark:border-[#1a2e26]';
-                let st=sb.status==='graded'?'LULUS ('+sb.grade+')':sb.status==='need-repeat'?'MINTA DIULANG':'MENUNGGU NILAI'; 
-                let ic=sb.status==='graded'?'ph-check-circle':sb.status==='need-repeat'?'ph-arrow-counter-clockwise':'ph-hourglass';
                 
-                let nI=(sb.note||sb.voiceNote)?'<div class="mt-4 p-4 bg-slate-50 dark:bg-[#15241e] rounded-2xl text-xs text-slate-600 dark:text-gray-300 border border-slate-100 dark:border-[#1a2e26]"><span class="text-orange-600 font-bold block mb-1.5 flex items-center gap-1"><i class="ph-fill ph-chat-text"></i> Catatan Ustadz/ah:</span>' + (sb.note?'<p class="leading-relaxed mb-3">' + window.esc(sb.note) + '</p>':'') + (sb.voiceNote?('<div class="mt-1 w-full">' + window.renderCustomAudio('hub_ust_' + sb.id, sb.voiceNote, 0, true) + '</div>'):'') + '</div>':'';
-                let rb=(sb.status==='need-repeat' && !isAdmin)?'<button onclick="window.App.actSurahId=' + sb.surahId + ';window.App.actSegId=' + sb.segmentId + ';window.App.resubmitId=' + sb.id + ';window.App.hierSel={u:' + sb.ustadzId + ',h:' + sb.halaqohId + ',s:' + sb.siswaId + '};window.App.rec.src=\'hub\';window.App.rec.secs=0;window.switchView(\'setoran\');" class="mt-4 w-full py-3 bg-red-50 text-red-600 border border-red-200 px-3 rounded-lg flex items-center justify-center gap-1 font-bold hover:bg-red-500 hover:text-white transition dark:bg-[#15241e] dark:border-red-900 uppercase tracking-widest text-[10px]"><i class="ph-bold ph-microphone text-lg"></i> Setor Ulang</button>':'';
+                let sColor = sb.status==='graded'?'text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-900/30 dark:border-emerald-800':sb.status==='need-repeat'?'text-red-600 bg-red-50 border-red-200 dark:bg-red-900/30 dark:border-red-800':'text-orange-600 bg-orange-50 border-orange-200 dark:bg-orange-900/30 dark:border-orange-800'; 
+                let sIcon = sb.status==='graded'?'ph-check-circle':sb.status==='need-repeat'?'ph-arrow-counter-clockwise':'ph-hourglass';
+                let sText = sb.status==='graded'?'LULUS ('+sb.grade+')':sb.status==='need-repeat'?'DIULANG':'MENUNGGU NILAI'; 
+
+                let ustNoteHtml = '';
+                if(sb.note || sb.voiceNote) {
+                    ustNoteHtml = '<div class="mt-4 bg-orange-50 dark:bg-orange-900/10 rounded-2xl p-4 border border-orange-100 dark:border-orange-900/30 relative z-10"><div class="flex items-center gap-1.5 mb-2"><i class="ph-fill ph-chalkboard-teacher text-orange-500"></i><span class="text-[10px] font-bold text-orange-600 uppercase tracking-widest">Catatan Penguji</span></div>';
+                    if(sb.note) ustNoteHtml += '<p class="text-xs text-slate-600 dark:text-gray-300 leading-relaxed mb-3">' + window.esc(sb.note) + '</p>';
+                    if(sb.voiceNote) ustNoteHtml += window.renderCustomAudio('hub_ust_' + sb.id, sb.voiceNote, 0, true);
+                    ustNoteHtml += '</div>';
+                }
+
+                let actionBtn = '';
+                if (sb.status==='need-repeat' && !isAdmin) {
+                    actionBtn = '<button onclick="window.App.actSurahId=' + sb.surahId + ';window.App.actSegId=' + sb.segmentId + ';window.App.resubmitId=' + sb.id + ';window.App.hierSel={u:' + sb.ustadzId + ',h:' + sb.halaqohId + ',s:' + sb.siswaId + '};window.App.rec.src=\'hub\';window.App.rec.secs=0;window.switchView(\'setoran\');" class="bg-red-500 hover:bg-red-600 text-white shadow-md shadow-red-500/30 px-4 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center gap-1.5 transition-all active:scale-95"><i class="ph-bold ph-microphone text-sm"></i> Setor Ulang</button>';
+                }
+
                 let studentAudioPlayer = window.renderCustomAudio('hub_stu_' + sb.id, sb.audioUrl, sb.duration || 0, false);
 
-                strList += '<div class="bg-white border ' + bc + ' rounded-2xl p-4 md:p-5 flex flex-col shadow-sm dark:bg-[#0a120f] relative overflow-hidden">' + (sb.status==='graded'?'<div class="absolute -top-6 -right-6 w-20 h-20 bg-emerald-100 dark:bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>':sb.status==='need-repeat'?'<div class="absolute -top-6 -right-6 w-20 h-20 bg-red-100 dark:bg-red-500/10 rounded-full blur-2xl pointer-events-none"></div>':'') + '<div class="flex justify-between items-start mb-3"><div class="flex gap-3 items-center"><div class="w-10 h-10 rounded-full bg-slate-100 dark:bg-[#0a120f] flex items-center justify-center text-slate-400"><i class="ph-fill ph-user text-xl"></i></div><div><h3 class="font-bold text-slate-800 dark:text-white text-base tracking-tight">' + window.getSName(sb.siswaId) + '</h3><span class="text-[9px] font-bold uppercase tracking-widest text-emerald-600">' + window.getUName(sb.ustadzId) + '</span></div></div><span class="text-[9px] font-mono text-slate-400 bg-slate-50 dark:bg-[#0a120f] px-2.5 py-1 rounded-lg border border-slate-100 dark:border-[#1a2e26]">' + sb.date + '</span></div><div class="mb-5 p-4 bg-emerald-50 dark:bg-emerald-500/5 rounded-2xl border border-emerald-100 dark:border-transparent"><p class="text-sm font-bold text-emerald-600 leading-tight mb-1">' + window.esc(su?su.title:'-') + ' <span class="text-slate-400 text-[10px] font-normal ml-1 border-l pl-2 border-slate-300 dark:border-[#1a2e26]">' + window.esc(lv?lv.name:'') + '</span></p><p class="text-xs text-slate-500 font-medium">' + window.esc(sg?sg.title:'-') + '</p></div><div class="mb-2">' + studentAudioPlayer + '</div>' + nH + rb + '<div class="mt-auto pt-5 mt-5 border-t border-slate-100 dark:border-[#1a2e26] flex items-center justify-center"><div class="flex items-center justify-center gap-1.5 text-xs font-bold w-full py-2.5 rounded-xl border ' + sc + '"><i class="ph-fill ' + ic + ' text-lg"></i> ' + st + '</div></div></div>';
+                strList += `
+                <div class="bg-white border border-slate-100 rounded-[2rem] p-5 md:p-6 shadow-soft flex flex-col gap-4 dark:bg-[#0f1915] dark:border-[#1a2e26] hover:shadow-xl transition-all relative">
+                    <!-- Header Kartu -->
+                    <div class="flex justify-between items-start">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-gradient-to-br from-emerald-100 to-teal-100 dark:from-emerald-900/40 dark:to-teal-900/40 rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                                <i class="ph-fill ph-user text-2xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-800 dark:text-white text-sm md:text-base leading-tight">${window.getSName(sb.siswaId)}</h3>
+                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">${window.getHName(sb.halaqohId)} &bull; ${window.getUName(sb.ustadzId)}</p>
+                            </div>
+                        </div>
+                        <div class="text-[9px] font-mono text-slate-400 bg-slate-50 dark:bg-[#15241e] px-2.5 py-1.5 rounded-lg border border-slate-100 dark:border-[#1a2e26] shrink-0">${sb.date}</div>
+                    </div>
+
+                    <!-- Info Surah -->
+                    <div class="bg-slate-50 dark:bg-[#15241e] rounded-2xl p-4 border border-slate-100 dark:border-[#1a2e26]">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <div class="flex items-center gap-2">
+                                <i class="ph-fill ph-book-open text-emerald-500 text-lg"></i>
+                                <span class="text-sm font-bold text-slate-700 dark:text-gray-200">${window.esc(su?su.title:'-')}</span>
+                            </div>
+                            <span class="text-[9px] font-bold bg-white dark:bg-[#0a120f] px-2 py-1 rounded-md text-emerald-600 border border-slate-100 dark:border-[#1a2e26] uppercase tracking-widest shadow-sm">${window.esc(lv?lv.name:'-')}</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 font-medium pl-6">${window.esc(sg?sg.title:'-')}</p>
+                    </div>
+
+                    <!-- Audio Santri -->
+                    <div class="w-full relative z-20">
+                        ${studentAudioPlayer}
+                    </div>
+
+                    <!-- Catatan Ustadz (Jika ada) -->
+                    ${ustNoteHtml}
+
+                    <!-- Footer Kartu -->
+                    <div class="pt-5 mt-auto border-t border-slate-100 dark:border-[#1a2e26] flex items-center justify-between">
+                        <div class="flex items-center gap-1.5 text-[10px] md:text-xs font-bold px-3 py-2 rounded-xl border ${sColor}">
+                            <i class="ph-fill ${sIcon} text-sm md:text-base"></i> ${sText}
+                        </div>
+                        ${actionBtn}
+                    </div>
+                </div>`;
             });
-            html += '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">' + strList + '</div>';
+            html += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">' + strList + '</div>';
         }
         html += '</div></div></div>';
       }
@@ -828,8 +891,10 @@
         
         if(!window.App.modal && !(window.App.customDialog && window.App.customDialog.show)) { 
             root.innerHTML = ''; 
+            root.classList.add('hidden');
             return; 
         }
+        root.classList.remove('hidden');
         
         if(window.App.modal==='login') {
             mHtml += '<div class="modal-overlay !flex"><div class="modal-box text-center"><div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 dark:bg-emerald-900/30"><i class="ph-fill ph-lock-key text-3xl"></i></div><h2 class="text-xl font-bold mb-4 dark:text-white">Akses Admin</h2>' + (window.App.loginError ? '<div class="mb-4 text-[11px] font-bold text-red-500 bg-red-50 p-3 rounded-lg border border-red-200 dark:bg-red-900/20 dark:border-transparent animate-pulse">' + window.App.loginError + '</div>' : '') + '<input type="text" id="m_u" onkeydown="if(event.key===\'Enter\')window.getEl(\'m_btn\').click()" class="input-std mb-3 text-center" placeholder="Username"><input type="password" id="m_p" onkeydown="if(event.key===\'Enter\')window.getEl(\'m_btn\').click()" class="input-std mb-4 text-center tracking-widest" placeholder="Password"><button id="m_btn" onclick="window.handleAdminLogin()" class="btn-std mb-2">Login</button><button onclick="window.App.modal=null;window.App.loginError=\'\';window.render(true)" class="w-full py-3 text-slate-500 font-bold hover:text-slate-800 dark:text-gray-400 dark:hover:text-white transition">Batal</button></div></div>';
