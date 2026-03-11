@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>TahfidzQur</title>
+  <title>TahfidzQu</title>
   
   <!-- LOAD FONT ARABIC (AMIRI) PERMANEN -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -695,7 +695,7 @@
       html += '<div class="flex flex-col justify-center"><span class="text-xl md:text-2xl leading-none tracking-tight text-slate-800 dark:text-white">Tahfidz<span class="text-emerald-500">Qu</span></span>' + (window.App.schSub?'<span class="text-[9px] text-slate-400 mt-1 uppercase tracking-widest font-bold">' + window.App.schSub + '</span>':'') + '</div></div>';
       html += '<div class="flex items-center gap-2 md:hidden"><button onclick="window.App.theme=window.App.theme===\'dark\'?\'light\':\'dark\';window.render(true)" class="w-11 h-11 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 flex items-center justify-center transition-transform active:scale-95"><i class="ph-fill ' + (window.App.theme==='dark'?'ph-sun':'ph-moon') + ' text-lg"></i></button>';
       html += isAdmin ? '<button onclick="window.App.adminLvl=0;window.switchView(\'home\');" class="w-11 h-11 rounded-full bg-red-50 text-red-500 flex items-center justify-center transition-transform active:scale-95"><i class="ph-bold ph-sign-out text-lg"></i></button>' : '<button onclick="window.App.modal=\'login\';window.render()" class="w-11 h-11 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 flex items-center justify-center transition-transform active:scale-95"><i class="ph-fill ph-lock-key text-lg"></i></button>';
-      html += '</div><div class="hidden md:flex items-center gap-4"><div class="relative"><i class="ph-bold ph-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i><input id="search-desktop" type="text" placeholder="' + searchPh + '" value="' + window.esc(window.App.search) + '" oninput="window.App.search=this.value;window.render()" class="input-std !w-64 !rounded-full !pl-14 transition-all focus:!w-80 shadow-sm"></div>';
+      html += '</div><div class="hidden md:flex items-center gap-4"><div class="relative"><i class="ph-bold ph-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i><input id="search-desktop" type="text" placeholder="' + searchPh + '" value="' + window.esc(window.App.search) + '" oninput="window.App.search=this.value;window.render()" class="input-std !w-full !rounded-full !pl-14 transition-all focus:!w-80 shadow-sm"></div>';
       html += '<button onclick="window.App.theme=window.App.theme===\'dark\'?\'light\':\'dark\';window.render(true)" class="w-12 h-12 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 hover:text-emerald-500 flex items-center justify-center transition shadow-sm"><i class="ph-fill ' + (window.App.theme==='dark'?'ph-sun':'ph-moon') + ' text-xl"></i></button>';
       html += isAdmin ? '<button onclick="window.App.adminLvl=0;window.switchView(\'home\');" class="w-12 h-12 rounded-full bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition shadow-sm" title="Keluar Akun"><i class="ph-bold ph-sign-out text-xl"></i></button>' : '<button onclick="window.App.modal=\'login\';window.render()" class="w-12 h-12 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 flex items-center justify-center transition shadow-sm"><i class="ph-fill ph-lock-key text-xl"></i></button>';
       html += '</div></div><div class="px-5 md:px-8 flex gap-8 text-[13px] font-bold pt-2 overflow-x-auto hide-scrollbar">';
@@ -762,7 +762,7 @@
         html += '<div class="flex items-center gap-2" id="levels-box-mobile"></div>';
         html += '</div>';
 
-        html += '<div class="p-4 lg:p-8 max-w-5xl mx-auto w-full flex flex-col gap-4 lg:gap-6 shrink-0 pb-24 lg:pb-10">';
+        html += '<div class="p-4 lg:p-8 max-w-5xl mx-auto w-full flex flex-col gap-4 lg:gap-6 shrink-0 pb-10">';
         
         html += '<div class="grid grid-cols-2 gap-3 lg:gap-5">';
         html += '<div class="bg-white border border-slate-100 shadow-sm dark:bg-[#15241e] dark:border-[#1a2e26] rounded-2xl p-3 lg:p-4 flex flex-col justify-between hover:border-emerald-300 transition-colors"><span class="text-[9px] lg:text-[10px] text-emerald-600 font-bold tracking-widest uppercase mb-2 block">Pengulangan</span><div class="flex justify-between items-center"><div class="text-lg lg:text-2xl font-bold dark:text-white leading-none"><span id="rep-target-val">' + window.App.repTarget + 'x</span> <span id="rep-text" class="text-[9px] lg:text-[10px] text-emerald-500 font-normal ml-0.5"></span></div><div class="flex gap-1"><button onclick="window.updateRepTarget(-1)" class="w-8 h-8 lg:w-9 lg:h-9 rounded-lg bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors font-bold text-base flex items-center justify-center">-</button><button onclick="window.updateRepTarget(1)" class="w-8 h-8 lg:w-9 lg:h-9 rounded-lg bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors font-bold text-base flex items-center justify-center">+</button></div></div></div>';
@@ -777,16 +777,14 @@
         html += '<div class="flex-1 space-y-2 mt-1" id="segs-box-mobile"></div>';
         html += '</div>';
 
-        html += '</div>'; 
-        
-        html += (!isAdmin ? '<div class="lg:hidden fixed bottom-0 left-0 w-full p-4 bg-white/90 dark:bg-[#0a120f]/90 backdrop-blur-md border-t border-slate-200/60 dark:border-[#1a2e26] z-40"><button onclick="if(!window.App.actSegId){window.showAlert(\'Pilih segmen hafalan terlebih dahulu!\');}else{window.App.rec.src=\'player\';window.App.resubmitId=null;window.switchView(\'setoran\');}" class="btn-std w-full shadow-emerald-500/30 flex items-center justify-center gap-2"><i class="ph-fill ph-microphone-stage text-xl"></i> Setor Hafalan</button></div>' : '');
-        
-        html += '</div>'; 
+        html += (!isAdmin ? '<div class="lg:hidden sticky bottom-0 w-full pt-4 pb-2 z-40 mt-auto"><button onclick="if(!window.App.actSegId){window.showAlert(\'Pilih segmen hafalan terlebih dahulu!\');}else{window.App.rec.src=\'player\';window.App.resubmitId=null;window.switchView(\'setoran\');}" class="btn-std w-full shadow-emerald-500/30 flex items-center justify-center gap-2"><i class="ph-fill ph-microphone-stage text-xl"></i> Setor Hafalan</button></div>' : '');
 
+        html += '</div>'; 
+        
         html += '<div class="hidden lg:flex w-80 xl:w-96 bg-white dark:bg-[#15241e] border-l border-slate-200/60 dark:border-[#1a2e26] flex-col shrink-0 h-full z-10 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">';
         html += '<div class="p-6 border-b border-slate-100 dark:border-[#1a2e26] shrink-0"><div class="flex justify-between items-center mb-5"><h2 class="text-lg font-bold dark:text-white flex items-center gap-2 tracking-tight"><i class="ph-fill ph-list-numbers text-emerald-500 text-xl"></i> Daftar Ayat</h2>' + (isAdmin?'<button onclick="window.App.modal=\'segment\';window.App.modalData=null;window.render(true);setTimeout(window.setupSegmentModal, 10);" class="text-[10px] bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded-lg text-emerald-600 font-bold flex items-center gap-1 hover:bg-emerald-500 hover:text-white transition-all uppercase tracking-widest"><i class="ph-bold ph-plus"></i> Baru</button>':'') + '</div>';
         html += '<div class="relative mb-5"><i class="ph-bold ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i><input id="search-desktop-segs" type="text" placeholder="Cari Ayat/Arti..." value="' + window.esc(window.App.search) + '" oninput="window.App.search=this.value;window.render()" class="input-std !w-full !rounded-2xl !pl-12 py-3 shadow-sm"></div>';
-        html += (!isAdmin ? '<button onclick="if(!window.App.actSegId){window.showAlert(\'Pilih segmen hafalan terlebih dahulu!\');}else{window.App.rec.src=\'player\';window.App.resubmitId=null;window.switchView(\'setoran\');}" class="btn-std !py-3.5 !text-sm flex items-center justify-center gap-2 shadow-xl"><i class="ph-fill ph-microphone-stage text-xl"></i> Setor Hafalan Segmen Ini</button>' : '');
+        html += (!isAdmin ? '<button onclick="if(!window.App.actSegId){window.showAlert(\'Pilih segmen hafalan terlebih dahulu!\');}else{window.App.rec.src=\'player\';window.App.resubmitId=null;window.switchView(\'setoran\');}" class="btn-std !py-3.5 !text-sm flex items-center justify-center gap-2 shadow-xl"><i class="ph-fill ph-microphone-stage text-xl"></i> Setor Hafalan</button>' : '');
         html += '</div><div class="flex-1 overflow-y-auto p-4 space-y-3" id="segs-box-desktop"></div></div>';
 
         html += '</div>';
