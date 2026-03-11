@@ -10,6 +10,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
+  <!-- DOM-TO-IMAGE LIBRARY UNTUK SCREENSHOT KARTU PRESTASI -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = { 
@@ -103,6 +106,67 @@
         if (el.readyState >= 1) { doFix(); }
     };
 
+    // Fungsi Share & Download Kartu Prestasi
+    window.downloadCard = async function() {
+        let node = document.getElementById('achievement-card-node');
+        let btn = document.getElementById('btn-download-card');
+        if(!node || !window.domtoimage) return;
+        
+        let oldHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-lg"></i> Loading...';
+        btn.disabled = true;
+
+        try {
+            await domtoimage.toPng(node); // Pre-render 1x untuk memuat font/style
+            let dataUrl = await domtoimage.toPng(node, { quality: 0.95, bgcolor: '#0B131A' });
+            
+            let link = document.createElement('a');
+            link.download = 'Kartu_Prestasi_TahfidzQu.png';
+            link.href = dataUrl;
+            link.click();
+        } catch (e) {
+            window.showAlert('Gagal mengunduh kartu. Silakan coba lagi.');
+        } finally {
+            btn.innerHTML = oldHtml;
+            btn.disabled = false;
+        }
+    };
+
+    window.shareCard = async function() {
+        let node = document.getElementById('achievement-card-node');
+        let btn = document.getElementById('btn-share-card');
+        if(!node || !window.domtoimage) return;
+
+        let oldHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-lg"></i> Tunggu...';
+        btn.disabled = true;
+
+        try {
+            await domtoimage.toPng(node); // Pre-render
+            let dataUrl = await domtoimage.toPng(node, { quality: 0.95, bgcolor: '#0B131A' });
+            
+            let blob = await (await fetch(dataUrl)).blob();
+            let file = new File([blob], 'Kartu_Prestasi.png', { type: 'image/png' });
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: 'Kartu Prestasi Hafalan',
+                    text: 'Alhamdulillah, pencapaian hafalan baru!',
+                    files: [file]
+                });
+            } else {
+                window.showAlert('Perangkat/Browser ini tidak mendukung fitur Share gambar langsung. Silakan Download gambarnya terlebih dahulu.');
+            }
+        } catch (e) {
+            if (e.name !== 'AbortError') {
+                window.showAlert('Gagal membagikan kartu. Coba gunakan fitur Download.');
+            }
+        } finally {
+            btn.innerHTML = oldHtml;
+            btn.disabled = false;
+        }
+    };
+
     const Q_SURAHS = JSON.parse('[{"no":1,"name":"Al-Fatihah","juz":[1]},{"no":2,"name":"Al-Baqarah","juz":[1,2,3]},{"no":3,"name":"Ali \'Imran","juz":[3,4]},{"no":4,"name":"An-Nisa\'","juz":[4,5,6]},{"no":5,"name":"Al-Ma\'idah","juz":[6,7]},{"no":6,"name":"Al-An\'am","juz":[7,8]},{"no":7,"name":"Al-A\'raf","juz":[8,9]},{"no":8,"name":"Al-Anfal","juz":[9,10]},{"no":9,"name":"At-Taubah","juz":[10,11]},{"no":10,"name":"Yunus","juz":[11]},{"no":11,"name":"Hud","juz":[11,12]},{"no":12,"name":"Yusuf","juz":[12,13]},{"no":13,"name":"Ar-Ra\'d","juz":[13]},{"no":14,"name":"Ibrahim","juz":[13]},{"no":15,"name":"Al-Hijr","juz":[14]},{"no":16,"name":"An-Nahl","juz":[14]},{"no":17,"name":"Al-Isra\'","juz":[15]},{"no":18,"name":"Al-Kahf","juz":[15,16]},{"no":19,"name":"Maryam","juz":[16]},{"no":20,"name":"Taha","juz":[16]},{"no":21,"name":"Al-Anbiya\'","juz":[17]},{"no":22,"name":"Al-Hajj","juz":[17]},{"no":23,"name":"Al-Mu\'minun","juz":[18]},{"no":24,"name":"An-Nur","juz":[18]},{"no":25,"name":"Al-Furqan","juz":[18,19]},{"no":26,"name":"Asy-Syu\'ara\'","juz":[19]},{"no":27,"name":"An-Naml","juz":[19,20]},{"no":28,"name":"Al-Qasas","juz":[20]},{"no":29,"name":"Al-\'Ankabut","juz":[20,21]},{"no":30,"name":"Ar-Rum","juz":[21]},{"no":31,"name":"Luqman","juz":[21]},{"no":32,"name":"As-Sajdah","juz":[21]},{"no":33,"name":"Al-Ahzab","juz":[21,22]},{"no":34,"name":"Saba\'","juz":[22]},{"no":35,"name":"Fatir","juz":[22]},{"no":36,"name":"Yasin","juz":[22,23]},{"no":37,"name":"As-Saffat","juz":[23]},{"no":38,"name":"Sad","juz":[23]},{"no":39,"name":"Az-Zumar","juz":[23,24]},{"no":40,"name":"Ghafir","juz":[24]},{"no":41,"name":"Fussilat","juz":[24,25]},{"no":42,"name":"Asy-Syura","juz":[25]},{"no":43,"name":"Az-Zukhruf","juz":[25]},{"no":44,"name":"Ad-Dukhan","juz":[25]},{"no":45,"name":"Al-Jasiyah","juz":[25]},{"no":46,"name":"Al-Ahqaf","juz":[26]},{"no":47,"name":"Muhammad","juz":[26]},{"no":48,"name":"Al-Fath","juz":[26]},{"no":49,"name":"Al-Hujurat","juz":[26]},{"no":50,"name":"Qaf","juz":[26]},{"no":51,"name":"Az-Zariyat","juz":[26,27]},{"no":52,"name":"At-Tur","juz":[27]},{"no":53,"name":"An-Najm","juz":[27]},{"no":54,"name":"Al-Qamar","juz":[27]},{"no":55,"name":"Ar-Rahman","juz":[27]},{"no":56,"name":"Al-Waqi\'ah","juz":[27]},{"no":57,"name":"Al-Hadid","juz":[27]},{"no":58,"name":"Al-Mujadilah","juz":[28]},{"no":59,"name":"Al-Hasyr","juz":[28]},{"no":60,"name":"Al-Mumtahanah","juz":[28]},{"no":61,"name":"As-Saff","juz":[28]},{"no":62,"name":"Al-Jumu\'ah","juz":[28]},{"no":63,"name":"Al-Munafiqun","juz":[28]},{"no":64,"name":"At-Tagabun","juz":[28]},{"no":65,"name":"At-Talaq","juz":[28]},{"no":66,"name":"At-Tahrim","juz":[28]},{"no":67,"name":"Al-Mulk","juz":[29]},{"no":68,"name":"Al-Qalam","juz":[29]},{"no":69,"name":"Al-Haqqah","juz":[29]},{"no":70,"name":"Al-Ma\'arij","juz":[29]},{"no":71,"name":"Nuh","juz":[29]},{"no":72,"name":"Al-Jinn","juz":[29]},{"no":73,"name":"Al-Muzzammil","juz":[29]},{"no":74,"name":"Al-Muddassir","juz":[29]},{"no":75,"name":"Al-Qiyamah","juz":[29]},{"no":76,"name":"Al-Insan","juz":[29]},{"no":77,"name":"Al-Mursalat","juz":[29]},{"no":78,"name":"An-Naba\'","juz":[30]},{"no":79,"name":"An-Nazi\'at","juz":[30]},{"no":80,"name":"\'Abasa","juz":[30]},{"no":81,"name":"At-Takwir","juz":[30]},{"no":82,"name":"Al-Infitar","juz":[30]},{"no":83,"name":"Al-Mutaffifin","juz":[30]},{"no":84,"name":"Al-Insyiqaq","juz":[30]},{"no":85,"name":"Al-Buruj","juz":[30]},{"no":86,"name":"At-Tariq","juz":[30]},{"no":87,"name":"Al-A\'la","juz":[30]},{"no":88,"name":"Al-Gasyiyah","juz":[30]},{"no":89,"name":"Al-Fajr","juz":[30]},{"no":90,"name":"Al-Balad","juz":[30]},{"no":91,"name":"Asy-Syams","juz":[30]},{"no":92,"name":"Al-Lail","juz":[30]},{"no":93,"name":"Ad-Duha","juz":[30]},{"no":94,"name":"Al-Insyirah","juz":[30]},{"no":95,"name":"At-Tin","juz":[30]},{"no":96,"name":"Al-\'Alaq","juz":[30]},{"no":97,"name":"Al-Qadr","juz":[30]},{"no":98,"name":"Al-Bayyinah","juz":[30]},{"no":99,"name":"Az-Zalzalah","juz":[30]},{"no":100,"name":"Al-\'Adiyat","juz":[30]},{"no":101,"name":"Al-Qari\'ah","juz":[30]},{"no":102,"name":"At-Takasur","juz":[30]},{"no":103,"name":"Al-\'Asr","juz":[30]},{"no":104,"name":"Al-Humazah","juz":[30]},{"no":105,"name":"Al-Fil","juz":[30]},{"no":106,"name":"Quraisy","juz":[30]},{"no":107,"name":"Al-Ma\'un","juz":[30]},{"no":108,"name":"Al-Kausar","juz":[30]},{"no":109,"name":"Al-Kafirun","juz":[30]},{"no":110,"name":"An-Nasr","juz":[30]},{"no":111,"name":"Al-Lahab","juz":[30]},{"no":112,"name":"Al-Ikhlas","juz":[30]},{"no":113,"name":"Al-Falaq","juz":[30]},{"no":114,"name":"An-Nas","juz":[30]}]');
 
     window.App = {
@@ -125,7 +189,6 @@
 
     window.fmtT = s => `${Math.floor(s/60).toString().padStart(2,'0')}:${Math.floor(s%60).toString().padStart(2,'0')}`;
     
-    // PEMUTAR AUDIO KUSTOM ANTI-BUG (DIBUAT OLEH FRIDAY)
     if (!window.App.audioObj) {
         window.App.audioObj = new Audio();
         
@@ -218,7 +281,7 @@
     };
 
     window.renderCustomAudio = function(id, url, duration, isUstadz = false) {
-        if (!url) return '<span class="text-[10px] md:text-xs text-slate-400 italic bg-slate-50 dark:bg-[#1a2e26] px-4 py-3 rounded-2xl border border-dashed border-slate-200 dark:border-transparent w-full text-center inline-block">Rekaman tidak tersedia</span>';
+        if (!url) return '<span class="text-[10px] md:text-xs text-slate-400 italic bg-slate-50 dark:bg-[#1a2e26] px-4 py-3 rounded-2xl border border-dashed border-slate-200 dark:border-transparent w-full text-center inline-block pointer-events-none">Rekaman tidak tersedia</span>';
         
         let isPlay = (window.App.activeAudioId === id && window.App.audioObj && !window.App.audioObj.paused);
         let ic = isPlay ? 'ph-pause' : 'ph-play';
@@ -227,7 +290,7 @@
         let iconSize = isUstadz ? 'text-xs' : 'text-sm';
         let btnSize = isUstadz ? 'w-8 h-8 md:w-9 md:h-9' : 'w-10 h-10 md:w-11 md:h-11';
         
-        return '<div class="flex items-center gap-2 md:gap-3 bg-slate-50 dark:bg-[#0a120f] border border-slate-200 dark:border-[#1a2e26] p-1.5 md:p-2 rounded-full w-full shadow-sm" onclick="event.stopPropagation();"><button type="button" id="audio-btn-' + id + '" onclick="window.playCustomAudio(\'' + id + '\', \'' + url + '\', ' + duration + '); event.stopPropagation();" class="' + btnSize + ' rounded-full ' + btnColor + ' text-white flex items-center justify-center shrink-0 transition-colors shadow-md active:scale-95"><i class="ph-fill ' + ic + ' ' + iconSize + '"></i></button><div class="flex-1 flex items-center gap-2 pr-2 md:pr-3"><div class="h-1.5 flex-1 bg-slate-200 dark:bg-[#15241e] rounded-full overflow-hidden relative"><div id="audio-bar-' + id + '" class="absolute left-0 top-0 h-full ' + barColor + ' rounded-full transition-all duration-100" style="width: ' + (isPlay?'auto':'0%') + '"></div></div><span id="audio-time-' + id + '" class="text-[9px] md:text-[10px] font-mono font-medium text-slate-500 dark:text-gray-400 w-8 text-right">00:00</span></div></div>';
+        return '<div class="flex items-center gap-2 md:gap-3 bg-slate-50 dark:bg-[#0a120f] border border-slate-200 dark:border-[#1a2e26] p-1.5 md:p-2 rounded-full w-full shadow-sm relative z-20"><button id="audio-btn-' + id + '" onclick="window.playCustomAudio(\'' + id + '\', \'' + url + '\', ' + duration + ')" class="' + btnSize + ' rounded-full ' + btnColor + ' text-white flex items-center justify-center shrink-0 transition-colors shadow-md active:scale-95 pointer-events-auto"><i class="ph-fill ' + ic + ' ' + iconSize + '"></i></button><div class="flex-1 flex items-center gap-2 pr-2 md:pr-3 pointer-events-none"><div class="h-1.5 flex-1 bg-slate-200 dark:bg-[#15241e] rounded-full overflow-hidden relative"><div id="audio-bar-' + id + '" class="absolute left-0 top-0 h-full ' + barColor + ' rounded-full transition-all duration-100" style="width: ' + (isPlay?'auto':'0%') + '"></div></div><span id="audio-time-' + id + '" class="text-[9px] md:text-[10px] font-mono font-medium text-slate-500 dark:text-gray-400 w-8 text-right">00:00</span></div></div>';
     };
 
     window.getLvl = () => {
@@ -617,7 +680,7 @@
       html += '<div class="flex flex-col justify-center"><span class="text-xl md:text-2xl leading-none tracking-tight text-slate-800 dark:text-white">Tahfidz<span class="text-emerald-500">Qu</span></span>' + (window.App.schSub?'<span class="text-[9px] text-slate-400 mt-1 uppercase tracking-widest font-bold">' + window.App.schSub + '</span>':'') + '</div></div>';
       html += '<div class="flex items-center gap-2 md:hidden"><button onclick="window.App.theme=window.App.theme===\'dark\'?\'light\':\'dark\';window.render(true)" class="w-11 h-11 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 flex items-center justify-center transition-transform active:scale-95"><i class="ph-fill ' + (window.App.theme==='dark'?'ph-sun':'ph-moon') + ' text-lg"></i></button>';
       html += isAdmin ? '<button onclick="window.App.adminLvl=0;window.switchView(\'home\');" class="w-11 h-11 rounded-full bg-red-50 text-red-500 flex items-center justify-center transition-transform active:scale-95"><i class="ph-bold ph-sign-out text-lg"></i></button>' : '<button onclick="window.App.modal=\'login\';window.render()" class="w-11 h-11 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 flex items-center justify-center transition-transform active:scale-95"><i class="ph-fill ph-lock-key text-lg"></i></button>';
-      html += '</div><div class="hidden md:flex items-center gap-4"><div class="relative"><i class="ph-bold ph-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i><input id="search-desktop" type="text" placeholder="' + searchPh + '" value="' + window.esc(window.App.search) + '" oninput="window.App.search=this.value;window.render()" class="input-std !w-64 !rounded-full !pl-14 transition-all focus:!w-80 shadow-sm"></div>';
+      html += '</div><div class="hidden md:flex items-center gap-4"><div class="relative"><i class="ph-bold ph-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i><input id="search-desktop" type="text" placeholder="' + searchPh + '" value="' + window.esc(window.App.search) + '" oninput="window.App.search=this.value;window.render()" class="input-std !w-full !rounded-full !pl-14 transition-all focus:!w-80 shadow-sm"></div>';
       html += '<button onclick="window.App.theme=window.App.theme===\'dark\'?\'light\':\'dark\';window.render(true)" class="w-12 h-12 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 hover:text-emerald-500 flex items-center justify-center transition shadow-sm"><i class="ph-fill ' + (window.App.theme==='dark'?'ph-sun':'ph-moon') + ' text-xl"></i></button>';
       html += isAdmin ? '<button onclick="window.App.adminLvl=0;window.switchView(\'home\');" class="w-12 h-12 rounded-full bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition shadow-sm" title="Keluar Akun"><i class="ph-bold ph-sign-out text-xl"></i></button>' : '<button onclick="window.App.modal=\'login\';window.render()" class="w-12 h-12 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 flex items-center justify-center transition shadow-sm"><i class="ph-fill ph-lock-key text-xl"></i></button>';
       html += '</div></div><div class="px-5 md:px-8 flex gap-8 text-[13px] font-bold pt-2 overflow-x-auto hide-scrollbar">';
@@ -764,6 +827,11 @@
                     actionBtn = '<button onclick="window.App.actSurahId=' + sb.surahId + ';window.App.actSegId=' + sb.segmentId + ';window.App.resubmitId=' + sb.id + ';window.App.hierSel={u:' + sb.ustadzId + ',h:' + sb.halaqohId + ',s:' + sb.siswaId + '};window.App.rec.src=\'hub\';window.App.rec.secs=0;window.switchView(\'setoran\');" class="bg-red-500 hover:bg-red-600 text-white shadow-md shadow-red-500/30 px-4 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center gap-1.5 transition-all active:scale-95"><i class="ph-bold ph-microphone text-sm"></i> Setor Ulang</button>';
                 }
 
+                let shareBtn = '';
+                if (sb.status === 'graded') {
+                    shareBtn = `<button onclick="window.App.modal='share_card';window.App.modalData=${sb.id};window.render(true)" class="px-4 py-2.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center gap-1.5 hover:bg-emerald-500 hover:text-white transition-all dark:bg-[#15241e] dark:border-[#1a2e26] dark:text-emerald-400"><i class="ph-bold ph-certificate text-sm"></i> Kartu</button>`;
+                }
+
                 let studentAudioPlayer = window.renderCustomAudio('hub_stu_' + sb.id, sb.audioUrl, sb.duration || 0, false);
 
                 strList += `
@@ -810,6 +878,7 @@
                         </div>
                         <div class="flex items-center gap-2 flex-1 justify-end">
                             ${actionBtn}
+                            ${shareBtn}
                         </div>
                     </div>
                 </div>`;
@@ -829,7 +898,7 @@
         if(window.App.filter.u!=='all')fs=fs.filter(s=>s.ustadzId==window.App.filter.u); if(window.App.filter.h!=='all')fs=fs.filter(s=>s.halaqohId==window.App.filter.h); if(window.App.filter.s!=='all')fs=fs.filter(s=>s.siswaId==window.App.filter.s);
         if(window.App.search)fs=fs.filter(x=>{let su=window.App.surahs.find(y=>y.id===x.surahId); return (su&&su.title.toLowerCase().includes(window.App.search.toLowerCase()))||window.getSName(x.siswaId).toLowerCase().includes(window.App.search.toLowerCase())});
 
-        html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-10 min-h-0 relative"><div class="max-w-6xl mx-auto w-full">';
+        html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10 min-h-0 relative"><div class="max-w-6xl mx-auto w-full">';
         html += mobileSearchBar;
         html += '<div class="mb-8 md:mb-12"><div class="flex flex-col md:flex-row justify-between md:items-end border-b border-slate-200 dark:border-[#1a2e26] pb-4 mb-6 gap-4 md:gap-0"><div><h1 class="text-3xl md:text-4xl font-serif text-orange-500 dark:text-orange-400 mb-2 flex items-center gap-3 tracking-tight"><i class="ph-fill ph-tray"></i> Antrean Setoran</h1><p class="text-xs md:text-sm text-slate-500">Daftar rekaman hafalan yang menunggu penilaian.</p></div></div>';
         
@@ -856,6 +925,8 @@
                 
                 let delB = isSuper ? '<button onclick="window.deleteSubmission(' + sb.id + ')" class="bg-red-50 text-red-500 border border-red-100 hover:bg-red-500 hover:text-white w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center transition-colors dark:bg-[#15241e] dark:border-[#1a2e26] shrink-0" title="Hapus"><i class="ph-bold ph-trash text-lg"></i></button>' : '';
                 
+                let shareBtn = sb.status === 'graded' ? `<button onclick="window.App.modal='share_card';window.App.modalData=${sb.id};window.render(true)" class="bg-slate-50 hover:bg-emerald-50 text-emerald-600 border border-slate-200 w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center transition-all dark:bg-[#0a120f] dark:border-[#1a2e26] dark:hover:border-emerald-500/50 shrink-0" title="Kartu Prestasi"><i class="ph-bold ph-certificate text-lg"></i></button>` : '';
+
                 let nI=(sb.note||sb.voiceNote)?'<div class="text-[10px] text-slate-400 mt-3 italic flex flex-wrap gap-3 relative z-10">' + (sb.note?'<span class="flex items-center gap-1"><i class="ph-fill ph-note text-emerald-500"></i> Teks</span>':'') + (sb.voiceNote?('<div class="mt-1 w-full">' + window.renderCustomAudio('adm_ust_' + sb.id, sb.voiceNote, 0, true) + '</div>'):'') + '</div>':'';
                 
                 let studentAudioPlayer = window.renderCustomAudio('adm_stu_' + sb.id, sb.audioUrl, sb.duration || 0, false);
@@ -869,7 +940,7 @@
 
                 mStr += '<div class="w-full relative z-20">' + studentAudioPlayer + '</div>';
 
-                mStr += '<div class="pt-4 mt-auto border-t border-slate-100 dark:border-[#1a2e26] flex items-center justify-between gap-3 relative z-20"><div class="flex items-center gap-1.5 text-[10px] md:text-xs font-bold px-3 py-2.5 rounded-xl border ' + sColor + ' shrink-0"><i class="ph-fill ' + sIcon + ' text-sm md:text-base"></i> <span class="hidden sm:inline md:hidden xl:inline">' + sText + '</span></div><div class="flex items-center gap-2 flex-1 justify-end">' + delB + aB + '</div></div>';
+                mStr += '<div class="pt-4 mt-auto border-t border-slate-100 dark:border-[#1a2e26] flex items-center justify-between gap-3 relative z-20"><div class="flex items-center gap-1.5 text-[10px] md:text-xs font-bold px-3 py-2.5 rounded-xl border ' + sColor + ' shrink-0"><i class="ph-fill ' + sIcon + ' text-sm md:text-base"></i> <span class="hidden sm:inline md:hidden xl:inline">' + sText + '</span></div><div class="flex items-center gap-2 flex-1 justify-end">' + delB + shareBtn + aB + '</div></div>';
                 
                 mStr += '</div>';
             });
@@ -1029,6 +1100,66 @@
             let deleteBtn = window.App.currentGradingAudioUrl ? '<button type="button" onclick="window.deleteGradingAudio()" class="w-8 h-8 rounded-full bg-red-100 text-red-600 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all shadow-sm shrink-0"><i class="ph-bold ph-trash"></i></button>' : '';
             
             mHtml += '<div class="modal-overlay !flex"><div class="modal-box text-center"><div class="w-12 h-12 md:w-14 md:h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4"><i class="ph-fill ph-star text-3xl"></i></div><h2 class="text-lg md:text-xl font-bold mb-1 dark:text-white">Beri Nilai</h2><p class="text-xs md:text-sm text-emerald-600 font-bold mb-6">' + window.getSName(sb.siswaId) + '</p><div class="text-left mb-4"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Teks:</label><textarea id="gn" class="input-std" rows="2">' + window.esc(sb.note||'') + '</textarea></div><div class="text-left mb-6"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Suara (Opsional):</label><div class="flex items-center gap-3 bg-slate-50 dark:bg-[#0a120f] border border-slate-200 dark:border-[#1a2e26] p-2 md:p-3 rounded-xl"><button type="button" onclick="window.toggleGradingRecord()" class="w-8 h-8 md:w-10 md:h-10 rounded-full ' + (window.App.isGradingRecording ? 'bg-red-500 text-white animate-pulse shadow-lg' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400') + ' flex items-center justify-center transition-all shrink-0"><i class="ph-fill ' + (window.App.isGradingRecording ? 'ph-stop' : 'ph-microphone') + ' text-lg md:text-xl"></i></button><div class="flex-1">' + audioHTML + '</div>' + deleteBtn + '</div></div><div class="flex justify-center gap-1.5 md:gap-2 mb-4 md:mb-5">' + btns + '</div><button type="button" onclick="window.submitGrade(' + sb.id + ', \'repeat\')" class="w-full py-2.5 md:py-3 bg-red-50 text-red-600 border border-red-100 rounded-xl font-bold text-xs md:text-sm mb-3 md:mb-4 hover:bg-red-500 hover:text-white transition dark:bg-red-900/20 dark:border-transparent">Minta Ulangi</button><button type="button" onclick="window.App.currentGradingAudioUrl=null;window.App.modal=null;window.render(true)" class="w-full py-2 text-slate-500 font-bold text-xs md:text-sm hover:text-slate-800 transition">Batal</button></div></div>';
+        } else if (window.App.modal === 'share_card') {
+            let sb = window.App.subs.find(x=>x.id===window.App.modalData);
+            let stu = window.App.siswas.find(x=>x.id===sb.siswaId);
+            let sur = window.App.surahs.find(x=>x.id===sb.surahId);
+            let sg = window.App.segs.find(x=>x.id===sb.segmentId);
+            let lv = sg ? window.App.levels.find(l=>l.id===sg.levelId) : null;
+            let schName = window.App.schSub || 'TAHFIDZQU INSTITUTE';
+
+            mHtml += `
+            <div class="modal-overlay !flex !items-end md:!items-center !p-0 md:!p-4 sm:pt-10 z-[500]">
+              <div class="modal-box !bg-[#0B131A] !border-slate-800 !p-0 !max-w-[380px] w-full mx-auto md:rounded-[2rem] rounded-b-none rounded-t-[2rem] overflow-hidden flex flex-col max-h-[95vh]">
+                
+                <div class="p-4 flex justify-between items-center bg-[#13201B] shrink-0 border-b border-slate-800">
+                    <h3 class="text-white font-bold text-sm flex items-center gap-2"><i class="ph-fill ph-certificate text-emerald-500 text-lg"></i> Kartu Prestasi</h3>
+                    <button onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-white transition-colors"><i class="ph-bold ph-x text-lg"></i></button>
+                </div>
+
+                <div id="achievement-card-node" class="bg-[#0B131A] p-6 sm:p-8 flex flex-col items-center relative shrink-0">
+                    
+                    <div class="absolute top-0 left-0 w-full h-full pointer-events-none" style="background-image: radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.1) 0%, transparent 60%);"></div>
+                    
+                    <div class="w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-white mb-6 shadow-[0_0_20px_rgba(16,185,129,0.4)] relative z-10">
+                        <i class="ph-bold ph-check text-3xl"></i>
+                    </div>
+
+                    <h2 class="text-xl sm:text-2xl font-serif text-emerald-400 font-bold tracking-[0.2em] text-center leading-snug mb-8 relative z-10">PASSED /<br>LULUS</h2>
+
+                    <h1 class="text-2xl font-bold text-white text-center tracking-tight mb-1 relative z-10">${window.esc(stu?.name||'')}</h1>
+                    <p class="text-sm font-medium text-emerald-500 mb-6 relative z-10">${window.esc(lv?.name||'Level')} &bull; Kelas ${window.esc(stu?.kelas||'')}</p>
+
+                    <div class="w-full bg-[#13201B] border border-emerald-900/30 rounded-2xl p-5 mb-8 relative z-10 shadow-inner">
+                        <div class="mb-4">
+                            <span class="text-[9px] font-bold text-emerald-600 uppercase tracking-widest block mb-1">Pencapaian Hafalan</span>
+                            <h3 class="text-white font-bold text-base leading-tight">${window.esc(sur?.title||'')}</h3>
+                            <p class="text-slate-400 text-xs mt-1">${window.esc(sg?.title||'')}</p>
+                        </div>
+                        <div class="flex items-center justify-between border-t border-slate-700/50 pt-4">
+                            <div>
+                                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Nilai</span>
+                                <span class="text-emerald-400 font-bold text-lg">${window.esc(sb.grade)}</span>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Tanggal Lulus</span>
+                                <span class="text-slate-300 font-medium text-sm">${window.esc(sb.date)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-center gap-2 text-slate-500 opacity-60 w-full mt-auto relative z-10">
+                        <i class="ph-fill ph-seal-check text-base"></i>
+                        <span class="text-[8px] font-bold uppercase tracking-widest truncate">${window.esc(schName)}</span>
+                    </div>
+                </div>
+
+                <div class="p-4 sm:p-6 bg-[#13201B] border-t border-slate-800 flex gap-3 shrink-0">
+                    <button onclick="window.shareCard()" id="btn-share-card" class="flex-1 py-3.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 rounded-xl font-bold text-xs uppercase tracking-widest flex justify-center items-center gap-2 hover:bg-emerald-500 hover:text-white transition-colors active:scale-95"><i class="ph-bold ph-share-network text-lg"></i> Bagikan</button>
+                    <button onclick="window.downloadCard()" id="btn-download-card" class="flex-1 py-3.5 bg-emerald-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest flex justify-center items-center gap-2 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 transition-all active:scale-95"><i class="ph-bold ph-download-simple text-lg"></i> Download</button>
+                </div>
+              </div>
+            </div>`;
         }
 
         if (window.App.customDialog && window.App.customDialog.show) {
