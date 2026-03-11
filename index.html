@@ -537,6 +537,18 @@
 
     window.submitRec = async function(type, evt=null) { 
         if(!window.App.hierSel.s) { if(evt) evt.target.value=''; window.showAlert('Pilih identitas santri terlebih dahulu!'); return; }
+        
+        if (!window.App.resubmitId) {
+            let sIdNum = Number(window.App.hierSel.s);
+            let segIdNum = window.App.actSegId;
+            let exists = window.App.subs.some(x => x.siswaId === sIdNum && x.segmentId === segIdNum);
+            if (exists) {
+                if(evt) evt.target.value='';
+                window.showAlert('Santri ini sudah pernah menyetorkan hafalan untuk segmen ini. Tidak bisa mengirim data ganda.');
+                return;
+            }
+        }
+
         var mediaType = type === 'mic' ? 'rekaman mic' : 'file audio'; var tDate = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}); let audioData = window.App.currentStudentAudioUrl;
         if(type === 'file' && evt && evt.target.files[0]) { audioData = await window.blobToBase64(evt.target.files[0]); }
         
@@ -1123,51 +1135,57 @@
 
             mHtml += `
             <div class="modal-overlay !flex !items-center !justify-center !p-4 z-[500]">
-              <div class="w-full max-w-[360px] mx-auto flex flex-col gap-4 max-h-[95vh] overflow-y-auto hide-scrollbar pb-10 sm:pb-0">
+              <div class="w-full max-w-[400px] mx-auto flex flex-col gap-4 max-h-[95vh] overflow-y-auto hide-scrollbar pb-10 sm:pb-0">
                 
                 <!-- THE ACHIEVEMENT CARD -->
-                <div id="achievement-card-node" class="relative p-7 sm:p-8 flex flex-col items-center shrink-0 rounded-[1.5rem] border border-slate-700/50 w-full overflow-hidden" style="background-color: #0d1518; background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px); background-size: 20px 20px;">
+                <div id="achievement-card-node" class="relative p-5 flex flex-col items-center justify-center shrink-0 rounded-[1.5rem] border border-slate-700/50 overflow-hidden w-full aspect-[5/4] mx-auto" style="background-color: #0d1518;">
                     
-                    <!-- Background glow -->
-                    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[150%] h-1/2 bg-emerald-500/10 blur-[60px] pointer-events-none"></div>
+                    <!-- Islamic Background (Quran / Book) -->
+                    <i class="ph-fill ph-book-open absolute -right-6 -bottom-6 text-[14rem] text-emerald-500 opacity-[0.04] pointer-events-none -rotate-12"></i>
                     
-                    <div class="w-12 h-12 bg-emerald-400 rounded-full flex items-center justify-center text-[#0d1518] mb-4 shadow-[0_0_20px_rgba(52,211,153,0.3)] relative z-10">
-                        <i class="ph-bold ph-check text-2xl"></i>
-                    </div>
+                    <!-- Glow -->
+                    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-emerald-500/10 blur-[50px] pointer-events-none"></div>
 
-                    <div class="flex flex-col items-center mb-6 relative z-10">
-                        <h2 class="text-[22px] font-serif text-emerald-400 font-bold tracking-[0.2em] text-center leading-tight">PASSED /<br>LULUS</h2>
-                        <div class="w-12 h-0.5 bg-emerald-400/50 mt-3"></div>
-                    </div>
-
-                    <div class="w-20 h-20 rounded-full border-[3px] border-emerald-400 flex items-center justify-center bg-[#15241e] text-emerald-400 text-3xl font-bold font-serif mb-4 relative z-10 shadow-[0_0_20px_rgba(52,211,153,0.15)]">
-                        ${initials}
-                    </div>
-
-                    <h1 class="text-xl font-bold text-white text-center tracking-tight mb-1 relative z-10 font-serif">${window.esc(stu?.name||'')}</h1>
-                    <p class="text-[11px] font-medium text-emerald-500 mb-6 relative z-10 tracking-wide">${window.esc(lv?.name||'Level')} &bull; Kelas ${window.esc(stu?.kelas||'')}</p>
-
-                    <div class="w-full bg-[#111c1d] border border-slate-700/50 rounded-2xl p-5 mb-8 relative z-10 shadow-inner">
-                        <div class="mb-4 text-center">
-                            <span class="text-[9px] font-bold text-emerald-600 uppercase tracking-[0.15em] block mb-1.5">ACHIEVEMENT</span>
-                            <h3 class="text-white font-bold text-[15px] leading-snug font-serif">${window.esc(sur?.title||'')}</h3>
-                            <p class="text-slate-400 text-[11px] mt-1">${window.esc(sg?.title||'')}</p>
+                    <div class="flex-1 flex flex-col items-center justify-center w-full relative z-10 z-10 w-full">
+                        <!-- Caption Islami -->
+                        <div class="flex flex-col items-center mb-3">
+                            <h2 class="text-[16px] sm:text-lg font-serif text-emerald-400 font-bold tracking-[0.15em] text-center leading-none">SYAHADAH TAHFIDZ</h2>
+                            <span class="text-emerald-500/80 font-arabic text-base sm:text-lg mt-1 leading-none">بَارَكَ اللَّهُ فِيكَ</span>
                         </div>
-                        <div class="flex items-center justify-between border-t border-slate-700/50 pt-4">
-                            <div class="text-left">
-                                <span class="text-[8px] font-bold text-emerald-600/80 uppercase tracking-widest block mb-1">GRADE</span>
-                                <span class="text-emerald-400 font-bold text-xs">${window.esc(sb.grade)} / ${getPredikat(sb.grade)}</span>
+
+                        <!-- Avatar Inisial -->
+                        <div class="w-14 h-14 rounded-full border-[2px] border-emerald-400 flex items-center justify-center bg-[#15241e] text-emerald-400 text-xl font-bold font-serif mb-2 sm:mb-3 shadow-[0_0_15px_rgba(52,211,153,0.15)] shrink-0">
+                            ${initials}
+                        </div>
+
+                        <!-- Nama & Info -->
+                        <h1 class="text-base sm:text-lg font-bold text-white text-center tracking-tight mb-0.5 font-serif w-full px-2 truncate leading-tight">${window.esc(stu?.name||'')}</h1>
+                        <p class="text-[9px] sm:text-[10px] font-medium text-emerald-500 mb-4 tracking-wide">${window.esc(lv?.name||'Level')} &bull; Kelas ${window.esc(stu?.kelas||'')}</p>
+
+                        <!-- Rincian Nilai -->
+                        <div class="w-[95%] bg-[#111c1d]/80 backdrop-blur-sm border border-slate-700/50 rounded-xl p-3 sm:p-4 mb-3 shadow-inner shrink-0">
+                            <div class="mb-2.5 text-center">
+                                <span class="text-[7px] sm:text-[8px] font-bold text-emerald-600 uppercase tracking-[0.15em] block mb-0.5">Pencapaian Hafalan</span>
+                                <h3 class="text-white font-bold text-xs sm:text-sm leading-snug font-serif truncate">${window.esc(sur?.title||'')}</h3>
+                                <p class="text-slate-400 text-[8px] sm:text-[9px] mt-0.5 truncate">${window.esc(sg?.title||'')}</p>
                             </div>
-                            <div class="text-right">
-                                <span class="text-[8px] font-bold text-emerald-600/80 uppercase tracking-widest block mb-1">DATE PASSED</span>
-                                <span class="text-slate-300 font-bold text-xs">${window.esc(sb.date)}</span>
+                            <div class="flex items-center justify-between border-t border-slate-700/50 pt-2.5">
+                                <div class="text-left flex-1">
+                                    <span class="text-[6px] sm:text-[7px] font-bold text-emerald-600/80 uppercase tracking-widest block mb-0.5">Nilai Akhir</span>
+                                    <span class="text-emerald-400 font-bold text-[10px] sm:text-[11px] leading-none">${window.esc(sb.grade)} / ${getPredikat(sb.grade)}</span>
+                                </div>
+                                <div class="text-right flex-1">
+                                    <span class="text-[6px] sm:text-[7px] font-bold text-emerald-600/80 uppercase tracking-widest block mb-0.5">Tanggal Lulus</span>
+                                    <span class="text-slate-300 font-bold text-[10px] sm:text-[11px] leading-none">${window.esc(sb.date)}</span>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="flex items-center justify-center gap-1.5 text-slate-500 w-full relative z-10 mt-auto opacity-70">
-                        <i class="ph-fill ph-seal-check text-sm text-emerald-700"></i>
-                        <span class="text-[8px] font-bold uppercase tracking-widest text-slate-500 truncate">${window.esc(schName)}</span>
+                    <!-- Footer Logo -->
+                    <div class="flex items-center justify-center gap-1.5 text-slate-500 w-full relative z-10 shrink-0 opacity-70">
+                        <i class="ph-fill ph-seal-check text-[10px] text-emerald-700"></i>
+                        <span class="text-[6px] sm:text-[7px] font-bold uppercase tracking-[0.2em] text-slate-500 truncate">${window.esc(schName)}</span>
                     </div>
                 </div>
 
