@@ -8,7 +8,7 @@
   <!-- LOAD FONT ARABIC (AMIRI) PERMANEN -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600;700;800&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
   
   <!-- DOM-TO-IMAGE LIBRARY UNTUK SCREENSHOT KARTU PRESTASI -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
@@ -19,7 +19,10 @@
       darkMode: 'class',
       theme: {
         extend: {
-          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          fontFamily: { 
+              sans: ['Inter', 'sans-serif'],
+              serif: ['Merriweather', 'serif'] 
+          },
           boxShadow: { 'soft': '0 4px 20px -2px rgba(0,0,0,0.05)' }
         }
       }
@@ -56,7 +59,7 @@
     @layer components {
       .input-std { @apply w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-sm text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-inner dark:bg-[#15241e] dark:border-[#1a2e26] dark:text-white dark:focus:ring-emerald-500/40 transition-all duration-200; }
       .btn-std { @apply w-full py-3.5 bg-emerald-500 text-white font-bold rounded-2xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/30 active:scale-95 disabled:opacity-50; }
-      .modal-overlay { @apply fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[100] backdrop-blur-sm dark:bg-black/80 transition-all p-4; }
+      .modal-overlay { @apply fixed inset-0 bg-slate-900/80 flex items-center justify-center z-[100] backdrop-blur-sm transition-all p-4; }
       .modal-box { @apply bg-white border border-slate-100 rounded-[2rem] w-full max-w-[420px] p-8 shadow-2xl dark:bg-[#0f1915] dark:border-[#1a2e26] transition-all max-h-[90vh] overflow-y-auto; }
       .card-std { @apply bg-white border border-slate-100 shadow-soft dark:bg-[#15241e] dark:border-[#1a2e26] rounded-3xl p-5 hover:border-emerald-400 hover:shadow-xl dark:hover:border-emerald-500/50 transition-all duration-300 cursor-pointer flex flex-col h-full relative overflow-hidden; }
       .btn-action { @apply flex-1 bg-slate-50 hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 border border-slate-200 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 dark:bg-[#0a120f] dark:border-[#1a2e26] dark:hover:bg-[#15241e] dark:text-gray-300; }
@@ -118,7 +121,7 @@
 
         try {
             await domtoimage.toPng(node); // Pre-render 1x untuk memuat font/style
-            let dataUrl = await domtoimage.toPng(node, { quality: 0.95, bgcolor: '#0B131A' });
+            let dataUrl = await domtoimage.toPng(node, { quality: 1.0, bgcolor: '#0d1518' });
             
             let link = document.createElement('a');
             link.download = 'Kartu_Prestasi_TahfidzQu.png';
@@ -143,7 +146,7 @@
 
         try {
             await domtoimage.toPng(node); // Pre-render
-            let dataUrl = await domtoimage.toPng(node, { quality: 0.95, bgcolor: '#0B131A' });
+            let dataUrl = await domtoimage.toPng(node, { quality: 1.0, bgcolor: '#0d1518' });
             
             let blob = await (await fetch(dataUrl)).blob();
             let file = new File([blob], 'Kartu_Prestasi.png', { type: 'image/png' });
@@ -216,7 +219,7 @@
         window.App.audioObj.addEventListener('ended', () => {
             let id = window.App.activeAudioId;
             if(!id) return;
-            let isUstadz = id.startsWith('ust_') || id === 'grade_modal';
+            let isUstadz = id.includes('_ust_') || id === 'grade_modal';
             let btn = window.getEl('audio-btn-' + id);
             let elBar = window.getEl('audio-bar-' + id);
             let elTime = window.getEl('audio-time-' + id);
@@ -229,7 +232,7 @@
         window.App.audioObj.addEventListener('error', () => {
             let id = window.App.activeAudioId;
             if(id) {
-                let isUstadz = id.startsWith('ust_') || id === 'grade_modal';
+                let isUstadz = id.includes('_ust_') || id === 'grade_modal';
                 let btn = window.getEl('audio-btn-' + id);
                 if(btn) btn.innerHTML = '<i class="ph-fill ph-play ' + (isUstadz ? 'text-xs' : 'text-sm') + '"></i>';
                 window.App.activeAudioId = null;
@@ -240,7 +243,7 @@
     window.playCustomAudio = function(id, url, savedDuration) {
         if (!window.App.audioObj) return;
         let a = window.App.audioObj;
-        let isUstadz = id.startsWith('ust_') || id === 'grade_modal';
+        let isUstadz = id.includes('_ust_') || id === 'grade_modal';
         let getIcon = (state) => `<i class="ph-fill ${state === 'play' ? 'ph-play' : 'ph-pause'} ${isUstadz ? 'text-xs' : 'text-sm'}"></i>`;
 
         if (window.App.activeAudioId === id) {
@@ -257,7 +260,7 @@
         }
         
         if (window.App.activeAudioId) {
-            let oldIsUst = window.App.activeAudioId.startsWith('ust_') || window.App.activeAudioId === 'grade_modal';
+            let oldIsUst = window.App.activeAudioId.includes('_ust_') || window.App.activeAudioId === 'grade_modal';
             let oldBtn = window.getEl('audio-btn-' + window.App.activeAudioId);
             if(oldBtn) oldBtn.innerHTML = `<i class="ph-fill ph-play ${oldIsUst ? 'text-xs' : 'text-sm'}"></i>`;
             let oldBar = window.getEl('audio-bar-' + window.App.activeAudioId);
@@ -290,7 +293,7 @@
         let iconSize = isUstadz ? 'text-xs' : 'text-sm';
         let btnSize = isUstadz ? 'w-8 h-8 md:w-9 md:h-9' : 'w-10 h-10 md:w-11 md:h-11';
         
-        return '<div class="flex items-center gap-2 md:gap-3 bg-slate-50 dark:bg-[#0a120f] border border-slate-200 dark:border-[#1a2e26] p-1.5 md:p-2 rounded-full w-full shadow-sm relative z-20"><button id="audio-btn-' + id + '" onclick="window.playCustomAudio(\'' + id + '\', \'' + url + '\', ' + duration + ')" class="' + btnSize + ' rounded-full ' + btnColor + ' text-white flex items-center justify-center shrink-0 transition-colors shadow-md active:scale-95 pointer-events-auto"><i class="ph-fill ' + ic + ' ' + iconSize + '"></i></button><div class="flex-1 flex items-center gap-2 pr-2 md:pr-3 pointer-events-none"><div class="h-1.5 flex-1 bg-slate-200 dark:bg-[#15241e] rounded-full overflow-hidden relative"><div id="audio-bar-' + id + '" class="absolute left-0 top-0 h-full ' + barColor + ' rounded-full transition-all duration-100" style="width: ' + (isPlay?'auto':'0%') + '"></div></div><span id="audio-time-' + id + '" class="text-[9px] md:text-[10px] font-mono font-medium text-slate-500 dark:text-gray-400 w-8 text-right">00:00</span></div></div>';
+        return '<div class="flex items-center gap-2 md:gap-3 bg-slate-50 dark:bg-[#0a120f] border border-slate-200 dark:border-[#1a2e26] p-1.5 md:p-2 rounded-full w-full shadow-sm" onclick="event.stopPropagation();"><button type="button" id="audio-btn-' + id + '" onclick="window.playCustomAudio(\'' + id + '\', \'' + url + '\', ' + duration + '); event.stopPropagation();" class="' + btnSize + ' rounded-full ' + btnColor + ' text-white flex items-center justify-center shrink-0 transition-colors shadow-md active:scale-95"><i class="ph-fill ' + ic + ' ' + iconSize + '"></i></button><div class="flex-1 flex items-center gap-2 pr-2 md:pr-3"><div class="h-1.5 flex-1 bg-slate-200 dark:bg-[#15241e] rounded-full overflow-hidden relative"><div id="audio-bar-' + id + '" class="absolute left-0 top-0 h-full ' + barColor + ' rounded-full transition-all duration-100" style="width: ' + (isPlay?'auto':'0%') + '"></div></div><span id="audio-time-' + id + '" class="text-[9px] md:text-[10px] font-mono font-medium text-slate-500 dark:text-gray-400 w-8 text-right">00:00</span></div></div>';
     };
 
     window.getLvl = () => {
@@ -680,7 +683,7 @@
       html += '<div class="flex flex-col justify-center"><span class="text-xl md:text-2xl leading-none tracking-tight text-slate-800 dark:text-white">Tahfidz<span class="text-emerald-500">Qu</span></span>' + (window.App.schSub?'<span class="text-[9px] text-slate-400 mt-1 uppercase tracking-widest font-bold">' + window.App.schSub + '</span>':'') + '</div></div>';
       html += '<div class="flex items-center gap-2 md:hidden"><button onclick="window.App.theme=window.App.theme===\'dark\'?\'light\':\'dark\';window.render(true)" class="w-11 h-11 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 flex items-center justify-center transition-transform active:scale-95"><i class="ph-fill ' + (window.App.theme==='dark'?'ph-sun':'ph-moon') + ' text-lg"></i></button>';
       html += isAdmin ? '<button onclick="window.App.adminLvl=0;window.switchView(\'home\');" class="w-11 h-11 rounded-full bg-red-50 text-red-500 flex items-center justify-center transition-transform active:scale-95"><i class="ph-bold ph-sign-out text-lg"></i></button>' : '<button onclick="window.App.modal=\'login\';window.render()" class="w-11 h-11 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 flex items-center justify-center transition-transform active:scale-95"><i class="ph-fill ph-lock-key text-lg"></i></button>';
-      html += '</div><div class="hidden md:flex items-center gap-4"><div class="relative"><i class="ph-bold ph-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i><input id="search-desktop" type="text" placeholder="' + searchPh + '" value="' + window.esc(window.App.search) + '" oninput="window.App.search=this.value;window.render()" class="input-std !w-full !rounded-full !pl-14 transition-all focus:!w-80 shadow-sm"></div>';
+      html += '</div><div class="hidden md:flex items-center gap-4"><div class="relative"><i class="ph-bold ph-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i><input id="search-desktop" type="text" placeholder="' + searchPh + '" value="' + window.esc(window.App.search) + '" oninput="window.App.search=this.value;window.render()" class="input-std !w-64 !rounded-full !pl-14 transition-all focus:!w-80 shadow-sm"></div>';
       html += '<button onclick="window.App.theme=window.App.theme===\'dark\'?\'light\':\'dark\';window.render(true)" class="w-12 h-12 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 hover:text-emerald-500 flex items-center justify-center transition shadow-sm"><i class="ph-fill ' + (window.App.theme==='dark'?'ph-sun':'ph-moon') + ' text-xl"></i></button>';
       html += isAdmin ? '<button onclick="window.App.adminLvl=0;window.switchView(\'home\');" class="w-12 h-12 rounded-full bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition shadow-sm" title="Keluar Akun"><i class="ph-bold ph-sign-out text-xl"></i></button>' : '<button onclick="window.App.modal=\'login\';window.render()" class="w-12 h-12 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 flex items-center justify-center transition shadow-sm"><i class="ph-fill ph-lock-key text-xl"></i></button>';
       html += '</div></div><div class="px-5 md:px-8 flex gap-8 text-[13px] font-bold pt-2 overflow-x-auto hide-scrollbar">';
@@ -1106,58 +1109,77 @@
             let sur = window.App.surahs.find(x=>x.id===sb.surahId);
             let sg = window.App.segs.find(x=>x.id===sb.segmentId);
             let lv = sg ? window.App.levels.find(l=>l.id===sg.levelId) : null;
-            let schName = window.App.schSub || 'TAHFIDZQU INSTITUTE';
+            let schName = window.App.schSub || 'OFFICIAL QURAN MEMORIZATION INSTITUTE';
+            
+            let getPredikat = (g) => {
+                if(g==='A+') return 'Mumtaz';
+                if(g==='A') return 'Jayyid Jiddan';
+                if(g==='B+') return 'Jayyid';
+                if(g==='B') return 'Maqbul';
+                if(g==='C') return 'Naqis';
+                return 'Lulus';
+            };
+            let initials = (stu?.name || 'S').split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
 
             mHtml += `
-            <div class="modal-overlay !flex !items-end md:!items-center !p-0 md:!p-4 sm:pt-10 z-[500]">
-              <div class="modal-box !bg-[#0B131A] !border-slate-800 !p-0 !max-w-[380px] w-full mx-auto md:rounded-[2rem] rounded-b-none rounded-t-[2rem] overflow-hidden flex flex-col max-h-[95vh]">
+            <div class="modal-overlay !flex !items-center !justify-center !p-4 z-[500]">
+              <div class="w-full max-w-[360px] mx-auto flex flex-col gap-4 max-h-[95vh] overflow-y-auto hide-scrollbar pb-10 sm:pb-0">
                 
-                <div class="p-4 flex justify-between items-center bg-[#13201B] shrink-0 border-b border-slate-800">
-                    <h3 class="text-white font-bold text-sm flex items-center gap-2"><i class="ph-fill ph-certificate text-emerald-500 text-lg"></i> Kartu Prestasi</h3>
-                    <button onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-white transition-colors"><i class="ph-bold ph-x text-lg"></i></button>
-                </div>
-
-                <div id="achievement-card-node" class="bg-[#0B131A] p-6 sm:p-8 flex flex-col items-center relative shrink-0">
+                <!-- THE ACHIEVEMENT CARD -->
+                <div id="achievement-card-node" class="relative p-7 sm:p-8 flex flex-col items-center shrink-0 rounded-[1.5rem] border border-slate-700/50 w-full overflow-hidden" style="background-color: #0d1518; background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px); background-size: 20px 20px;">
                     
-                    <div class="absolute top-0 left-0 w-full h-full pointer-events-none" style="background-image: radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.1) 0%, transparent 60%);"></div>
+                    <!-- Background glow -->
+                    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[150%] h-1/2 bg-emerald-500/10 blur-[60px] pointer-events-none"></div>
                     
-                    <div class="w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-white mb-6 shadow-[0_0_20px_rgba(16,185,129,0.4)] relative z-10">
-                        <i class="ph-bold ph-check text-3xl"></i>
+                    <div class="w-12 h-12 bg-emerald-400 rounded-full flex items-center justify-center text-[#0d1518] mb-4 shadow-[0_0_20px_rgba(52,211,153,0.3)] relative z-10">
+                        <i class="ph-bold ph-check text-2xl"></i>
                     </div>
 
-                    <h2 class="text-xl sm:text-2xl font-serif text-emerald-400 font-bold tracking-[0.2em] text-center leading-snug mb-8 relative z-10">PASSED /<br>LULUS</h2>
+                    <div class="flex flex-col items-center mb-6 relative z-10">
+                        <h2 class="text-[22px] font-serif text-emerald-400 font-bold tracking-[0.2em] text-center leading-tight">PASSED /<br>LULUS</h2>
+                        <div class="w-12 h-0.5 bg-emerald-400/50 mt-3"></div>
+                    </div>
 
-                    <h1 class="text-2xl font-bold text-white text-center tracking-tight mb-1 relative z-10">${window.esc(stu?.name||'')}</h1>
-                    <p class="text-sm font-medium text-emerald-500 mb-6 relative z-10">${window.esc(lv?.name||'Level')} &bull; Kelas ${window.esc(stu?.kelas||'')}</p>
+                    <div class="w-20 h-20 rounded-full border-[3px] border-emerald-400 flex items-center justify-center bg-[#15241e] text-emerald-400 text-3xl font-bold font-serif mb-4 relative z-10 shadow-[0_0_20px_rgba(52,211,153,0.15)]">
+                        ${initials}
+                    </div>
 
-                    <div class="w-full bg-[#13201B] border border-emerald-900/30 rounded-2xl p-5 mb-8 relative z-10 shadow-inner">
-                        <div class="mb-4">
-                            <span class="text-[9px] font-bold text-emerald-600 uppercase tracking-widest block mb-1">Pencapaian Hafalan</span>
-                            <h3 class="text-white font-bold text-base leading-tight">${window.esc(sur?.title||'')}</h3>
-                            <p class="text-slate-400 text-xs mt-1">${window.esc(sg?.title||'')}</p>
+                    <h1 class="text-xl font-bold text-white text-center tracking-tight mb-1 relative z-10 font-serif">${window.esc(stu?.name||'')}</h1>
+                    <p class="text-[11px] font-medium text-emerald-500 mb-6 relative z-10 tracking-wide">${window.esc(lv?.name||'Level')} &bull; Kelas ${window.esc(stu?.kelas||'')}</p>
+
+                    <div class="w-full bg-[#111c1d] border border-slate-700/50 rounded-2xl p-5 mb-8 relative z-10 shadow-inner">
+                        <div class="mb-4 text-center">
+                            <span class="text-[9px] font-bold text-emerald-600 uppercase tracking-[0.15em] block mb-1.5">ACHIEVEMENT</span>
+                            <h3 class="text-white font-bold text-[15px] leading-snug font-serif">${window.esc(sur?.title||'')}</h3>
+                            <p class="text-slate-400 text-[11px] mt-1">${window.esc(sg?.title||'')}</p>
                         </div>
                         <div class="flex items-center justify-between border-t border-slate-700/50 pt-4">
-                            <div>
-                                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Nilai</span>
-                                <span class="text-emerald-400 font-bold text-lg">${window.esc(sb.grade)}</span>
+                            <div class="text-left">
+                                <span class="text-[8px] font-bold text-emerald-600/80 uppercase tracking-widest block mb-1">GRADE</span>
+                                <span class="text-emerald-400 font-bold text-xs">${window.esc(sb.grade)} / ${getPredikat(sb.grade)}</span>
                             </div>
                             <div class="text-right">
-                                <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Tanggal Lulus</span>
-                                <span class="text-slate-300 font-medium text-sm">${window.esc(sb.date)}</span>
+                                <span class="text-[8px] font-bold text-emerald-600/80 uppercase tracking-widest block mb-1">DATE PASSED</span>
+                                <span class="text-slate-300 font-bold text-xs">${window.esc(sb.date)}</span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="flex items-center justify-center gap-2 text-slate-500 opacity-60 w-full mt-auto relative z-10">
-                        <i class="ph-fill ph-seal-check text-base"></i>
-                        <span class="text-[8px] font-bold uppercase tracking-widest truncate">${window.esc(schName)}</span>
+                    <div class="flex items-center justify-center gap-1.5 text-slate-500 w-full relative z-10 mt-auto opacity-70">
+                        <i class="ph-fill ph-seal-check text-sm text-emerald-700"></i>
+                        <span class="text-[8px] font-bold uppercase tracking-widest text-slate-500 truncate">${window.esc(schName)}</span>
                     </div>
                 </div>
 
-                <div class="p-4 sm:p-6 bg-[#13201B] border-t border-slate-800 flex gap-3 shrink-0">
-                    <button onclick="window.shareCard()" id="btn-share-card" class="flex-1 py-3.5 bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 rounded-xl font-bold text-xs uppercase tracking-widest flex justify-center items-center gap-2 hover:bg-emerald-500 hover:text-white transition-colors active:scale-95"><i class="ph-bold ph-share-network text-lg"></i> Bagikan</button>
-                    <button onclick="window.downloadCard()" id="btn-download-card" class="flex-1 py-3.5 bg-emerald-500 text-white rounded-xl font-bold text-xs uppercase tracking-widest flex justify-center items-center gap-2 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 transition-all active:scale-95"><i class="ph-bold ph-download-simple text-lg"></i> Download</button>
+                <!-- THE BUTTONS (Matching Reference UI) -->
+                <div class="flex flex-col gap-2.5 w-full shrink-0 px-1">
+                    <button onclick="window.App.modal=null;window.render(true)" class="w-full py-4 bg-emerald-400 text-[#0d1518] rounded-xl font-bold text-[13px] hover:bg-emerald-300 transition-colors shadow-[0_0_15px_rgba(52,211,153,0.2)] active:scale-95 flex items-center justify-center gap-1.5">Tutup Kartu <i class="ph-bold ph-arrow-right text-lg"></i></button>
+                    <div class="flex gap-2.5">
+                        <button onclick="window.shareCard()" id="btn-share-card" class="flex-1 py-3 bg-[#111c1d] text-emerald-400 border border-emerald-900/30 rounded-xl font-bold text-xs flex justify-center items-center gap-2 hover:bg-[#15241e] transition-colors active:scale-95"><i class="ph-bold ph-share-network text-lg"></i> Share</button>
+                        <button onclick="window.downloadCard()" id="btn-download-card" class="flex-1 py-3 bg-[#111c1d] text-emerald-400 border border-emerald-900/30 rounded-xl font-bold text-xs flex justify-center items-center gap-2 hover:bg-[#15241e] transition-colors active:scale-95"><i class="ph-bold ph-download-simple text-lg"></i> Download</button>
+                    </div>
                 </div>
+
               </div>
             </div>`;
         }
