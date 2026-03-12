@@ -596,10 +596,12 @@
         if (!window.App.resubmitId) {
             let sIdNum = Number(window.App.hierSel.s);
             let segIdNum = window.App.actSegId;
-            let exists = window.App.subs.some(x => x.siswaId === sIdNum && x.segmentId === segIdNum);
+            let hIdNum = Number(window.App.hierSel.h); 
+            
+            let exists = window.App.subs.some(x => x.siswaId === sIdNum && x.segmentId === segIdNum && x.halaqohId === hIdNum);
             if (exists) {
                 if(evt) evt.target.value='';
-                window.showAlert('Santri ini sudah pernah menyetorkan hafalan untuk segmen ini. Tidak bisa mengirim data ganda.');
+                window.showAlert('Santri ini sudah pernah menyetorkan hafalan untuk segmen ini di Kelompok/Halaqoh saat ini. Tidak bisa mengirim data ganda.');
                 return;
             }
         }
@@ -782,8 +784,8 @@
 
         html += '<div class="hidden lg:flex w-64 bg-white border-r border-slate-200/60 p-6 flex-col shrink-0 dark:bg-[#15241e] dark:border-[#1a2e26] z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">';
         html += '<button onclick="window.switchView(\'home\')" class="flex items-center gap-2 text-slate-400 hover:text-emerald-500 font-bold text-sm mb-8 whitespace-nowrap shrink-0 transition-colors"><i class="ph-bold ph-arrow-left text-lg"></i> Kembali</button>';
-        html += '<div class="flex justify-between items-center mb-4"><h3 class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Pilih Level</h3></div>';
-        html += '<div class="flex flex-col gap-3 w-full overflow-y-auto hide-scrollbar pb-10" id="levels-box-desktop"></div>';
+        html += '<div class="flex justify-between items-center mb-4"><h3 class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Pilih Level</h3>' + (isSuper?'<button onclick="window.App.modal=\'level\';window.render(true)" class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-500/20 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all"><i class="ph-bold ph-plus text-sm"></i></button>':'') + '</div>';
+        html += '<div class="flex flex-col gap-2 w-full overflow-y-auto hide-scrollbar pb-10" id="levels-box-desktop"></div>';
         html += '</div>';
 
         html += '<div id="main-scroll" class="flex-1 overflow-y-auto flex flex-col relative w-full bg-slate-50/50 dark:bg-[#111c18]">';
@@ -834,14 +836,14 @@
 
         html += '</div>'; 
         
-        html += (!isAdmin ? '<div class="lg:hidden sticky bottom-0 left-0 w-full p-4 bg-white/90 dark:bg-[#0a120f]/90 backdrop-blur-md border-t border-slate-200/60 dark:border-[#1a2e26] z-40 mt-auto"><button onclick="if(!window.App.actSegId){window.showAlert(\'Pilih segmen hafalan terlebih dahulu!\');}else{window.App.rec.src=\'player\';window.App.resubmitId=null;window.switchView(\'setoran\');}" class="btn-std w-full shadow-emerald-500/30 flex items-center justify-center gap-2"><i class="ph-fill ph-microphone-stage text-xl"></i> Setor Hafalan</button></div>' : '');
+        html += '<div class="lg:hidden sticky bottom-0 left-0 w-full p-4 bg-white/90 dark:bg-[#0a120f]/90 backdrop-blur-md border-t border-slate-200/60 dark:border-[#1a2e26] z-40 mt-auto"><button onclick="if(!window.App.actSegId){window.showAlert(\'Pilih segmen hafalan terlebih dahulu!\');}else{window.App.rec.src=\'player\';window.App.resubmitId=null;window.switchView(\'setoran\');}" class="btn-std w-full shadow-emerald-500/30 flex items-center justify-center gap-2"><i class="ph-fill ph-microphone-stage text-xl"></i> Setor Hafalan</button></div>';
         
         html += '</div>'; 
 
         html += '<div class="hidden lg:flex w-80 xl:w-96 bg-white dark:bg-[#15241e] border-l border-slate-200/60 dark:border-[#1a2e26] flex-col shrink-0 h-full z-10 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">';
         html += '<div class="p-6 border-b border-slate-100 dark:border-[#1a2e26] shrink-0"><div class="flex justify-between items-center mb-5"><h2 class="text-lg font-bold dark:text-white flex items-center gap-2 tracking-tight"><i class="ph-fill ph-list-numbers text-emerald-500 text-xl"></i> Daftar Ayat</h2>' + (isSuper?'<button onclick="window.App.modal=\'segment\';window.App.modalData=null;window.render(true);setTimeout(window.setupSegmentModal, 10);" class="text-[10px] bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded-lg text-emerald-600 font-bold flex items-center gap-1 hover:bg-emerald-500 hover:text-white transition-all uppercase tracking-widest"><i class="ph-bold ph-plus"></i> Baru</button>':'') + '</div>';
         html += '<div class="relative mb-5"><i class="ph-bold ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i><input id="search-desktop-segs" type="text" placeholder="Cari Ayat/Arti..." value="' + window.esc(window.App.search) + '" oninput="window.App.search=this.value;window.render()" class="input-std !w-full !rounded-2xl !pl-12 py-3 shadow-sm"></div>';
-        html += (!isAdmin ? '<button onclick="if(!window.App.actSegId){window.showAlert(\'Pilih segmen hafalan terlebih dahulu!\');}else{window.App.rec.src=\'player\';window.App.resubmitId=null;window.switchView(\'setoran\');}" class="btn-std !py-3.5 !text-sm flex items-center justify-center gap-2 shadow-xl"><i class="ph-fill ph-microphone-stage text-xl"></i> Setor Hafalan</button>' : '');
+        html += '<button onclick="if(!window.App.actSegId){window.showAlert(\'Pilih segmen hafalan terlebih dahulu!\');}else{window.App.rec.src=\'player\';window.App.resubmitId=null;window.switchView(\'setoran\');}" class="btn-std !py-3.5 !text-sm flex items-center justify-center gap-2 shadow-xl"><i class="ph-fill ph-microphone-stage text-xl"></i> Setor Hafalan</button>';
         html += '</div><div class="flex-1 overflow-y-auto p-4 space-y-3" id="segs-box-desktop"></div></div>';
 
         html += '</div>';
@@ -863,7 +865,7 @@
         const uListHub = window.App.adminLvl === 2 ? window.App.ustadz.filter(x=>x.id == window.App.loggedInUstadzId) : window.App.ustadz;
         const oU = (window.App.adminLvl !== 2 ? '<option value="all">-- Semua Ustadz/ah --</option>' : '') + uListHub.map(u=>'<option value="' + u.id + '" ' + (window.App.filter.u==u.id?'selected':'') + '>' + window.esc(u.name) + '</option>').join('');
         const hl = window.App.filter.u!=='all'?window.App.halaqohs.filter(h=>h.ustadzId==window.App.filter.u):window.App.halaqohs;
-        const oH = '<option value="all">-- Semua Halaqoh --</option>'+hl.map(h=>'<option value="' + h.id + '" ' + (window.App.filter.h==h.id?'selected':'') + '>' + window.esc(h.name) + '</option>').join('');
+        const oH = '<option value="all">-- Semua Kelompok --</option>'+hl.map(h=>'<option value="' + h.id + '" ' + (window.App.filter.h==h.id?'selected':'') + '>' + window.esc(h.name) + '</option>').join('');
         let sl = window.App.siswas; if(window.App.filter.h!=='all')sl=sl.filter(s=>s.halaqohId==window.App.filter.h);else if(window.App.filter.u!=='all'){let ids=hl.map(x=>x.id);sl=sl.filter(s=>ids.includes(s.halaqohId))}
         const oS = '<option value="all">-- Semua Siswa --</option>'+window.App.siswas.map(s=>'<option value="' + s.id + '" ' + (window.App.filter.s==s.id?'selected':'') + '>' + window.esc(s.name) + '</option>').join('');
 
