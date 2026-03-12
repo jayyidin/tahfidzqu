@@ -109,7 +109,7 @@
         if (el.readyState >= 1) { doFix(); }
     };
 
-    // Fungsi Share & Download Kartu Prestasi
+    // Fungsi Share & Download Kartu Prestasi Resolusi Tinggi Anti-Crop
     window.downloadCard = async function() {
         let node = document.getElementById('achievement-card-node');
         let btn = document.getElementById('btn-download-card');
@@ -120,15 +120,29 @@
         btn.disabled = true;
 
         try {
-            await domtoimage.toPng(node); // Pre-render 1x untuk memuat font/style
-            let dataUrl = await domtoimage.toPng(node, { quality: 1.0, bgcolor: '#0d1518' });
+            const scale = 3; 
+            const style = {
+                transform: 'scale(' + scale + ')',
+                transformOrigin: 'top left',
+                width: node.offsetWidth + 'px',
+                height: node.offsetHeight + 'px'
+            };
+            const param = {
+                height: node.offsetHeight * scale,
+                width: node.offsetWidth * scale,
+                quality: 1.0,
+                style: style
+            };
+
+            await domtoimage.toPng(node, param); 
+            let dataUrl = await domtoimage.toPng(node, param);
             
             let link = document.createElement('a');
-            link.download = 'Kartu_Prestasi_TahfidzQu.png';
+            link.download = 'Syahadah_TahfidzQu.png';
             link.href = dataUrl;
             link.click();
         } catch (e) {
-            window.showAlert('Gagal mengunduh kartu. Silakan coba lagi.');
+            window.showAlert('Gagal mengunduh kartu. Pastikan koneksi stabil. ' + e);
         } finally {
             btn.innerHTML = oldHtml;
             btn.disabled = false;
@@ -145,15 +159,29 @@
         btn.disabled = true;
 
         try {
-            await domtoimage.toPng(node); // Pre-render
-            let dataUrl = await domtoimage.toPng(node, { quality: 1.0, bgcolor: '#0d1518' });
+            const scale = 3;
+            const style = {
+                transform: 'scale(' + scale + ')',
+                transformOrigin: 'top left',
+                width: node.offsetWidth + 'px',
+                height: node.offsetHeight + 'px'
+            };
+            const param = {
+                height: node.offsetHeight * scale,
+                width: node.offsetWidth * scale,
+                quality: 1.0,
+                style: style
+            };
+
+            await domtoimage.toPng(node, param); 
+            let dataUrl = await domtoimage.toPng(node, param);
             
             let blob = await (await fetch(dataUrl)).blob();
-            let file = new File([blob], 'Kartu_Prestasi.png', { type: 'image/png' });
+            let file = new File([blob], 'Syahadah_TahfidzQu.png', { type: 'image/png' });
 
             if (navigator.canShare && navigator.canShare({ files: [file] })) {
                 await navigator.share({
-                    title: 'Kartu Prestasi Hafalan',
+                    title: 'Syahadah Tahfidz',
                     text: 'Alhamdulillah, pencapaian hafalan baru!',
                     files: [file]
                 });
@@ -161,7 +189,7 @@
                 window.showAlert('Perangkat/Browser ini tidak mendukung fitur Share gambar langsung. Silakan Download gambarnya terlebih dahulu.');
             }
         } catch (e) {
-            if (e.name !== 'AbortError') {
+            if (e && e.name !== 'AbortError') {
                 window.showAlert('Gagal membagikan kartu. Coba gunakan fitur Download.');
             }
         } finally {
@@ -187,6 +215,7 @@
       currentGradingAudioUrl: null, isGradingRecording: false, gradingMediaRecorder: null, gradingAudioChunks: [],
       studentMediaRecorder: null, studentAudioChunks: [], currentStudentAudioUrl: null,
       audioObj: null, activeAudioId: null, activeAudioDur: 0,
+      loggedInUstadzId: null,
       firebaseError: '' 
     };
 
@@ -322,6 +351,12 @@
           window.App.audioObj.pause();
           window.App.activeAudioId = null;
       }
+      
+      if (window.App.adminLvl === 2) {
+          window.App.hierSel.u = window.App.loggedInUstadzId;
+          window.App.filter.u = window.App.loggedInUstadzId;
+      }
+      
       window.App.search = ''; 
       window.App.view = viewTarget;
       window.render(true);
@@ -332,6 +367,7 @@
         if (window.App.adminLvl > 0) {
             window.App.inactivityTimer = setTimeout(() => {
                 window.App.adminLvl = 0;
+                window.App.loggedInUstadzId = null;
                 window.showAlert("Sesi keamanan Anda telah habis (15 menit tidak ada aktivitas). Anda otomatis dikeluarkan.");
                 window.switchView('home');
             }, 15 * 60 * 1000);
@@ -480,10 +516,29 @@
     window.handleAdminLogin = function() {
         const u = document.getElementById('m_u').value.trim(); const p = document.getElementById('m_p').value.trim();
         if (Date.now() < window.App.lockoutTime) { let remain = Math.ceil((window.App.lockoutTime - Date.now()) / 1000); window.App.loginError = `Akses Terkunci! Tunggu ${remain} detik.`; window.render(); return; }
-        if(u === 'jayyidin' && p === 'offthewallba123') { window.App.adminLvl = 1; window.App.modal = null; window.App.loginError = ''; window.App.loginAttempts = 0; window.resetTimer(); window.switchView('admin'); } 
+        if(u === 'jayyidin' && p === 'offthewallba123') { 
+            window.App.adminLvl = 1; 
+            window.App.modal = null; 
+            window.App.loginError = ''; 
+            window.App.loginAttempts = 0; 
+            window.App.loggedInUstadzId = null;
+            window.App.filter.u = 'all';
+            window.resetTimer(); 
+            window.switchView('admin'); 
+        } 
         else {
             let ust = window.App.ustadz.find(x => x.username === u && x.password === p);
-            if(ust) { window.App.adminLvl = 2; window.App.modal = null; window.App.loginError = ''; window.App.loginAttempts = 0; window.resetTimer(); window.switchView('admin'); } 
+            if(ust) { 
+                window.App.adminLvl = 2; 
+                window.App.modal = null; 
+                window.App.loginError = ''; 
+                window.App.loginAttempts = 0; 
+                window.App.loggedInUstadzId = ust.id;
+                window.App.filter.u = ust.id;
+                window.App.hierSel.u = ust.id;
+                window.resetTimer(); 
+                window.switchView('admin'); 
+            } 
             else {
                 window.App.loginAttempts++;
                 if (window.App.loginAttempts >= 3) { window.App.lockoutTime = Date.now() + 30000; window.App.loginError = 'Akun terkunci sementara karena gagal 3 kali berturut-turut.'; } 
@@ -694,10 +749,10 @@
       html += window.App.schLogo ? '<img src="' + window.App.schLogo + '" class="h-8 md:h-10 max-w-[120px] object-contain">' : '<i class="ph-fill ph-monitor-play text-[2rem] md:text-4xl"></i>';
       html += '<div class="flex flex-col justify-center"><span class="text-xl md:text-2xl leading-none tracking-tight text-slate-800 dark:text-white">Tahfidz<span class="text-emerald-500">Qu</span></span>' + (window.App.schSub?'<span class="text-[9px] text-slate-400 mt-1 uppercase tracking-widest font-bold">' + window.App.schSub + '</span>':'') + '</div></div>';
       html += '<div class="flex items-center gap-2 md:hidden"><button onclick="window.App.theme=window.App.theme===\'dark\'?\'light\':\'dark\';window.render(true)" class="w-11 h-11 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 flex items-center justify-center transition-transform active:scale-95"><i class="ph-fill ' + (window.App.theme==='dark'?'ph-sun':'ph-moon') + ' text-lg"></i></button>';
-      html += isAdmin ? '<button onclick="window.App.adminLvl=0;window.switchView(\'home\');" class="w-11 h-11 rounded-full bg-red-50 text-red-500 flex items-center justify-center transition-transform active:scale-95"><i class="ph-bold ph-sign-out text-lg"></i></button>' : '<button onclick="window.App.modal=\'login\';window.render()" class="w-11 h-11 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 flex items-center justify-center transition-transform active:scale-95"><i class="ph-fill ph-lock-key text-lg"></i></button>';
-      html += '</div><div class="hidden md:flex items-center gap-4"><div class="relative"><i class="ph-bold ph-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i><input id="search-desktop" type="text" placeholder="' + searchPh + '" value="' + window.esc(window.App.search) + '" oninput="window.App.search=this.value;window.render()" class="input-std !w-full !rounded-full !pl-14 transition-all focus:!w-80 shadow-sm"></div>';
+      html += isAdmin ? '<button onclick="window.App.adminLvl=0;window.App.loggedInUstadzId=null;window.App.filter.u=\'all\';window.switchView(\'home\');" class="w-11 h-11 rounded-full bg-red-50 text-red-500 flex items-center justify-center transition-transform active:scale-95"><i class="ph-bold ph-sign-out text-lg"></i></button>' : '<button onclick="window.App.modal=\'login\';window.render()" class="w-11 h-11 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 flex items-center justify-center transition-transform active:scale-95"><i class="ph-fill ph-lock-key text-lg"></i></button>';
+      html += '</div><div class="hidden md:flex items-center gap-4"><div class="relative"><i class="ph-bold ph-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i><input id="search-desktop" type="text" placeholder="' + searchPh + '" value="' + window.esc(window.App.search) + '" oninput="window.App.search=this.value;window.render()" class="input-std !w-64 !rounded-full !pl-14 transition-all focus:!w-80 shadow-sm"></div>';
       html += '<button onclick="window.App.theme=window.App.theme===\'dark\'?\'light\':\'dark\';window.render(true)" class="w-12 h-12 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 hover:text-emerald-500 flex items-center justify-center transition shadow-sm"><i class="ph-fill ' + (window.App.theme==='dark'?'ph-sun':'ph-moon') + ' text-xl"></i></button>';
-      html += isAdmin ? '<button onclick="window.App.adminLvl=0;window.switchView(\'home\');" class="w-12 h-12 rounded-full bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition shadow-sm" title="Keluar Akun"><i class="ph-bold ph-sign-out text-xl"></i></button>' : '<button onclick="window.App.modal=\'login\';window.render()" class="w-12 h-12 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 flex items-center justify-center transition shadow-sm"><i class="ph-fill ph-lock-key text-xl"></i></button>';
+      html += isAdmin ? '<button onclick="window.App.adminLvl=0;window.App.loggedInUstadzId=null;window.App.filter.u=\'all\';window.switchView(\'home\');" class="w-12 h-12 rounded-full bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition shadow-sm" title="Keluar Akun"><i class="ph-bold ph-sign-out text-xl"></i></button>' : '<button onclick="window.App.modal=\'login\';window.render()" class="w-12 h-12 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 flex items-center justify-center transition shadow-sm"><i class="ph-fill ph-lock-key text-xl"></i></button>';
       html += '</div></div><div class="px-5 md:px-8 flex gap-8 text-[13px] font-bold pt-2 overflow-x-auto hide-scrollbar">';
       html += '<button onclick="window.switchView(\'home\')" class="' + (window.App.view==='home'?'text-emerald-600 border-b-[3px] border-emerald-500':'text-slate-400 hover:text-slate-800 dark:text-gray-400 dark:hover:text-white') + ' pb-3 transition whitespace-nowrap flex items-center gap-1.5"><i class="ph-fill ph-house text-lg"></i> Beranda</button>';
       html += '<button onclick="window.switchView(\'hub\')" class="' + (window.App.view==='hub'?'text-emerald-600 border-b-[3px] border-emerald-500':'text-slate-400 hover:text-slate-800 dark:text-gray-400 dark:hover:text-white') + ' pb-3 transition whitespace-nowrap flex items-center gap-1.5"><i class="ph-fill ph-clipboard-text text-lg"></i> Setoran Hub</button>';
@@ -714,10 +769,10 @@
         
         html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-10 min-h-0 relative"><div class="max-w-7xl mx-auto w-full">' + mobileSearchBar + '<div class="mb-6 md:mb-10 shrink-0"><h1 class="text-2xl md:text-4xl font-serif dark:text-white mb-1.5 md:mb-2 flex items-center gap-2 md:gap-3 tracking-tight"><i class="ph-fill ph-books text-emerald-500"></i> Perpustakaan Surah</h1><p class="text-[11px] md:text-sm text-slate-500">Pilih materi hafalan dari daftar surah yang tersedia di sistem.</p></div>';
         if (!window.App.search) {
-            html += '<div class="flex items-center gap-2 md:gap-3 border-b border-slate-200/60 dark:border-[#1a2e26] pb-4 md:pb-6 mb-6 md:mb-8 overflow-x-auto hide-scrollbar shrink-0">' + window.App.juzs.map(j=>'<div class="flex shrink-0 mr-1"><button onclick="window.App.actJuzId=' + j.id + ';window.render(true)" class="' + (j.id===window.App.actJuzId?'tab-active':'tab-inactive') + '">' + window.esc(j.name) + '</button>' + (isAdmin?'<div class="flex ml-1 md:ml-2 items-center"><button onclick="window.App.modal=\'juz\';window.App.modalData=' + j.id + ';window.render(true)" class="p-1.5 md:p-2 text-slate-400 hover:text-blue-500 transition-colors"><i class="ph-bold ph-pencil-simple text-base md:text-lg"></i></button><button onclick="window.confirmDelete(\'juz\', ' + j.id + ')" class="p-1.5 md:p-2 text-slate-400 hover:text-red-500 transition-colors"><i class="ph-bold ph-trash text-base md:text-lg"></i></button></div>':'') + '</div>').join('') + (isAdmin?'<button onclick="window.App.modal=\'juz\';window.App.modalData=null;window.render(true)" class="tab-inactive !bg-transparent border-dashed border-2 hover:border-emerald-400 flex items-center gap-1.5"><i class="ph-bold ph-plus text-base md:text-lg"></i> Tambah</button>':'') + '</div>';
+            html += '<div class="flex items-center gap-2 md:gap-3 border-b border-slate-200/60 dark:border-[#1a2e26] pb-4 md:pb-6 mb-6 md:mb-8 overflow-x-auto hide-scrollbar shrink-0">' + window.App.juzs.map(j=>'<div class="flex shrink-0 mr-1"><button onclick="window.App.actJuzId=' + j.id + ';window.render(true)" class="' + (j.id===window.App.actJuzId?'tab-active':'tab-inactive') + '">' + window.esc(j.name) + '</button>' + (isSuper?'<div class="flex ml-1 md:ml-2 items-center"><button onclick="window.App.modal=\'juz\';window.App.modalData=' + j.id + ';window.render(true)" class="p-1.5 md:p-2 text-slate-400 hover:text-blue-500 transition-colors"><i class="ph-bold ph-pencil-simple text-base md:text-lg"></i></button><button onclick="window.confirmDelete(\'juz\', ' + j.id + ')" class="p-1.5 md:p-2 text-slate-400 hover:text-red-500 transition-colors"><i class="ph-bold ph-trash text-base md:text-lg"></i></button></div>':'') + '</div>').join('') + (isSuper?'<button onclick="window.App.modal=\'juz\';window.App.modalData=null;window.render(true)" class="tab-inactive !bg-transparent border-dashed border-2 hover:border-emerald-400 flex items-center gap-1.5"><i class="ph-bold ph-plus text-base md:text-lg"></i> Tambah</button>':'') + '</div>';
         }
-        html += '<div class="flex justify-between items-center mb-6 md:mb-8 shrink-0"><div><h2 class="text-lg md:text-xl font-bold dark:text-white tracking-tight">' + (window.App.search?'Hasil Pencarian':'Daftar Surah') + '</h2><p class="text-[10px] md:text-xs text-slate-400 mt-1">' + (window.App.search?'Menampilkan: "' + window.esc(window.App.search) + '"':'Juz yang dipilih: ' + window.esc(jName)) + '</p></div>' + (isAdmin?'<button onclick="window.App.modal=\'surah\';window.App.modalData=null;window.render(true)" class="bg-emerald-500 hover:scale-105 transition-transform shadow-lg shadow-emerald-500/30 text-white px-4 py-2 md:px-5 md:py-2.5 rounded-xl md:rounded-full font-bold flex gap-1.5 items-center text-[11px] md:text-sm"><i class="ph-bold ph-plus text-base md:text-lg"></i> <span class="hidden sm:inline">Tambah Surah</span><span class="sm:hidden">Tambah</span></button>':'') + '</div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-5 lg:gap-6 pb-10">';
-        html += sList.length ? sList.map(s=>'<div class="bg-white border border-slate-100 shadow-sm dark:bg-[#15241e] dark:border-[#1a2e26] rounded-2xl md:rounded-3xl p-4 md:p-5 hover:border-emerald-400 hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col relative overflow-hidden group" onclick="window.openSurah(' + s.id + ', \'' + (s.videoId||'') + '\')"><div class="flex items-center gap-3 md:gap-4"><div class="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 group-hover:rotate-3"><i class="ph-fill ph-book-open text-2xl md:text-3xl"></i></div><div class="flex-1 min-w-0"><h3 class="text-base md:text-xl font-bold dark:text-white truncate tracking-tight mb-0.5 md:mb-1">' + window.esc(s.title) + '</h3><p class="text-[10px] md:text-xs text-slate-400 font-mono mb-4 flex items-center gap-1.5"><i class="ph-fill ph-list-numbers"></i> ' + window.App.segs.filter(x=>x.surahId==s.id).length + ' Segmen Hafalan</p></div><div class="shrink-0 ' + (s.videoId?'bg-red-50 dark:bg-red-500/10 text-red-500':'bg-slate-50 dark:bg-[#111c18] text-slate-300') + ' p-2 md:p-2.5 rounded-lg md:rounded-xl"><i class="ph-fill ' + (s.videoId?'ph-youtube-logo':'ph-video-camera-slash') + ' text-lg md:text-xl"></i></div></div>' + (isAdmin?'<div class="flex gap-2 border-t border-slate-100 dark:border-[#1a2e26] pt-3 md:pt-4 mt-3 md:mt-4"><button onclick="event.stopPropagation();window.App.modal=\'surah\';window.App.modalData=' + s.id + ';window.render(true)" class="flex-1 bg-slate-50 hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 border border-slate-200 py-2 rounded-lg text-[10px] md:text-xs font-bold transition-all flex items-center justify-center gap-1.5 dark:bg-[#0a120f] dark:border-[#1a2e26] dark:hover:bg-[#15241e]"><i class="ph-bold ph-pencil-simple text-sm"></i> Edit</button><button onclick="event.stopPropagation();window.confirmDelete(\'surah\', ' + s.id + ')" class="flex-1 bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 py-2 rounded-lg text-[10px] md:text-xs font-bold transition-all flex items-center justify-center gap-1.5 dark:bg-[#0a120f] dark:border-[#1a2e26] dark:hover:bg-[#15241e]"><i class="ph-bold ph-trash text-sm"></i> Hapus</button></div>':'') + '</div>').join('') : '<div class="col-span-full py-16 md:py-20 text-center"><div class="w-16 h-16 md:w-20 md:h-20 bg-slate-100 dark:bg-[#15241e] rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4 text-slate-300"><i class="ph-fill ph-books text-3xl md:text-4xl"></i></div><p class="text-xs md:text-sm text-slate-500 font-medium">Belum ada data materi hafalan.</p></div>';
+        html += '<div class="flex justify-between items-center mb-6 md:mb-8 shrink-0"><div><h2 class="text-lg md:text-xl font-bold dark:text-white tracking-tight">' + (window.App.search?'Hasil Pencarian':'Daftar Surah') + '</h2><p class="text-[10px] md:text-xs text-slate-400 mt-1">' + (window.App.search?'Menampilkan: "' + window.esc(window.App.search) + '"':'Juz yang dipilih: ' + window.esc(jName)) + '</p></div>' + (isSuper?'<button onclick="window.App.modal=\'surah\';window.App.modalData=null;window.render(true)" class="bg-emerald-500 hover:scale-105 transition-transform shadow-lg shadow-emerald-500/30 text-white px-4 py-2 md:px-5 md:py-2.5 rounded-xl md:rounded-full font-bold flex gap-1.5 items-center text-[11px] md:text-sm"><i class="ph-bold ph-plus text-base md:text-lg"></i> <span class="hidden sm:inline">Tambah Surah</span><span class="sm:hidden">Tambah</span></button>':'') + '</div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-5 lg:gap-6 pb-10">';
+        html += sList.length ? sList.map(s=>'<div class="bg-white border border-slate-100 shadow-sm dark:bg-[#15241e] dark:border-[#1a2e26] rounded-2xl md:rounded-3xl p-4 md:p-5 hover:border-emerald-400 hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col relative overflow-hidden group" onclick="window.openSurah(' + s.id + ', \'' + (s.videoId||'') + '\')"><div class="flex items-center gap-3 md:gap-4"><div class="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 group-hover:rotate-3"><i class="ph-fill ph-book-open text-2xl md:text-3xl"></i></div><div class="flex-1 min-w-0"><h3 class="text-base md:text-xl font-bold dark:text-white truncate tracking-tight mb-0.5 md:mb-1">' + window.esc(s.title) + '</h3><p class="text-[10px] md:text-xs text-slate-400 font-mono mb-4 flex items-center gap-1.5"><i class="ph-fill ph-list-numbers"></i> ' + window.App.segs.filter(x=>x.surahId==s.id).length + ' Segmen Hafalan</p></div><div class="shrink-0 ' + (s.videoId?'bg-red-50 dark:bg-red-500/10 text-red-500':'bg-slate-50 dark:bg-[#111c18] text-slate-300') + ' p-2 md:p-2.5 rounded-lg md:rounded-xl"><i class="ph-fill ' + (s.videoId?'ph-youtube-logo':'ph-video-camera-slash') + ' text-lg md:text-xl"></i></div></div>' + (isSuper?'<div class="flex gap-2 border-t border-slate-100 dark:border-[#1a2e26] pt-3 md:pt-4 mt-3 md:mt-4"><button onclick="event.stopPropagation();window.App.modal=\'surah\';window.App.modalData=' + s.id + ';window.render(true)" class="flex-1 bg-slate-50 hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 border border-slate-200 py-2 rounded-lg text-[10px] md:text-xs font-bold transition-all flex items-center justify-center gap-1.5 dark:bg-[#0a120f] dark:border-[#1a2e26] dark:hover:bg-[#15241e]"><i class="ph-bold ph-pencil-simple text-sm"></i> Edit</button><button onclick="event.stopPropagation();window.confirmDelete(\'surah\', ' + s.id + ')" class="flex-1 bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 py-2 rounded-lg text-[10px] md:text-xs font-bold transition-all flex items-center justify-center gap-1.5 dark:bg-[#0a120f] dark:border-[#1a2e26] dark:hover:bg-[#15241e]"><i class="ph-bold ph-trash text-sm"></i> Hapus</button></div>':'') + '</div>').join('') : '<div class="col-span-full py-16 md:py-20 text-center"><div class="w-16 h-16 md:w-20 md:h-20 bg-slate-100 dark:bg-[#15241e] rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4 text-slate-300"><i class="ph-fill ph-books text-3xl md:text-4xl"></i></div><p class="text-xs md:text-sm text-slate-500 font-medium">Belum ada data materi hafalan.</p></div>';
         html += '</div></div></div>';
       }
       else if(window.App.view === 'player') {
@@ -727,7 +782,7 @@
 
         html += '<div class="hidden lg:flex w-64 bg-white border-r border-slate-200/60 p-6 flex-col shrink-0 dark:bg-[#15241e] dark:border-[#1a2e26] z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">';
         html += '<button onclick="window.switchView(\'home\')" class="flex items-center gap-2 text-slate-400 hover:text-emerald-500 font-bold text-sm mb-8 whitespace-nowrap shrink-0 transition-colors"><i class="ph-bold ph-arrow-left text-lg"></i> Kembali</button>';
-        html += '<div class="flex justify-between items-center mb-4"><h3 class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Pilih Level</h3>' + (isAdmin?'<button onclick="window.App.modal=\'level\';window.render(true)" class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-500/20 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all"><i class="ph-bold ph-plus text-sm"></i></button>':'') + '</div>';
+        html += '<div class="flex justify-between items-center mb-4"><h3 class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Pilih Level</h3>' + (isSuper?'<button onclick="window.App.modal=\'level\';window.render(true)" class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-500/20 flex items-center justify-center hover:bg-emerald-500 hover:text-white transition-all"><i class="ph-bold ph-plus text-sm"></i></button>':'') + '</div>';
         html += '<div class="flex flex-col gap-2 w-full overflow-y-auto hide-scrollbar" id="levels-box-desktop"></div>';
         html += '</div>';
 
@@ -736,7 +791,7 @@
         html += '<div class="lg:hidden flex items-center justify-between p-4 bg-white dark:bg-[#15241e] border-b border-slate-100 dark:border-[#1a2e26] sticky top-0 z-30 shadow-sm shrink-0">';
         html += '<button onclick="window.switchView(\'home\')" class="text-slate-500 hover:text-emerald-500 transition-colors p-1 -ml-1"><i class="ph-bold ph-arrow-left text-xl"></i></button>';
         html += '<h1 class="text-sm font-bold text-slate-800 dark:text-white truncate px-3 flex-1 text-center tracking-tight">' + window.esc(sur?.title||'') + '</h1>';
-        html += (isAdmin?'<button onclick="window.App.modal=\'video\';window.render(true)" class="text-slate-400 hover:text-emerald-500 p-1 -mr-1"><i class="ph-bold ph-link text-xl"></i></button>':'<div class="w-7"></div>');
+        html += (isSuper?'<button onclick="window.App.modal=\'video\';window.render(true)" class="text-slate-400 hover:text-emerald-500 p-1 -mr-1"><i class="ph-bold ph-link text-xl"></i></button>':'<div class="w-7"></div>');
         html += '</div>';
 
         html += '<div class="hidden lg:block p-8 pb-6 max-w-5xl mx-auto w-full shrink-0">';
@@ -744,7 +799,7 @@
         html += '<div>';
         html += '<div class="flex items-center gap-3 mb-1.5">';
         html += '<h1 class="text-3xl lg:text-4xl font-serif font-bold dark:text-white tracking-tight flex items-center gap-3">' + window.esc(sur?.title||'') + '</h1>';
-        html += (isAdmin?'<button onclick="window.App.modal=\'video\';window.render(true)" class="p-2 bg-white dark:bg-[#15241e] rounded-xl border border-slate-200 dark:border-[#1a2e26] text-slate-400 hover:text-emerald-500 hover:border-emerald-300 transition-all shadow-sm"><i class="ph-bold ph-link text-lg"></i></button>':'');
+        html += (isSuper?'<button onclick="window.App.modal=\'video\';window.render(true)" class="p-2 bg-white dark:bg-[#15241e] rounded-xl border border-slate-200 dark:border-[#1a2e26] text-slate-400 hover:text-emerald-500 hover:border-emerald-300 transition-all shadow-sm"><i class="ph-bold ph-link text-lg"></i></button>':'');
         html += '</div>';
         html += '<p class="text-xs text-slate-500 flex items-center gap-1.5 font-medium"><i class="ph-fill ph-youtube-logo text-red-500 text-base"></i> Materi Media YouTube</p>';
         html += '</div></div></div>';
@@ -758,11 +813,11 @@
         html += '<div class="flex justify-between items-center text-white relative"><div class="flex gap-6 pointer-events-auto items-center"><button onclick="window.nextSeg(-1)" class="hover:text-emerald-400 transition-colors"><i class="ph-fill ph-skip-back text-xl"></i></button><button id="play-pause-btn" onclick="window.toggleYTPlay()" class="hover:text-emerald-400 transition-colors"><i class="ph-fill ' + (window.App.isPlay?'ph-pause':'ph-play') + ' text-3xl"></i></button><button onclick="window.nextSeg(1)" class="hover:text-emerald-400 transition-colors"><i class="ph-fill ph-skip-forward text-xl"></i></button></div><div class="text-[10px] lg:text-xs font-mono font-medium tracking-wider bg-black/40 px-2.5 py-1 rounded-lg backdrop-blur-md" id="time-display">00:00 / 00:00</div></div>';
         html += '</div></div></div>';
 
-        html += '<div class="lg:hidden w-full bg-white dark:bg-[#15241e] border-b border-slate-100 dark:border-[#1a2e26] p-3 flex gap-2 overflow-x-auto hide-scrollbar shrink-0 items-center z-10 shadow-sm">';
-        html += '<div class="flex items-center gap-2" id="levels-box-mobile"></div>';
+        html += '<div class="lg:hidden w-full bg-white dark:bg-[#15241e] border-b border-slate-100 dark:border-[#1a2e26] p-3 overflow-x-auto hide-scrollbar shrink-0 z-10 shadow-sm">';
+        html += '<div class="flex items-center gap-2 w-max px-1" id="levels-box-mobile"></div>';
         html += '</div>';
 
-        html += '<div class="p-4 lg:p-8 max-w-5xl mx-auto w-full flex flex-col gap-4 lg:gap-6 shrink-0 pb-10">';
+        html += '<div class="p-4 lg:p-8 max-w-5xl mx-auto w-full flex flex-col gap-4 lg:gap-6 shrink-0 pb-24 lg:pb-10">';
         
         html += '<div class="grid grid-cols-2 gap-3 lg:gap-5">';
         html += '<div class="bg-white border border-slate-100 shadow-sm dark:bg-[#15241e] dark:border-[#1a2e26] rounded-2xl p-3 lg:p-4 flex flex-col justify-between hover:border-emerald-300 transition-colors"><span class="text-[9px] lg:text-[10px] text-emerald-600 font-bold tracking-widest uppercase mb-2 block">Pengulangan</span><div class="flex justify-between items-center"><div class="text-lg lg:text-2xl font-bold dark:text-white leading-none"><span id="rep-target-val">' + window.App.repTarget + 'x</span> <span id="rep-text" class="text-[9px] lg:text-[10px] text-emerald-500 font-normal ml-0.5"></span></div><div class="flex gap-1"><button onclick="window.updateRepTarget(-1)" class="w-8 h-8 lg:w-9 lg:h-9 rounded-lg bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors font-bold text-base flex items-center justify-center">-</button><button onclick="window.updateRepTarget(1)" class="w-8 h-8 lg:w-9 lg:h-9 rounded-lg bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors font-bold text-base flex items-center justify-center">+</button></div></div></div>';
@@ -772,17 +827,19 @@
         html += '<div class="bg-white border border-slate-100 shadow-sm dark:bg-[#15241e] dark:border-[#1a2e26] rounded-2xl lg:rounded-3xl p-5 lg:p-8 hidden relative overflow-hidden" id="quran-box"><div class="absolute top-0 right-0 w-20 h-20 bg-emerald-50 dark:bg-emerald-500/5 rounded-bl-full -mr-5 -mt-5 pointer-events-none"></div><h3 id="quran-title" class="inline-block bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 font-bold text-[10px] lg:text-[11px] px-3 py-1.5 rounded-lg mb-5 lg:mb-6 uppercase tracking-widest text-left relative z-10"></h3><p id="quran-arabic" class="font-arabic text-3xl lg:text-4xl dark:text-white mb-6 lg:mb-8 relative z-10 leading-[2.5] lg:leading-[2.5] text-right"></p><div class="border-t border-slate-100 dark:border-[#1a2e26] pt-4 lg:pt-5"><p id="quran-trans" class="text-[11px] lg:text-sm text-slate-500 dark:text-gray-400 italic text-left leading-relaxed relative z-10"></p></div></div>';
 
         html += '<div class="lg:hidden mt-2 flex flex-col gap-3">';
-        html += '<div class="flex justify-between items-center px-1"><h2 class="text-sm font-bold dark:text-white flex items-center gap-1.5"><i class="ph-fill ph-list-numbers text-emerald-500 text-lg"></i> Daftar Ayat</h2>' + (isAdmin?'<button onclick="window.App.modal=\'segment\';window.App.modalData=null;window.render(true);setTimeout(window.setupSegmentModal, 10);" class="text-[9px] bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1.5 rounded-md text-emerald-600 font-bold flex items-center gap-1 uppercase tracking-widest"><i class="ph-bold ph-plus"></i> Baru</button>':'') + '</div>';
+        html += '<div class="flex justify-between items-center px-1"><h2 class="text-sm font-bold dark:text-white flex items-center gap-1.5"><i class="ph-fill ph-list-numbers text-emerald-500 text-lg"></i> Daftar Ayat</h2>' + (isSuper?'<button onclick="window.App.modal=\'segment\';window.App.modalData=null;window.render(true);setTimeout(window.setupSegmentModal, 10);" class="text-[9px] bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1.5 rounded-md text-emerald-600 font-bold flex items-center gap-1 uppercase tracking-widest"><i class="ph-bold ph-plus"></i> Baru</button>':'') + '</div>';
         html += '<div class="relative"><i class="ph-bold ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i><input id="search-mobile-segs" type="text" placeholder="Cari Ayat/Arti..." value="' + window.esc(window.App.search) + '" oninput="window.App.search=this.value;window.render()" class="input-std !w-full !rounded-xl !pl-10 !py-3 shadow-sm text-xs"></div>';
         html += '<div class="flex-1 space-y-2 mt-1" id="segs-box-mobile"></div>';
         html += '</div>';
 
-        html += (!isAdmin ? '<div class="lg:hidden sticky bottom-0 w-full pt-4 pb-2 z-40 mt-auto"><button onclick="if(!window.App.actSegId){window.showAlert(\'Pilih segmen hafalan terlebih dahulu!\');}else{window.App.rec.src=\'player\';window.App.resubmitId=null;window.switchView(\'setoran\');}" class="btn-std w-full shadow-emerald-500/30 flex items-center justify-center gap-2"><i class="ph-fill ph-microphone-stage text-xl"></i> Setor Hafalan</button></div>' : '');
-
         html += '</div>'; 
         
+        html += (!isAdmin ? '<div class="lg:hidden sticky bottom-0 left-0 w-full p-4 bg-white/90 dark:bg-[#0a120f]/90 backdrop-blur-md border-t border-slate-200/60 dark:border-[#1a2e26] z-40 mt-auto"><button onclick="if(!window.App.actSegId){window.showAlert(\'Pilih segmen hafalan terlebih dahulu!\');}else{window.App.rec.src=\'player\';window.App.resubmitId=null;window.switchView(\'setoran\');}" class="btn-std w-full shadow-emerald-500/30 flex items-center justify-center gap-2"><i class="ph-fill ph-microphone-stage text-xl"></i> Setor Hafalan</button></div>' : '');
+        
+        html += '</div>'; 
+
         html += '<div class="hidden lg:flex w-80 xl:w-96 bg-white dark:bg-[#15241e] border-l border-slate-200/60 dark:border-[#1a2e26] flex-col shrink-0 h-full z-10 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">';
-        html += '<div class="p-6 border-b border-slate-100 dark:border-[#1a2e26] shrink-0"><div class="flex justify-between items-center mb-5"><h2 class="text-lg font-bold dark:text-white flex items-center gap-2 tracking-tight"><i class="ph-fill ph-list-numbers text-emerald-500 text-xl"></i> Daftar Ayat</h2>' + (isAdmin?'<button onclick="window.App.modal=\'segment\';window.App.modalData=null;window.render(true);setTimeout(window.setupSegmentModal, 10);" class="text-[10px] bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded-lg text-emerald-600 font-bold flex items-center gap-1 hover:bg-emerald-500 hover:text-white transition-all uppercase tracking-widest"><i class="ph-bold ph-plus"></i> Baru</button>':'') + '</div>';
+        html += '<div class="p-6 border-b border-slate-100 dark:border-[#1a2e26] shrink-0"><div class="flex justify-between items-center mb-5"><h2 class="text-lg font-bold dark:text-white flex items-center gap-2 tracking-tight"><i class="ph-fill ph-list-numbers text-emerald-500 text-xl"></i> Daftar Ayat</h2>' + (isSuper?'<button onclick="window.App.modal=\'segment\';window.App.modalData=null;window.render(true);setTimeout(window.setupSegmentModal, 10);" class="text-[10px] bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded-lg text-emerald-600 font-bold flex items-center gap-1 hover:bg-emerald-500 hover:text-white transition-all uppercase tracking-widest"><i class="ph-bold ph-plus"></i> Baru</button>':'') + '</div>';
         html += '<div class="relative mb-5"><i class="ph-bold ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i><input id="search-desktop-segs" type="text" placeholder="Cari Ayat/Arti..." value="' + window.esc(window.App.search) + '" oninput="window.App.search=this.value;window.render()" class="input-std !w-full !rounded-2xl !pl-12 py-3 shadow-sm"></div>';
         html += (!isAdmin ? '<button onclick="if(!window.App.actSegId){window.showAlert(\'Pilih segmen hafalan terlebih dahulu!\');}else{window.App.rec.src=\'player\';window.App.resubmitId=null;window.switchView(\'setoran\');}" class="btn-std !py-3.5 !text-sm flex items-center justify-center gap-2 shadow-xl"><i class="ph-fill ph-microphone-stage text-xl"></i> Setor Hafalan</button>' : '');
         html += '</div><div class="flex-1 overflow-y-auto p-4 space-y-3" id="segs-box-desktop"></div></div>';
@@ -792,30 +849,54 @@
       else if(window.App.view === 'setoran') {
         const seg = window.App.segs.find(s=>s.id===window.App.actSegId);
         const sur = window.App.surahs.find(s=>s.id===window.App.actSurahId);
+        if(window.App.adminLvl === 2) window.App.hierSel.u = window.App.loggedInUstadzId;
         const uId = window.App.hierSel.u||''; const hId = window.App.hierSel.h||''; const sId = window.App.hierSel.s||'';
         const hList = window.App.halaqohs.filter(h=>h.ustadzId==uId);
         const sList = window.App.siswas.filter(s=>s.halaqohId==hId);
         const isResubmit = window.App.resubmitId !== null;
+        let uListSetoran = window.App.adminLvl === 2 ? window.App.ustadz.filter(x => x.id == window.App.loggedInUstadzId) : window.App.ustadz;
 
-        html += '<div id="main-scroll" class="flex-1 flex flex-col w-full h-full bg-slate-50 dark:bg-[#111c18] overflow-y-auto"><header class="h-16 md:h-20 flex justify-between items-center px-5 md:px-8 bg-white border-b border-slate-200/60 dark:bg-[#0a120f] dark:border-[#1a2e26] shrink-0 sticky top-0 z-20"><button onclick="if(window.App.rec.is){window.stopStudentRecord();} window.App.resubmitId=null;window.switchView(window.App.rec.src);" class="font-bold text-slate-500 hover:text-emerald-500 flex gap-2 items-center text-sm transition-colors"><i class="ph-bold ph-arrow-left text-lg"></i> Batal</button><div class="text-emerald-500 font-bold text-lg md:text-xl flex items-center gap-2 tracking-tight"><i class="ph-fill ph-microphone-stage text-2xl"></i> ' + (isResubmit?'Setor Ulang Hafalan':'Ujian Hafalan') + '</div><div class="w-16 md:w-20"></div></header><div class="flex-1 p-4 py-8 md:p-10 relative bg-gradient-to-br from-emerald-50/50 to-slate-100 dark:from-[#0a120f] dark:to-[#111c18]"><div class="w-full max-w-[480px] bg-white border border-slate-100 rounded-[2.5rem] p-6 sm:p-8 md:p-10 shadow-2xl dark:bg-[#15241e] dark:border-[#1a2e26] text-center mx-auto mt-2 md:mt-6 relative"><div class="inline-flex p-4 bg-emerald-50 text-emerald-600 rounded-[1.5rem] mb-4 dark:bg-emerald-900/30 shadow-inner"><i class="ph-fill ph-waveform text-4xl"></i></div><h2 class="text-emerald-600 font-bold tracking-[0.2em] text-[10px] md:text-xs uppercase mb-2">' + window.esc(sur?.title||'') + '</h2><h1 class="text-2xl md:text-3xl font-serif font-bold dark:text-white mb-8 tracking-tight">' + window.esc(seg?.title||'') + '</h1><div class="text-left flex flex-col gap-4 mb-8 bg-slate-50 p-5 rounded-3xl border border-slate-100 dark:bg-[#0a120f] dark:border-[#1a2e26]"><div><label class="block text-[10px] text-slate-500 font-bold mb-2 uppercase tracking-widest flex items-center gap-1.5"><i class="ph-fill ph-chalkboard-teacher text-emerald-500 text-sm"></i> Penguji</label><select onchange="window.App.hierSel.u=this.value;window.App.hierSel.h=\'\';window.App.hierSel.s=\'\';window.render(true)" class="input-std !bg-white dark:!bg-[#15241e] cursor-pointer ' + (isResubmit?'opacity-50 pointer-events-none':'') + '" ' + (isResubmit?'disabled':'') + '><option value="" disabled ' + (!uId?'selected':'') + '>-- Pilih Ustadz --</option>' + window.App.ustadz.map(u=>'<option value="' + u.id + '" ' + (uId==u.id?'selected':'') + '>' + window.esc(u.name) + '</option>').join('') + '</select></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><label class="block text-[10px] text-slate-500 font-bold mb-2 uppercase tracking-widest flex items-center gap-1.5"><i class="ph-fill ph-users-three text-blue-500 text-sm"></i> Kelompok</label><select onchange="window.App.hierSel.h=this.value;window.App.hierSel.s=\'\';window.render(true)" class="input-std !bg-white dark:!bg-[#15241e] cursor-pointer ' + (!uId||isResubmit?'opacity-50 pointer-events-none':'') + '" ' + (!uId||isResubmit?'disabled':'') + '><option value="" disabled ' + (!hId?'selected':'') + '>-- Pilih --</option>' + hList.map(h=>'<option value="' + h.id + '" ' + (hId==h.id?'selected':'') + '>' + window.esc(h.name) + '</option>').join('') + '</select></div><div><label class="block text-[10px] text-slate-500 font-bold mb-2 uppercase tracking-widest flex items-center gap-1.5"><i class="ph-fill ph-user-circle text-purple-500 text-sm"></i> Santri</label><select onchange="window.App.hierSel.s=this.value;window.render(true)" class="input-std !bg-white dark:!bg-[#15241e] cursor-pointer ' + (!hId||isResubmit?'opacity-50 pointer-events-none':'') + '" ' + (!hId||isResubmit?'disabled':'') + '><option value="" disabled ' + (!sId?'selected':'') + '>-- Pilih --</option>' + sList.map(s=>'<option value="' + s.id + '" ' + (sId==s.id?'selected':'') + '>' + window.esc(s.name) + ' (' + window.esc(s.kelas) + ')</option>').join('') + '</select></div></div></div><div class="bg-white border-2 border-dashed border-emerald-200 p-8 rounded-[2rem] mb-5 dark:bg-transparent dark:border-emerald-500/20"><div class="relative w-24 h-24 md:w-28 md:h-28 mx-auto mb-4">' + (window.App.rec.is?'<div class="absolute inset-0 bg-red-500/30 rounded-full animate-ping pointer-events-none"></div>':'') + '<button onclick="if(!window.App.hierSel.s){window.showAlert(\'Pilih identitas santri terlebih dahulu!\');return;} if(!window.App.rec.is){window.startStudentRecord();}else{window.stopStudentRecord();}" class="relative w-full h-full ' + (window.App.rec.is?'bg-red-500':'bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-xl shadow-emerald-500/40 hover:-translate-y-1') + ' text-white rounded-full flex items-center justify-center transition-all duration-300 active:scale-95"><i class="ph-fill ' + (window.App.rec.is?'ph-stop':'ph-microphone') + ' text-4xl md:text-5xl"></i></button></div><div id="rec-timer-display" class="text-base md:text-lg font-mono text-slate-700 dark:text-gray-200 font-bold tracking-widest">' + (window.App.rec.is ? window.fmtT(window.App.rec.secs) : (window.App.rec.secs>0 ? 'Selesai: '+window.fmtT(window.App.rec.secs) : 'Ketuk untuk Merekam')) + '</div>' + (window.App.rec.secs>0 && !window.App.rec.is ? '<div class="flex gap-3 mt-8 pt-8 border-t border-slate-100 dark:border-[#1a2e26]"><button onclick="window.App.rec.secs=0;window.App.currentStudentAudioUrl=null;window.render(true)" class="flex-1 py-4 bg-slate-100 rounded-2xl text-slate-500 font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition-colors dark:bg-[#0a120f] dark:hover:bg-[#1A2E26]">Ulangi</button><button onclick="window.submitRec(\'mic\')" class="flex-[2] py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/30 hover:opacity-90 transition-all flex items-center justify-center gap-2"><i class="ph-bold ph-paper-plane-tilt text-lg"></i> Kirim</button></div>' : '') + '</div>' + (window.App.rec.secs===0 && !window.App.rec.is ? '<div class="pt-2"><div class="relative flex items-center py-2 mb-3"><div class="flex-grow border-t border-slate-200 dark:border-[#1a2e26]"></div><span class="mx-4 text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em]">Atau</span><div class="flex-grow border-t border-slate-200 dark:border-[#1a2e26]"></div></div><input type="file" id="au-up" accept="audio/*" class="hidden" onchange="window.submitRec(\'file\', event)"><button onclick="if(!window.App.hierSel.s){window.showAlert(\'Pilih identitas santri terlebih dahulu!\');return;} document.getElementById(\'au-up\').click()" class="w-full py-4 bg-slate-50 text-slate-600 border border-slate-200 rounded-2xl font-bold flex justify-center items-center gap-2 hover:bg-white hover:border-emerald-400 hover:text-emerald-600 hover:shadow-md transition-all dark:bg-[#0a120f] dark:border-[#1a2e26] dark:text-gray-400 text-xs uppercase tracking-widest"><i class="ph-bold ph-upload-simple text-lg"></i> Upload File Audio</button></div>' : '') + '</div></div></div>';
+        html += '<div id="main-scroll" class="flex-1 flex flex-col w-full h-full bg-slate-50 dark:bg-[#111c18] overflow-y-auto"><header class="h-16 md:h-20 flex justify-between items-center px-5 md:px-8 bg-white border-b border-slate-200/60 dark:bg-[#0a120f] dark:border-[#1a2e26] shrink-0 sticky top-0 z-20"><button onclick="if(window.App.rec.is){window.stopStudentRecord();} window.App.resubmitId=null;window.switchView(window.App.rec.src);" class="font-bold text-slate-500 hover:text-emerald-500 flex gap-2 items-center text-sm transition-colors"><i class="ph-bold ph-arrow-left text-lg"></i> Batal</button><div class="text-emerald-500 font-bold text-lg md:text-xl flex items-center gap-2 tracking-tight"><i class="ph-fill ph-microphone-stage text-2xl"></i> ' + (isResubmit?'Setor Ulang Hafalan':'Ujian Hafalan') + '</div><div class="w-16 md:w-20"></div></header><div class="flex-1 p-4 py-8 md:p-10 relative bg-gradient-to-br from-emerald-50/50 to-slate-100 dark:from-[#0a120f] dark:to-[#111c18]"><div class="w-full max-w-[480px] bg-white border border-slate-100 rounded-[2.5rem] p-6 sm:p-8 md:p-10 shadow-2xl dark:bg-[#15241e] dark:border-[#1a2e26] text-center mx-auto mt-2 md:mt-6 relative"><div class="inline-flex p-4 bg-emerald-50 text-emerald-600 rounded-[1.5rem] mb-4 dark:bg-emerald-900/30 shadow-inner"><i class="ph-fill ph-waveform text-4xl"></i></div><h2 class="text-emerald-600 font-bold tracking-[0.2em] text-[10px] md:text-xs uppercase mb-2">' + window.esc(sur?.title||'') + '</h2><h1 class="text-2xl md:text-3xl font-serif font-bold dark:text-white mb-8 tracking-tight">' + window.esc(seg?.title||'') + '</h1><div class="text-left flex flex-col gap-4 mb-8 bg-slate-50 p-5 rounded-3xl border border-slate-100 dark:bg-[#0a120f] dark:border-[#1a2e26]"><div><label class="block text-[10px] text-slate-500 font-bold mb-2 uppercase tracking-widest flex items-center gap-1.5"><i class="ph-fill ph-chalkboard-teacher text-emerald-500 text-sm"></i> Penguji</label><select onchange="window.App.hierSel.u=this.value;window.App.hierSel.h=\'\';window.App.hierSel.s=\'\';window.render(true)" class="input-std !bg-white dark:!bg-[#15241e] cursor-pointer ' + (isResubmit||window.App.adminLvl===2?'opacity-50 pointer-events-none':'') + '" ' + (isResubmit||window.App.adminLvl===2?'disabled':'') + '>' + (window.App.adminLvl !== 2 ? '<option value="" disabled ' + (!uId?'selected':'') + '>-- Pilih Ustadz --</option>' : '') + uListSetoran.map(u=>'<option value="' + u.id + '" ' + (uId==u.id?'selected':'') + '>' + window.esc(u.name) + '</option>').join('') + '</select></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><label class="block text-[10px] text-slate-500 font-bold mb-2 uppercase tracking-widest flex items-center gap-1.5"><i class="ph-fill ph-users-three text-blue-500 text-sm"></i> Kelompok</label><select onchange="window.App.hierSel.h=this.value;window.App.hierSel.s=\'\';window.render(true)" class="input-std !bg-white dark:!bg-[#15241e] cursor-pointer ' + (!uId||isResubmit?'opacity-50 pointer-events-none':'') + '" ' + (!uId||isResubmit?'disabled':'') + '><option value="" disabled ' + (!hId?'selected':'') + '>-- Pilih --</option>' + hList.map(h=>'<option value="' + h.id + '" ' + (hId==h.id?'selected':'') + '>' + window.esc(h.name) + '</option>').join('') + '</select></div><div><label class="block text-[10px] text-slate-500 font-bold mb-2 uppercase tracking-widest flex items-center gap-1.5"><i class="ph-fill ph-user-circle text-purple-500 text-sm"></i> Santri</label><select onchange="window.App.hierSel.s=this.value;window.render(true)" class="input-std !bg-white dark:!bg-[#15241e] cursor-pointer ' + (!hId||isResubmit?'opacity-50 pointer-events-none':'') + '" ' + (!hId||isResubmit?'disabled':'') + '><option value="" disabled ' + (!sId?'selected':'') + '>-- Pilih --</option>' + sList.map(s=>'<option value="' + s.id + '" ' + (sId==s.id?'selected':'') + '>' + window.esc(s.name) + ' (' + window.esc(s.kelas) + ')</option>').join('') + '</select></div></div></div><div class="bg-white border-2 border-dashed border-emerald-200 p-8 rounded-[2rem] mb-5 dark:bg-transparent dark:border-emerald-500/20"><div class="relative w-24 h-24 md:w-28 md:h-28 mx-auto mb-4">' + (window.App.rec.is?'<div class="absolute inset-0 bg-red-500/30 rounded-full animate-ping pointer-events-none"></div>':'') + '<button onclick="if(!window.App.hierSel.s){window.showAlert(\'Pilih identitas santri terlebih dahulu!\');return;} if(!window.App.rec.is){window.startStudentRecord();}else{window.stopStudentRecord();}" class="relative w-full h-full ' + (window.App.rec.is?'bg-red-500':'bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-xl shadow-emerald-500/40 hover:-translate-y-1') + ' text-white rounded-full flex items-center justify-center transition-all duration-300 active:scale-95"><i class="ph-fill ' + (window.App.rec.is?'ph-stop':'ph-microphone') + ' text-4xl md:text-5xl"></i></button></div><div id="rec-timer-display" class="text-base md:text-lg font-mono text-slate-700 dark:text-gray-200 font-bold tracking-widest">' + (window.App.rec.is ? window.fmtT(window.App.rec.secs) : (window.App.rec.secs>0 ? 'Selesai: '+window.fmtT(window.App.rec.secs) : 'Ketuk untuk Merekam')) + '</div>' + (window.App.rec.secs>0 && !window.App.rec.is ? '<div class="flex gap-3 mt-8 pt-8 border-t border-slate-100 dark:border-[#1a2e26]"><button onclick="window.App.rec.secs=0;window.App.currentStudentAudioUrl=null;window.render(true)" class="flex-1 py-4 bg-slate-100 rounded-2xl text-slate-500 font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition-colors dark:bg-[#0a120f] dark:hover:bg-[#1A2E26]">Ulangi</button><button onclick="window.submitRec(\'mic\')" class="flex-[2] py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/30 hover:opacity-90 transition-all flex items-center justify-center gap-2"><i class="ph-bold ph-paper-plane-tilt text-lg"></i> Kirim</button></div>' : '') + '</div>' + (window.App.rec.secs===0 && !window.App.rec.is ? '<div class="pt-2"><div class="relative flex items-center py-2 mb-3"><div class="flex-grow border-t border-slate-200 dark:border-[#1a2e26]"></div><span class="mx-4 text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em]">Atau</span><div class="flex-grow border-t border-slate-200 dark:border-[#1a2e26]"></div></div><input type="file" id="au-up" accept="audio/*" class="hidden" onchange="window.submitRec(\'file\', event)"><button onclick="if(!window.App.hierSel.s){window.showAlert(\'Pilih identitas santri terlebih dahulu!\');return;} document.getElementById(\'au-up\').click()" class="w-full py-4 bg-slate-50 text-slate-600 border border-slate-200 rounded-2xl font-bold flex justify-center items-center gap-2 hover:bg-white hover:border-emerald-400 hover:text-emerald-600 hover:shadow-md transition-all dark:bg-[#0a120f] dark:border-[#1a2e26] dark:text-gray-400 text-xs uppercase tracking-widest"><i class="ph-bold ph-upload-simple text-lg"></i> Upload File Audio</button></div>' : '') + '</div></div></div>';
       }
       else if(window.App.view === 'hub') {
-        const oU = '<option value="all">-- Semua Ustadz/ah --</option>'+window.App.ustadz.map(u=>'<option value="' + u.id + '" ' + (window.App.filter.u==u.id?'selected':'') + '>' + window.esc(u.name) + '</option>').join('');
+        if (window.App.adminLvl === 2) window.App.filter.u = window.App.loggedInUstadzId;
+        const uListHub = window.App.adminLvl === 2 ? window.App.ustadz.filter(x=>x.id == window.App.loggedInUstadzId) : window.App.ustadz;
+        const oU = (window.App.adminLvl !== 2 ? '<option value="all">-- Semua Ustadz/ah --</option>' : '') + uListHub.map(u=>'<option value="' + u.id + '" ' + (window.App.filter.u==u.id?'selected':'') + '>' + window.esc(u.name) + '</option>').join('');
         const hl = window.App.filter.u!=='all'?window.App.halaqohs.filter(h=>h.ustadzId==window.App.filter.u):window.App.halaqohs;
-        const oH = '<option value="all">-- Semua Kelompok --</option>'+hl.map(h=>'<option value="' + h.id + '" ' + (window.App.filter.h==h.id?'selected':'') + '>' + window.esc(h.name) + '</option>').join('');
+        const oH = '<option value="all">-- Semua Halaqoh --</option>'+hl.map(h=>'<option value="' + h.id + '" ' + (window.App.filter.h==h.id?'selected':'') + '>' + window.esc(h.name) + '</option>').join('');
         let sl = window.App.siswas; if(window.App.filter.h!=='all')sl=sl.filter(s=>s.halaqohId==window.App.filter.h);else if(window.App.filter.u!=='all'){let ids=hl.map(x=>x.id);sl=sl.filter(s=>ids.includes(s.halaqohId))}
         const oS = '<option value="all">-- Semua Siswa --</option>'+window.App.siswas.map(s=>'<option value="' + s.id + '" ' + (window.App.filter.s==s.id?'selected':'') + '>' + window.esc(s.name) + '</option>').join('');
 
         let fs = window.App.subs;
-        if(window.App.filter.u!=='all')fs=fs.filter(s=>s.ustadzId==window.App.filter.u); if(window.App.filter.h!=='all')fs=fs.filter(s=>s.halaqohId==window.App.filter.h); if(window.App.filter.s!=='all')fs=fs.filter(s=>s.siswaId==window.App.filter.s);
-        if(window.App.search)fs=fs.filter(x=>{let su=window.App.surahs.find(y=>y.id===x.surahId); return (su&&su.title.toLowerCase().includes(window.App.search.toLowerCase()))||window.getSName(x.siswaId).toLowerCase().includes(window.App.search.toLowerCase())});
+        let tUidHub = window.App.adminLvl === 2 ? window.App.loggedInUstadzId : (window.App.filter.u !== 'all' ? Number(window.App.filter.u) : null);
+        
+        if (tUidHub !== null) {
+            let uHals = window.App.halaqohs.filter(h=>h.ustadzId === tUidHub).map(h=>h.id);
+            let uSws = window.App.siswas.filter(s=>uHals.includes(s.halaqohId)).map(s=>s.id);
+            fs = fs.filter(sb => sb.ustadzId === tUidHub || uSws.includes(sb.siswaId));
+        }
+        if (window.App.filter.h !== 'all') {
+            let tHid = Number(window.App.filter.h);
+            let hSws = window.App.siswas.filter(s=>s.halaqohId === tHid).map(s=>s.id);
+            fs = fs.filter(sb => sb.halaqohId === tHid || hSws.includes(sb.siswaId));
+        }
+        if (window.App.filter.s !== 'all') {
+            fs = fs.filter(sb => sb.siswaId === Number(window.App.filter.s));
+        }
+        if(window.App.search) {
+            let sq = window.App.search.toLowerCase();
+            fs = fs.filter(x=>{
+                let su=window.App.surahs.find(y=>y.id===x.surahId); 
+                return (su&&su.title.toLowerCase().includes(sq)) || window.getSName(x.siswaId).toLowerCase().includes(sq);
+            });
+        }
 
         html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-10 min-h-0 relative"><div class="max-w-6xl mx-auto w-full">';
         html += mobileSearchBar;
         html += '<div class="mb-8 md:mb-12"><div class="flex flex-col md:flex-row justify-between md:items-end border-b border-slate-200 dark:border-[#1a2e26] pb-4 mb-6 gap-4 md:gap-0"><div><h1 class="text-2xl md:text-3xl font-serif dark:text-white mb-1 flex items-center gap-2"><i class="ph-fill ph-clipboard-text text-emerald-500"></i> Papan Riwayat</h1><p class="text-xs md:text-sm text-slate-500">Pantau status hafalan dan progres santri secara real-time.</p></div></div>';
         
         html += '<div class="bg-white dark:bg-[#15241e] border border-slate-100 dark:border-[#1a2e26] p-2 md:p-3 rounded-[2rem] shadow-soft flex flex-col md:flex-row gap-2">';
-        html += '<div class="flex-1 relative"><i class="ph-fill ph-chalkboard-teacher absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select onchange="window.App.filter.u=this.value;window.App.filter.h=\'all\';window.App.filter.s=\'all\';window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oU + '</select></div>';
+        html += '<div class="flex-1 relative"><i class="ph-fill ph-chalkboard-teacher absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select onchange="window.App.filter.u=this.value;window.App.filter.h=\'all\';window.App.filter.s=\'all\';window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none" ' + (window.App.adminLvl===2?'disabled':'') + '>' + oU + '</select></div>';
         html += '<div class="flex-1 relative"><i class="ph-fill ph-users-three absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select onchange="window.App.filter.h=this.value;window.App.filter.s=\'all\';window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oH + '</select></div>';
         html += '<div class="flex-1 relative"><i class="ph-fill ph-user-circle absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select onchange="window.App.filter.s=this.value;window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oS + '</select></div>';
         html += '</div></div>';
@@ -905,22 +986,44 @@
         html += '</div></div></div>';
       }
       else if(window.App.view === 'admin') {
-        const oU = '<option value="all">Semua Ustadz/ah</option>'+window.App.ustadz.map(u=>'<option value="' + u.id + '" ' + (window.App.filter.u==u.id?'selected':'') + '>' + window.esc(u.name) + '</option>').join('');
+        if (window.App.adminLvl === 2) window.App.filter.u = window.App.loggedInUstadzId;
+        const uListHub = window.App.adminLvl === 2 ? window.App.ustadz.filter(x=>x.id == window.App.loggedInUstadzId) : window.App.ustadz;
+        const oU = (window.App.adminLvl !== 2 ? '<option value="all">Semua Ustadz/ah</option>' : '') + uListHub.map(u=>'<option value="' + u.id + '" ' + (window.App.filter.u==u.id?'selected':'') + '>' + window.esc(u.name) + '</option>').join('');
         const hl = window.App.filter.u!=='all'?window.App.halaqohs.filter(h=>h.ustadzId==window.App.filter.u):window.App.halaqohs;
         const oH = '<option value="all">Semua Halaqoh</option>'+hl.map(h=>'<option value="' + h.id + '" ' + (window.App.filter.h==h.id?'selected':'') + '>' + window.esc(h.name) + '</option>').join('');
         let sl = window.App.siswas; if(window.App.filter.h!=='all')sl=sl.filter(s=>s.halaqohId==window.App.filter.h);else if(window.App.filter.u!=='all'){let ids=hl.map(x=>x.id);sl=sl.filter(s=>ids.includes(s.halaqohId))}
         const oS = '<option value="all">Semua Siswa</option>'+window.App.siswas.map(s=>'<option value="' + s.id + '" ' + (window.App.filter.s==s.id?'selected':'') + '>' + window.esc(s.name) + '</option>').join('');
 
         let fs = window.App.subs;
-        if(window.App.filter.u!=='all')fs=fs.filter(s=>s.ustadzId==window.App.filter.u); if(window.App.filter.h!=='all')fs=fs.filter(s=>s.halaqohId==window.App.filter.h); if(window.App.filter.s!=='all')fs=fs.filter(s=>s.siswaId==window.App.filter.s);
-        if(window.App.search)fs=fs.filter(x=>{let su=window.App.surahs.find(y=>y.id===x.surahId); return (su&&su.title.toLowerCase().includes(window.App.search.toLowerCase()))||window.getSName(x.siswaId).toLowerCase().includes(window.App.search.toLowerCase())});
+        let tUidAdmin = window.App.adminLvl === 2 ? window.App.loggedInUstadzId : (window.App.filter.u !== 'all' ? Number(window.App.filter.u) : null);
+        
+        if (tUidAdmin !== null) {
+            let uHals = window.App.halaqohs.filter(h=>h.ustadzId === tUidAdmin).map(h=>h.id);
+            let uSws = window.App.siswas.filter(s=>uHals.includes(s.halaqohId)).map(s=>s.id);
+            fs = fs.filter(sb => sb.ustadzId === tUidAdmin || uSws.includes(sb.siswaId));
+        }
+        if (window.App.filter.h !== 'all') {
+            let tHid = Number(window.App.filter.h);
+            let hSws = window.App.siswas.filter(s=>s.halaqohId === tHid).map(s=>s.id);
+            fs = fs.filter(sb => sb.halaqohId === tHid || hSws.includes(sb.siswaId));
+        }
+        if (window.App.filter.s !== 'all') {
+            fs = fs.filter(sb => sb.siswaId === Number(window.App.filter.s));
+        }
+        if(window.App.search) {
+            let sq = window.App.search.toLowerCase();
+            fs = fs.filter(x=>{
+                let su=window.App.surahs.find(y=>y.id===x.surahId); 
+                return (su&&su.title.toLowerCase().includes(sq)) || window.getSName(x.siswaId).toLowerCase().includes(sq);
+            });
+        }
 
         html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10 min-h-0 relative"><div class="max-w-6xl mx-auto w-full">';
         html += mobileSearchBar;
         html += '<div class="mb-8 md:mb-12"><div class="flex flex-col md:flex-row justify-between md:items-end border-b border-slate-200 dark:border-[#1a2e26] pb-4 mb-6 gap-4 md:gap-0"><div><h1 class="text-3xl md:text-4xl font-serif text-orange-500 dark:text-orange-400 mb-2 flex items-center gap-3 tracking-tight"><i class="ph-fill ph-tray"></i> Antrean Setoran</h1><p class="text-xs md:text-sm text-slate-500">Daftar rekaman hafalan yang menunggu penilaian.</p></div></div>';
         
         html += '<div class="bg-white dark:bg-[#15241e] border border-slate-100 dark:border-[#1a2e26] p-2 md:p-3 rounded-[2rem] shadow-soft flex flex-col md:flex-row gap-2 mb-6 md:mb-8">';
-        html += '<div class="flex-1 relative"><i class="ph-fill ph-chalkboard-teacher absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select onchange="window.App.filter.u=this.value;window.App.filter.h=\'all\';window.App.filter.s=\'all\';window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oU + '</select></div>';
+        html += '<div class="flex-1 relative"><i class="ph-fill ph-chalkboard-teacher absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select onchange="window.App.filter.u=this.value;window.App.filter.h=\'all\';window.App.filter.s=\'all\';window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none" ' + (window.App.adminLvl===2?'disabled':'') + '>' + oU + '</select></div>';
         html += '<div class="flex-1 relative"><i class="ph-fill ph-users-three absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select onchange="window.App.filter.h=this.value;window.App.filter.s=\'all\';window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oH + '</select></div>';
         html += '<div class="flex-1 relative"><i class="ph-fill ph-user-circle absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select onchange="window.App.filter.s=this.value;window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oS + '</select></div>';
         html += '</div>';
@@ -966,8 +1069,10 @@
         html += '</div></div></div>';
       }
       else if(window.App.view === 'master') {
+        if (window.App.adminLvl === 2 && !window.App.hierSel.u) window.App.hierSel.u = window.App.loggedInUstadzId;
+        
         let sQ = window.App.search.toLowerCase();
-        let ul = window.App.ustadz;
+        let ul = window.App.adminLvl === 2 ? window.App.ustadz.filter(x=>x.id == window.App.loggedInUstadzId) : window.App.ustadz;
         if(sQ) ul = ul.filter(u => u.name.toLowerCase().includes(sQ) || u.username.toLowerCase().includes(sQ));
         let hl = sQ ? window.App.halaqohs.filter(h => h.name.toLowerCase().includes(sQ)) : (window.App.hierSel.u ? window.App.halaqohs.filter(h=>h.ustadzId==window.App.hierSel.u) : []);
         let sl = sQ ? window.App.siswas.filter(s => s.name.toLowerCase().includes(sQ) || s.kelas.toLowerCase().includes(sQ)) : (window.App.hierSel.h ? window.App.siswas.filter(s=>s.halaqohId==window.App.hierSel.h) : []);
@@ -1024,7 +1129,10 @@
         
         if(isAdmin && window.App.hierSel.h && !sQ) {
             let es = window.App.editingSiswaId ? window.App.siswas.find(x=>x.id===window.App.editingSiswaId) : null;
-            html += '<div class="p-4 border-t border-slate-100 dark:border-[#1a2e26] shrink-0 bg-slate-50 dark:bg-[#15241e]"><form onsubmit="event.preventDefault();let n=window.val(\'is_n\').trim(),k=window.val(\'is_k\').trim();let id=' + (window.App.editingSiswaId||'null') + ';let nD={id:(id||Date.now()),halaqohId:' + (window.App.hierSel.h||'null') + ',name:n,kelas:k};if(!id)window.App.siswas.push(nD);window.dbSave(\'siswas\',nD.id,nD);window.App.editingSiswaId=null;window.render(true)"><div class="flex flex-col gap-2.5"><input type="text" id="is_n" required placeholder="Nama Lengkap Santri..." value="' + (es?es.name:'') + '" class="input-std !text-xs !py-3.5 !rounded-xl"><div class="flex gap-2.5"><input type="text" id="is_k" required placeholder="Kelas..." value="' + (es?es.kelas:'') + '" class="input-std !text-xs !py-3.5 !rounded-xl flex-1">' + (es?'<button type="button" onclick="window.App.editingSiswaId=null;window.render(true)" class="btn-std !bg-white border border-slate-200 dark:!bg-[#0a120f] dark:border-[#1a2e26] !text-slate-500 shadow-sm !w-14 !p-0 !rounded-xl transition-colors"><i class="ph-bold ph-x text-lg"></i></button>':'') + '<button type="submit" class="btn-std ' + (es?'!bg-blue-600':'!bg-emerald-500') + ' !w-16 !p-0 !rounded-xl flex items-center justify-center shadow-md"><i class="ph-bold ' + (es?'ph-check':'ph-plus') + ' text-xl"></i></button></div></div></form></div>';
+            let allowedHals = window.App.adminLvl === 2 ? window.App.halaqohs.filter(h => h.ustadzId == window.App.loggedInUstadzId) : window.App.halaqohs;
+            let halOptions = allowedHals.map(h => '<option value="' + h.id + '" ' + (es ? (es.halaqohId==h.id?'selected':'') : (window.App.hierSel.h==h.id?'selected':'')) + '>' + window.esc(h.name) + ' - ' + window.getUName(h.ustadzId) + '</option>').join('');
+
+            html += '<div class="p-4 border-t border-slate-100 dark:border-[#1a2e26] shrink-0 bg-slate-50 dark:bg-[#15241e]"><form onsubmit="event.preventDefault();let n=window.val(\'is_n\').trim(),k=window.val(\'is_k\').trim(),hId=Number(window.val(\'is_h\'));let id=' + (window.App.editingSiswaId||'null') + ';let nD={id:(id||Date.now()),halaqohId:hId,name:n,kelas:k};if(!id){window.App.siswas.push(nD);}else{let o=window.App.siswas.find(x=>x.id===id);if(o){o.name=n;o.kelas=k;o.halaqohId=hId;}}window.dbSave(\'siswas\',nD.id,nD);window.App.editingSiswaId=null;window.render(true)"><div class="flex flex-col gap-2.5"><input type="text" id="is_n" required placeholder="Nama Lengkap Santri..." value="' + (es?es.name:'') + '" class="input-std !text-xs !py-3.5 !rounded-xl"><div class="flex gap-2.5"><input type="text" id="is_k" required placeholder="Kelas..." value="' + (es?es.kelas:'') + '" class="input-std !text-xs !py-3.5 !rounded-xl w-[30%]"><select id="is_h" class="input-std !text-xs !py-3.5 !rounded-xl flex-1">' + halOptions + '</select>' + (es?'<button type="button" onclick="window.App.editingSiswaId=null;window.render(true)" class="btn-std !bg-white border border-slate-200 dark:!bg-[#0a120f] dark:border-[#1a2e26] !text-slate-500 shadow-sm !w-12 !p-0 !rounded-xl transition-colors"><i class="ph-bold ph-x text-lg"></i></button>':'') + '<button type="submit" class="btn-std ' + (es?'!bg-blue-600':'!bg-emerald-500') + ' !w-14 !p-0 !rounded-xl flex items-center justify-center shadow-md"><i class="ph-bold ' + (es?'ph-check':'ph-plus') + ' text-xl"></i></button></div></div></form></div>';
         }
         html += '</div></div></div></div>';
       }
@@ -1140,54 +1248,54 @@
               <div class="w-full max-w-[400px] mx-auto flex flex-col gap-4 max-h-[95vh] overflow-y-auto hide-scrollbar pb-10 sm:pb-0">
                 
                 <!-- THE ACHIEVEMENT CARD -->
-                <div id="achievement-card-node" class="relative p-5 flex flex-col items-center justify-center shrink-0 rounded-[1.5rem] border border-slate-700/50 overflow-hidden w-full aspect-[5/4] mx-auto" style="background-color: #0d1518;">
+                <div id="achievement-card-node" class="relative p-5 flex flex-col items-center justify-center shrink-0 rounded-[1.5rem] border border-slate-700/50 overflow-hidden w-full aspect-[5/4] mx-auto bg-cover bg-center" style="background-image: url('https://images.weserv.nl/?url=https://cdn.pixabay.com/photo/2019/05/04/17/36/quran-4178711_1280.jpg&w=800&output=jpg');">
                     
-                    <!-- Islamic Background (Quran / Book) -->
-                    <i class="ph-fill ph-book-open absolute -right-6 -bottom-6 text-[14rem] text-emerald-500 opacity-[0.04] pointer-events-none -rotate-12"></i>
+                    <!-- Overlay -->
+                    <div class="absolute inset-0 bg-[#0B131A]/80 backdrop-blur-[2px] pointer-events-none"></div>
                     
                     <!-- Glow -->
-                    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-emerald-500/10 blur-[50px] pointer-events-none"></div>
+                    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-emerald-500/20 blur-[60px] pointer-events-none"></div>
 
-                    <div class="flex-1 flex flex-col items-center justify-center w-full relative z-10 z-10 w-full">
+                    <div class="flex-1 flex flex-col items-center justify-center w-full relative z-10">
                         <!-- Caption Islami -->
                         <div class="flex flex-col items-center mb-3">
-                            <h2 class="text-[16px] sm:text-lg font-serif text-emerald-400 font-bold tracking-[0.15em] text-center leading-none">SYAHADAH TAHFIDZ</h2>
-                            <span class="text-emerald-500/80 font-arabic text-base sm:text-lg mt-1 leading-none">بَارَكَ اللَّهُ فِيكَ</span>
+                            <h2 class="text-[16px] sm:text-lg font-serif text-emerald-400 font-bold tracking-[0.15em] text-center leading-none drop-shadow-md">SYAHADAH TAHFIDZ</h2>
+                            <span class="text-emerald-300 font-arabic text-base sm:text-lg mt-1 leading-none drop-shadow-md">بَارَكَ اللَّهُ فِيكَ</span>
                         </div>
 
                         <!-- Avatar Inisial -->
-                        <div class="w-14 h-14 rounded-full border-[2px] border-emerald-400 flex items-center justify-center bg-[#15241e] text-emerald-400 text-xl font-bold font-serif mb-2 sm:mb-3 shadow-[0_0_15px_rgba(52,211,153,0.15)] shrink-0">
+                        <div class="w-14 h-14 rounded-full border-[2px] border-emerald-400/80 flex items-center justify-center bg-[#15241e]/80 backdrop-blur-md text-emerald-300 text-xl font-bold font-serif mb-2 sm:mb-3 shadow-[0_0_15px_rgba(52,211,153,0.2)] shrink-0">
                             ${initials}
                         </div>
 
                         <!-- Nama & Info -->
-                        <h1 class="text-base sm:text-lg font-bold text-white text-center tracking-tight mb-0.5 font-serif w-full px-2 truncate leading-tight">${window.esc(stu?.name||'')}</h1>
-                        <p class="text-[9px] sm:text-[10px] font-medium text-emerald-500 mb-4 tracking-wide">${window.esc(lv?.name||'Level')} &bull; Kelas ${window.esc(stu?.kelas||'')}</p>
+                        <h1 class="text-base sm:text-lg font-bold text-white text-center tracking-tight mb-0.5 font-serif w-full px-2 truncate leading-tight drop-shadow-md">${window.esc(stu?.name||'')}</h1>
+                        <p class="text-[9px] sm:text-[10px] font-medium text-emerald-400 mb-4 tracking-wide drop-shadow-sm">${window.esc(lv?.name||'Level')} &bull; Kelas ${window.esc(stu?.kelas||'')}</p>
 
                         <!-- Rincian Nilai -->
-                        <div class="w-[95%] bg-[#111c1d]/80 backdrop-blur-sm border border-slate-700/50 rounded-xl p-3 sm:p-4 mb-3 shadow-inner shrink-0">
+                        <div class="w-[95%] bg-[#0B131A]/60 backdrop-blur-md border border-emerald-500/20 rounded-xl p-3 sm:p-4 mb-2 shadow-inner shrink-0">
                             <div class="mb-2.5 text-center">
-                                <span class="text-[7px] sm:text-[8px] font-bold text-emerald-600 uppercase tracking-[0.15em] block mb-0.5">Pencapaian Hafalan</span>
-                                <h3 class="text-white font-bold text-xs sm:text-sm leading-snug font-serif truncate">${window.esc(sur?.title||'')}</h3>
-                                <p class="text-slate-400 text-[8px] sm:text-[9px] mt-0.5 truncate">${window.esc(sg?.title||'')}</p>
+                                <span class="text-[7px] sm:text-[8px] font-bold text-emerald-500 uppercase tracking-[0.15em] block mb-0.5 drop-shadow-sm">Pencapaian Hafalan</span>
+                                <h3 class="text-white font-bold text-xs sm:text-sm leading-snug font-serif truncate drop-shadow-sm">${window.esc(sur?.title||'')}</h3>
+                                <p class="text-slate-300 text-[8px] sm:text-[9px] mt-0.5 truncate drop-shadow-sm">${window.esc(sg?.title||'')}</p>
                             </div>
-                            <div class="flex items-center justify-between border-t border-slate-700/50 pt-2.5">
+                            <div class="flex items-center justify-between border-t border-emerald-500/20 pt-2.5">
                                 <div class="text-left flex-1">
-                                    <span class="text-[6px] sm:text-[7px] font-bold text-emerald-600/80 uppercase tracking-widest block mb-0.5">Nilai Akhir</span>
-                                    <span class="text-emerald-400 font-bold text-[10px] sm:text-[11px] leading-none">${window.esc(sb.grade)} / ${getPredikat(sb.grade)}</span>
+                                    <span class="text-[6px] sm:text-[7px] font-bold text-emerald-600 uppercase tracking-widest block mb-0.5 drop-shadow-sm">Nilai Akhir</span>
+                                    <span class="text-emerald-400 font-bold text-[10px] sm:text-[11px] leading-none drop-shadow-sm">${window.esc(sb.grade)} / ${getPredikat(sb.grade)}</span>
                                 </div>
                                 <div class="text-right flex-1">
-                                    <span class="text-[6px] sm:text-[7px] font-bold text-emerald-600/80 uppercase tracking-widest block mb-0.5">Tanggal Lulus</span>
-                                    <span class="text-slate-300 font-bold text-[10px] sm:text-[11px] leading-none">${window.esc(sb.date)}</span>
+                                    <span class="text-[6px] sm:text-[7px] font-bold text-emerald-600 uppercase tracking-widest block mb-0.5 drop-shadow-sm">Tanggal Lulus</span>
+                                    <span class="text-slate-200 font-bold text-[10px] sm:text-[11px] leading-none drop-shadow-sm">${window.esc(sb.date)}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Footer Logo -->
-                    <div class="flex items-center justify-center gap-1.5 text-slate-500 w-full relative z-10 shrink-0 opacity-70">
-                        <i class="ph-fill ph-seal-check text-[10px] text-emerald-700"></i>
-                        <span class="text-[6px] sm:text-[7px] font-bold uppercase tracking-[0.2em] text-slate-500 truncate">${window.esc(schName)}</span>
+                    <div class="flex items-center justify-center gap-1.5 text-emerald-600/80 w-full relative z-10 shrink-0 mt-auto">
+                        <i class="ph-fill ph-seal-check text-[10px]"></i>
+                        <span class="text-[6px] sm:text-[7px] font-bold uppercase tracking-[0.2em] truncate drop-shadow-sm">${window.esc(schName)}</span>
                     </div>
                 </div>
 
