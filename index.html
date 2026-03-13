@@ -1254,7 +1254,7 @@
             let sur = window.App.surahs.find(x=>x.id===sb.surahId);
             let sg = window.App.segs.find(x=>x.id===sb.segmentId);
             let lv = sg ? window.App.levels.find(l=>l.id===sg.levelId) : null;
-            let schName = window.App.schSub || 'OFFICIAL QURAN MEMORIZATION INSTITUTE';
+            let schName = window.App.schSub || 'Madrasah Tahfidz Quran';
             let logoImg = window.App.schLogo ? `<img src="${window.App.schLogo}" style="height: 50px; max-width: 150px; object-fit: contain; margin: 0 auto; display: block;">` : `<div style="height: 50px; display: flex; align-items: center; justify-content: center; color: #059669;"><i class="ph-fill ph-monitor-play" style="font-size: 38px;"></i></div>`;
             
             let getPredikat = (g) => {
@@ -1290,7 +1290,7 @@
                         <!-- Logo Top Center with School Name -->
                         <div style="width: 100%; text-align: center; margin-bottom: 12px; flex-shrink: 0;">
                             ${logoImg}
-                            <div style="font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 700; color: #047857; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 8px;">${window.esc(schName)}</div>
+                            <div style="font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 700; color: #047857; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 8px; line-height: 1.4; padding: 0 10px; word-wrap: break-word;">${window.esc(schName)}</div>
                         </div>
 
                         <!-- Caption Islami -->
@@ -1324,9 +1324,11 @@
                         </div>
 
                         <!-- Footer Logo -->
-                        <div style="text-align: center; flex-shrink: 0; color: #059669; display: flex; justify-content: center; align-items: center; gap: 6px; width: 100%;">
-                            <i class="ph-fill ph-seal-check" style="font-size: 12px;"></i>
-                            <span style="font-family: 'Inter', sans-serif; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.2em;">TAHFIDZQU</span>
+                        <div style="text-align: center; flex-shrink: 0; display: flex; justify-content: center; align-items: center; gap: 4px; width: 100%;">
+                            <i class="ph-fill ph-seal-check" style="font-size: 14px; color: #10b981;"></i>
+                            <span style="font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 800; letter-spacing: -0.02em;">
+                                <span style="color: #1e293b;">Tahfidz</span><span style="color: #10b981;">Qu</span>
+                            </span>
                         </div>
                     </div>
                 </div>
