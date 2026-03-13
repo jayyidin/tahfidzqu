@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600;700;800&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/earlyaccess/thuluth.css" rel="stylesheet">
   
-  <!-- DOM-TO-IMAGE LIBRARY UNTUK SCREENSHOT MURNI -->
+  <!-- DOM-TO-IMAGE LIBRARY UNTUK SCREENSHOT MURNI (KEMBALI KE METODE MYQURANPLAN) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
 
   <script src="https://cdn.tailwindcss.com"></script>
@@ -110,29 +110,7 @@
         if (el.readyState >= 1) { doFix(); }
     };
 
-    // Fitur Flash Kamera untuk Efek Screenshot Murni
-    window.simulateScreenshot = function() {
-        let f = document.createElement('div');
-        f.style.position = 'fixed';
-        f.style.top = '0'; f.style.left = '0';
-        f.style.width = '100vw'; f.style.height = '100vh';
-        f.style.backgroundColor = '#ffffff';
-        f.style.zIndex = '999999';
-        f.style.opacity = '0.9';
-        f.style.transition = 'opacity 0.4s ease-out';
-        document.body.appendChild(f);
-        
-        try {
-            let a = new Audio('https://actions.google.com/sounds/v1/ui/camera_shutter.ogg');
-            a.volume = 0.5;
-            a.play().catch(e=>{});
-        } catch(err){}
-
-        setTimeout(() => { f.style.opacity = '0'; }, 50);
-        setTimeout(() => { if(f.parentNode) f.parentNode.removeChild(f); }, 500);
-    };
-
-    // Fungsi Share & Download Menggunakan Metode Screenshot Murni 1:1 (Tanpa Scale yang merusak Layout)
+    // Fungsi Share & Download Menggunakan dom-to-image (Paten seperti MyQuranPlan)
     window.downloadCard = function() {
         let node = document.getElementById('achievement-card-node');
         let btn = document.getElementById('btn-download-card');
@@ -142,10 +120,22 @@
         btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-lg"></i> Menyimpan...';
         btn.disabled = true;
 
-        window.simulateScreenshot();
+        document.fonts.ready.then(() => {
+            const scale = 3; 
+            const param = {
+                height: node.offsetHeight * scale,
+                width: node.offsetWidth * scale,
+                quality: 1.0,
+                bgcolor: '#ffffff',
+                style: {
+                    transform: 'scale(' + scale + ')',
+                    transformOrigin: 'top left',
+                    width: node.offsetWidth + 'px',
+                    height: node.offsetHeight + 'px'
+                }
+            };
 
-        setTimeout(() => {
-            domtoimage.toPng(node, { bgcolor: '#ffffff' })
+            domtoimage.toPng(node, param)
             .then(function (dataUrl) {
                 let link = document.createElement('a');
                 link.download = 'Syahadah_TahfidzQu.png';
@@ -155,11 +145,11 @@
                 btn.disabled = false;
             })
             .catch(function (error) {
-                window.showAlert('Gagal screenshot kartu. ' + error);
+                window.showAlert('Gagal mengunduh kartu. Pastikan koneksi stabil. ' + error);
                 btn.innerHTML = oldHtml;
                 btn.disabled = false;
             });
-        }, 150);
+        });
     };
 
     window.shareCard = function() {
@@ -171,10 +161,22 @@
         btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-lg"></i> Memproses...';
         btn.disabled = true;
 
-        window.simulateScreenshot();
+        document.fonts.ready.then(() => {
+            const scale = 3;
+            const param = {
+                height: node.offsetHeight * scale,
+                width: node.offsetWidth * scale,
+                quality: 1.0,
+                bgcolor: '#ffffff',
+                style: {
+                    transform: 'scale(' + scale + ')',
+                    transformOrigin: 'top left',
+                    width: node.offsetWidth + 'px',
+                    height: node.offsetHeight + 'px'
+                }
+            };
 
-        setTimeout(() => {
-            domtoimage.toPng(node, { bgcolor: '#ffffff' })
+            domtoimage.toPng(node, param)
             .then(async function (dataUrl) {
                 try {
                     let blob = await (await fetch(dataUrl)).blob();
@@ -202,7 +204,7 @@
                 btn.innerHTML = oldHtml;
                 btn.disabled = false;
             });
-        }, 150);
+        });
     };
 
     const Q_SURAHS = JSON.parse('[{"no":1,"name":"Al-Fatihah","juz":[1]},{"no":2,"name":"Al-Baqarah","juz":[1,2,3]},{"no":3,"name":"Ali \'Imran","juz":[3,4]},{"no":4,"name":"An-Nisa\'","juz":[4,5,6]},{"no":5,"name":"Al-Ma\'idah","juz":[6,7]},{"no":6,"name":"Al-An\'am","juz":[7,8]},{"no":7,"name":"Al-A\'raf","juz":[8,9]},{"no":8,"name":"Al-Anfal","juz":[9,10]},{"no":9,"name":"At-Taubah","juz":[10,11]},{"no":10,"name":"Yunus","juz":[11]},{"no":11,"name":"Hud","juz":[11,12]},{"no":12,"name":"Yusuf","juz":[12,13]},{"no":13,"name":"Ar-Ra\'d","juz":[13]},{"no":14,"name":"Ibrahim","juz":[13]},{"no":15,"name":"Al-Hijr","juz":[14]},{"no":16,"name":"An-Nahl","juz":[14]},{"no":17,"name":"Al-Isra\'","juz":[15]},{"no":18,"name":"Al-Kahf","juz":[15,16]},{"no":19,"name":"Maryam","juz":[16]},{"no":20,"name":"Taha","juz":[16]},{"no":21,"name":"Al-Anbiya\'","juz":[17]},{"no":22,"name":"Al-Hajj","juz":[17]},{"no":23,"name":"Al-Mu\'minun","juz":[18]},{"no":24,"name":"An-Nur","juz":[18]},{"no":25,"name":"Al-Furqan","juz":[18,19]},{"no":26,"name":"Asy-Syu\'ara\'","juz":[19]},{"no":27,"name":"An-Naml","juz":[19,20]},{"no":28,"name":"Al-Qasas","juz":[20]},{"no":29,"name":"Al-\'Ankabut","juz":[20,21]},{"no":30,"name":"Ar-Rum","juz":[21]},{"no":31,"name":"Luqman","juz":[21]},{"no":32,"name":"As-Sajdah","juz":[21]},{"no":33,"name":"Al-Ahzab","juz":[21,22]},{"no":34,"name":"Saba\'","juz":[22]},{"no":35,"name":"Fatir","juz":[22]},{"no":36,"name":"Yasin","juz":[22,23]},{"no":37,"name":"As-Saffat","juz":[23]},{"no":38,"name":"Sad","juz":[23]},{"no":39,"name":"Az-Zumar","juz":[23,24]},{"no":40,"name":"Ghafir","juz":[24]},{"no":41,"name":"Fussilat","juz":[24,25]},{"no":42,"name":"Asy-Syura","juz":[25]},{"no":43,"name":"Az-Zukhruf","juz":[25]},{"no":44,"name":"Ad-Dukhan","juz":[25]},{"no":45,"name":"Al-Jasiyah","juz":[25]},{"no":46,"name":"Al-Ahqaf","juz":[26]},{"no":47,"name":"Muhammad","juz":[26]},{"no":48,"name":"Al-Fath","juz":[26]},{"no":49,"name":"Al-Hujurat","juz":[26]},{"no":50,"name":"Qaf","juz":[26]},{"no":51,"name":"Az-Zariyat","juz":[26,27]},{"no":52,"name":"At-Tur","juz":[27]},{"no":53,"name":"An-Najm","juz":[27]},{"no":54,"name":"Al-Qamar","juz":[27]},{"no":55,"name":"Ar-Rahman","juz":[27]},{"no":56,"name":"Al-Waqi\'ah","juz":[27]},{"no":57,"name":"Al-Hadid","juz":[27]},{"no":58,"name":"Al-Mujadilah","juz":[28]},{"no":59,"name":"Al-Hasyr","juz":[28]},{"no":60,"name":"Al-Mumtahanah","juz":[28]},{"no":61,"name":"As-Saff","juz":[28]},{"no":62,"name":"Al-Jumu\'ah","juz":[28]},{"no":63,"name":"Al-Munafiqun","juz":[28]},{"no":64,"name":"At-Tagabun","juz":[28]},{"no":65,"name":"At-Talaq","juz":[28]},{"no":66,"name":"At-Tahrim","juz":[28]},{"no":67,"name":"Al-Mulk","juz":[29]},{"no":68,"name":"Al-Qalam","juz":[29]},{"no":69,"name":"Al-Haqqah","juz":[29]},{"no":70,"name":"Al-Ma\'arij","juz":[29]},{"no":71,"name":"Nuh","juz":[29]},{"no":72,"name":"Al-Jinn","juz":[29]},{"no":73,"name":"Al-Muzzammil","juz":[29]},{"no":74,"name":"Al-Muddassir","juz":[29]},{"no":75,"name":"Al-Qiyamah","juz":[29]},{"no":76,"name":"Al-Insan","juz":[29]},{"no":77,"name":"Al-Mursalat","juz":[29]},{"no":78,"name":"An-Naba\'","juz":[30]},{"no":79,"name":"An-Nazi\'at","juz":[30]},{"no":80,"name":"\'Abasa","juz":[30]},{"no":81,"name":"At-Takwir","juz":[30]},{"no":82,"name":"Al-Infitar","juz":[30]},{"no":83,"name":"Al-Mutaffifin","juz":[30]},{"no":84,"name":"Al-Insyiqaq","juz":[30]},{"no":85,"name":"Al-Buruj","juz":[30]},{"no":86,"name":"At-Tariq","juz":[30]},{"no":87,"name":"Al-A\'la","juz":[30]},{"no":88,"name":"Al-Gasyiyah","juz":[30]},{"no":89,"name":"Al-Fajr","juz":[30]},{"no":90,"name":"Al-Balad","juz":[30]},{"no":91,"name":"Asy-Syams","juz":[30]},{"no":92,"name":"Al-Lail","juz":[30]},{"no":93,"name":"Ad-Duha","juz":[30]},{"no":94,"name":"Al-Insyirah","juz":[30]},{"no":95,"name":"At-Tin","juz":[30]},{"no":96,"name":"Al-\'Alaq","juz":[30]},{"no":97,"name":"Al-Qadr","juz":[30]},{"no":98,"name":"Al-Bayyinah","juz":[30]},{"no":99,"name":"Az-Zalzalah","juz":[30]},{"no":100,"name":"Al-\'Adiyat","juz":[30]},{"no":101,"name":"Al-Qari\'ah","juz":[30]},{"no":102,"name":"At-Takasur","juz":[30]},{"no":103,"name":"Al-\'Asr","juz":[30]},{"no":104,"name":"Al-Humazah","juz":[30]},{"no":105,"name":"Al-Fil","juz":[30]},{"no":106,"name":"Quraisy","juz":[30]},{"no":107,"name":"Al-Ma\'un","juz":[30]},{"no":108,"name":"Al-Kausar","juz":[30]},{"no":109,"name":"Al-Kafirun","juz":[30]},{"no":110,"name":"An-Nasr","juz":[30]},{"no":111,"name":"Al-Lahab","juz":[30]},{"no":112,"name":"Al-Ikhlas","juz":[30]},{"no":113,"name":"Al-Falaq","juz":[30]},{"no":114,"name":"An-Nas","juz":[30]}]');
@@ -1276,17 +1278,17 @@
             let stuKelas = stu ? window.esc(stu.kelas) : '-';
             let lvName = lv ? window.esc(lv.name) : 'Level';
 
-            // Responsif font size untuk nama yang sangat panjang
+            // Responsif font size untuk nama yang sangat panjang, dibuat lebih lega
             let nameFontSize = '22px';
-            if (stuName.length > 25) nameFontSize = '16px';
-            else if (stuName.length > 15) nameFontSize = '18px';
+            if (stuName.length > 22) nameFontSize = '16px';
+            else if (stuName.length > 14) nameFontSize = '18px';
 
             mHtml += `
             <div class="modal-overlay !flex !items-center !justify-center !p-4 z-[500]">
               <div class="w-full max-w-[360px] mx-auto flex flex-col gap-4 max-h-[95vh] overflow-y-auto hide-scrollbar pb-10 sm:pb-0 items-center">
                 
-                <!-- THE ACHIEVEMENT CARD (FIXED PIXEL SIZE FOR PERFECT DOWNLOAD) -->
-                <div id="achievement-card-node" style="width: 340px; height: 425px; position: relative; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 24px; display: flex; flex-direction: column; align-items: center; padding: 24px; box-sizing: border-box; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); margin: 0 auto;">
+                <!-- THE ACHIEVEMENT CARD -->
+                <div id="achievement-card-node" style="width: 340px; height: 425px; position: relative; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 24px; display: flex; flex-direction: column; align-items: center; padding: 24px; box-sizing: border-box; margin: 0 auto; box-shadow: none;">
                     
                     <!-- Background Watermark -->
                     <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: url('https://images.weserv.nl/?url=https://cdn.pixabay.com/photo/2019/05/04/17/36/quran-4178711_1280.jpg&w=800&output=jpg'); background-size: cover; background-position: center; opacity: 0.10; z-index: 0; pointer-events: none;"></div>
@@ -1301,13 +1303,13 @@
 
                         <!-- Caption Islami -->
                         <div style="width: 100%; text-align: center; flex-shrink: 0;">
-                            <div style="font-family: 'Thuluth', 'Amiri', serif; font-size: 32px; color: #059669; line-height: 1.2; margin: 0; padding-bottom: 4px;">بَارَكَ اللَّهُ فِيكَ</div>
+                            <div style="font-family: 'Thuluth', 'Amiri', serif; font-size: 32px; color: #059669; line-height: 1.4; margin: 0; padding-bottom: 4px;">بَارَكَ اللَّهُ فِيكَ</div>
                         </div>
 
-                        <!-- Spacer and Name -->
+                        <!-- Spacer and Name (DIPERBAIKI: Padding bawah ekstra agar ekor huruf y/f/g/j tidak terpotong) -->
                         <div style="width: 100%; text-align: center; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 8px 0;">
-                            <h1 style="font-family: 'Merriweather', serif; font-size: ${nameFontSize}; font-weight: 700; color: #1e293b; margin: 0 0 6px 0; line-height: 1.3; text-align: center; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-break: break-word;">${stuName}</h1>
-                            <p style="font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 600; color: #64748b; margin: 0; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;">KELAS ${stuKelas}</p>
+                            <h1 style="font-family: 'Merriweather', serif; font-size: ${nameFontSize}; font-weight: 700; color: #1e293b; margin: 0; padding-bottom: 8px; line-height: normal; text-align: center;">${stuName}</h1>
+                            <p style="font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 600; color: #64748b; margin: 0; letter-spacing: 0.1em; text-transform: uppercase;">KELAS ${stuKelas}</p>
                         </div>
 
                         <!-- Rincian Nilai -->
