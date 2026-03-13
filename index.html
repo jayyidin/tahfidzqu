@@ -11,8 +11,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600;700;800&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/earlyaccess/thuluth.css" rel="stylesheet">
   
-  <!-- HTML2CANVAS LIBRARY UNTUK SCREENSHOT KARTU PRESTASI (LEBIH STABIL DARI DOM-TO-IMAGE) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- DOM-TO-IMAGE LIBRARY UNTUK SCREENSHOT KARTU PRESTASI -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -110,29 +110,34 @@
         if (el.readyState >= 1) { doFix(); }
     };
 
-    // Fungsi Share & Download Kartu Prestasi Menggunakan html2canvas
+    // Fungsi Share & Download Kartu Prestasi Menggunakan dom-to-image (Diperbaiki)
     window.downloadCard = async function() {
         let node = document.getElementById('achievement-card-node');
         let btn = document.getElementById('btn-download-card');
-        if(!node || !window.html2canvas) return;
+        if(!node || !window.domtoimage) return;
         
         let oldHtml = btn.innerHTML;
         btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-lg"></i> Loading...';
         btn.disabled = true;
 
         try {
-            // Scroll ke atas agar tidak ada masalah rendering saat elemen tidak terlihat
-            window.scrollTo(0, 0);
+            const scale = 3; 
+            const style = {
+                transform: 'scale(' + scale + ')',
+                transformOrigin: 'top left',
+                width: node.offsetWidth + 'px',
+                height: node.offsetHeight + 'px'
+            };
+            const param = {
+                height: node.offsetHeight * scale,
+                width: node.offsetWidth * scale,
+                quality: 1.0,
+                style: style
+            };
 
-            let canvas = await html2canvas(node, {
-                scale: 3,
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#ffffff',
-                logging: false
-            });
-            
-            let dataUrl = canvas.toDataURL('image/png');
+            // Render 2 kali untuk memastikan custom font benar-benar ter-load di canvas
+            await domtoimage.toPng(node, param); 
+            let dataUrl = await domtoimage.toPng(node, param);
             
             let link = document.createElement('a');
             link.download = 'Syahadah_TahfidzQu.png';
@@ -149,24 +154,29 @@
     window.shareCard = async function() {
         let node = document.getElementById('achievement-card-node');
         let btn = document.getElementById('btn-share-card');
-        if(!node || !window.html2canvas) return;
+        if(!node || !window.domtoimage) return;
 
         let oldHtml = btn.innerHTML;
         btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-lg"></i> Tunggu...';
         btn.disabled = true;
 
         try {
-            window.scrollTo(0, 0);
+            const scale = 3;
+            const style = {
+                transform: 'scale(' + scale + ')',
+                transformOrigin: 'top left',
+                width: node.offsetWidth + 'px',
+                height: node.offsetHeight + 'px'
+            };
+            const param = {
+                height: node.offsetHeight * scale,
+                width: node.offsetWidth * scale,
+                quality: 1.0,
+                style: style
+            };
 
-            let canvas = await html2canvas(node, {
-                scale: 3,
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: '#ffffff',
-                logging: false
-            });
-            
-            let dataUrl = canvas.toDataURL('image/png');
+            await domtoimage.toPng(node, param); 
+            let dataUrl = await domtoimage.toPng(node, param);
             
             let blob = await (await fetch(dataUrl)).blob();
             let file = new File([blob], 'Syahadah_TahfidzQu.png', { type: 'image/png' });
