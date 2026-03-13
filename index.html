@@ -11,8 +11,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600;700;800&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/earlyaccess/thuluth.css" rel="stylesheet">
   
-  <!-- DOM-TO-IMAGE LIBRARY UNTUK SCREENSHOT KARTU PRESTASI -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
+  <!-- HTML-TO-IMAGE LIBRARY (LEBIH MODERN DAN AKURAT DARI DOM-TO-IMAGE & HTML2CANVAS) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -110,33 +110,23 @@
         if (el.readyState >= 1) { doFix(); }
     };
 
-    // Fungsi Share & Download Menggunakan DOM-TO-IMAGE yang dioptimalkan
+    // Fungsi Share & Download Menggunakan html-to-image (Paling stabil untuk font/absolut layout)
     window.downloadCard = async function() {
         let node = document.getElementById('achievement-card-node');
         let btn = document.getElementById('btn-download-card');
-        if(!node || !window.domtoimage) return;
+        if(!node || !window.htmlToImage) return;
         
         let oldHtml = btn.innerHTML;
         btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-lg"></i> Loading...';
         btn.disabled = true;
 
         try {
-            const scale = 3; 
-            const param = {
-                height: node.offsetHeight * scale,
-                width: node.offsetWidth * scale,
-                quality: 1.0,
-                style: {
-                    transform: 'scale(' + scale + ')',
-                    transformOrigin: 'top left',
-                    width: node.offsetWidth + 'px',
-                    height: node.offsetHeight + 'px'
-                }
-            };
+            await document.fonts.ready; // Trik memastikan font sudah siap
 
-            // Trik jitu: render 2 kali agar font external ter-load sempurna sebelum diunduh
-            await domtoimage.toPng(node, param); 
-            let dataUrl = await domtoimage.toPng(node, param);
+            let dataUrl = await htmlToImage.toPng(node, { 
+                pixelRatio: 3,
+                backgroundColor: '#ffffff'
+            });
             
             let link = document.createElement('a');
             link.download = 'Syahadah_TahfidzQu.png';
@@ -153,28 +143,19 @@
     window.shareCard = async function() {
         let node = document.getElementById('achievement-card-node');
         let btn = document.getElementById('btn-share-card');
-        if(!node || !window.domtoimage) return;
+        if(!node || !window.htmlToImage) return;
 
         let oldHtml = btn.innerHTML;
         btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-lg"></i> Tunggu...';
         btn.disabled = true;
 
         try {
-            const scale = 3;
-            const param = {
-                height: node.offsetHeight * scale,
-                width: node.offsetWidth * scale,
-                quality: 1.0,
-                style: {
-                    transform: 'scale(' + scale + ')',
-                    transformOrigin: 'top left',
-                    width: node.offsetWidth + 'px',
-                    height: node.offsetHeight + 'px'
-                }
-            };
+            await document.fonts.ready;
 
-            await domtoimage.toPng(node, param); 
-            let dataUrl = await domtoimage.toPng(node, param);
+            let dataUrl = await htmlToImage.toPng(node, { 
+                pixelRatio: 3,
+                backgroundColor: '#ffffff'
+            });
             
             let blob = await (await fetch(dataUrl)).blob();
             let file = new File([blob], 'Syahadah_TahfidzQu.png', { type: 'image/png' });
