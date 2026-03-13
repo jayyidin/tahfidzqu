@@ -11,8 +11,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600;700;800&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/earlyaccess/thuluth.css" rel="stylesheet">
   
-  <!-- DOM-TO-IMAGE LIBRARY UNTUK SCREENSHOT KARTU PRESTASI -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/dom-to-image/2.6.0/dom-to-image.min.js"></script>
+  <!-- HTML2CANVAS LIBRARY UNTUK SCREENSHOT KARTU PRESTASI -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -110,93 +110,102 @@
         if (el.readyState >= 1) { doFix(); }
     };
 
-    // Fungsi Share & Download Kartu Prestasi Menggunakan dom-to-image (Diperbaiki)
-    window.downloadCard = async function() {
-        let node = document.getElementById('achievement-card-node');
-        let btn = document.getElementById('btn-download-card');
-        if(!node || !window.domtoimage) return;
+    // Fungsi Render Kloning untuk Gambar Sempurna
+    window.processRender = async function(btn, originalNode) {
+        if(!window.html2canvas) return null;
         
         let oldHtml = btn.innerHTML;
-        btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-lg"></i> Loading...';
+        btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-lg"></i> Tunggu...';
         btn.disabled = true;
 
         try {
-            const scale = 3; 
-            const style = {
-                transform: 'scale(' + scale + ')',
-                transformOrigin: 'top left',
-                width: node.offsetWidth + 'px',
-                height: node.offsetHeight + 'px'
-            };
-            const param = {
-                height: node.offsetHeight * scale,
-                width: node.offsetWidth * scale,
-                quality: 1.0,
-                style: style
-            };
-
-            // Render 2 kali untuk memastikan custom font benar-benar ter-load di canvas
-            await domtoimage.toPng(node, param); 
-            let dataUrl = await domtoimage.toPng(node, param);
+            // 1. Buat kloningan dari node kartu
+            let clone = originalNode.cloneNode(true);
             
-            let link = document.createElement('a');
-            link.download = 'Syahadah_TahfidzQu.png';
-            link.href = dataUrl;
-            link.click();
+            // 2. Siapkan wadah tersembunyi di luar layar (tapi tetap di DOM agar dirender)
+            let wrapper = document.createElement('div');
+            wrapper.style.position = 'fixed';
+            wrapper.style.top = '-9999px';
+            wrapper.style.left = '-9999px';
+            // Pastikan lebar cukup agar tidak gepeng
+            wrapper.style.width = '400px'; 
+            wrapper.style.height = '500px';
+            wrapper.style.display = 'flex';
+            wrapper.style.justifyContent = 'center';
+            wrapper.style.alignItems = 'center';
+            wrapper.style.backgroundColor = '#ffffff';
+            
+            // 3. Masukkan kloningan ke wadah
+            wrapper.appendChild(clone);
+            document.body.appendChild(wrapper);
+
+            // Trik utama: beri sedikit waktu agar browser sempat menggambar font custom (Merriweather/Thuluth) ke clone
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // 4. Render kloningan menggunakan html2canvas
+            let canvas = await html2canvas(clone, {
+                scale: 3, // Resolusi tinggi
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: '#ffffff',
+                logging: false,
+                // Mengatasi masalah huruf terpotong pada padding
+                windowWidth: 400,
+                windowHeight: 500
+            });
+            
+            // 5. Bersihkan kloningan
+            document.body.removeChild(wrapper);
+            
+            return canvas.toDataURL('image/png');
         } catch (e) {
-            window.showAlert('Gagal mengunduh kartu. Pastikan koneksi stabil. ' + e);
+            window.showAlert('Gagal memproses kartu. ' + e);
+            return null;
         } finally {
             btn.innerHTML = oldHtml;
             btn.disabled = false;
         }
     };
 
+    window.downloadCard = async function() {
+        let node = document.getElementById('achievement-card-node');
+        let btn = document.getElementById('btn-download-card');
+        if(!node) return;
+
+        let dataUrl = await window.processRender(btn, node);
+        if (dataUrl) {
+            let link = document.createElement('a');
+            link.download = 'Syahadah_TahfidzQu.png';
+            link.href = dataUrl;
+            link.click();
+        }
+    };
+
     window.shareCard = async function() {
         let node = document.getElementById('achievement-card-node');
         let btn = document.getElementById('btn-share-card');
-        if(!node || !window.domtoimage) return;
+        if(!node) return;
 
-        let oldHtml = btn.innerHTML;
-        btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-lg"></i> Tunggu...';
-        btn.disabled = true;
+        let dataUrl = await window.processRender(btn, node);
+        if (dataUrl) {
+            try {
+                let blob = await (await fetch(dataUrl)).blob();
+                let file = new File([blob], 'Syahadah_TahfidzQu.png', { type: 'image/png' });
 
-        try {
-            const scale = 3;
-            const style = {
-                transform: 'scale(' + scale + ')',
-                transformOrigin: 'top left',
-                width: node.offsetWidth + 'px',
-                height: node.offsetHeight + 'px'
-            };
-            const param = {
-                height: node.offsetHeight * scale,
-                width: node.offsetWidth * scale,
-                quality: 1.0,
-                style: style
-            };
-
-            await domtoimage.toPng(node, param); 
-            let dataUrl = await domtoimage.toPng(node, param);
-            
-            let blob = await (await fetch(dataUrl)).blob();
-            let file = new File([blob], 'Syahadah_TahfidzQu.png', { type: 'image/png' });
-
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                    title: 'Syahadah Tahfidz',
-                    text: 'Alhamdulillah, pencapaian hafalan baru!',
-                    files: [file]
-                });
-            } else {
-                window.showAlert('Perangkat/Browser ini tidak mendukung fitur Share gambar langsung. Silakan Download gambarnya terlebih dahulu.');
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        title: 'Syahadah Tahfidz',
+                        text: 'Alhamdulillah, pencapaian hafalan baru!',
+                        files: [file]
+                    });
+                } else {
+                    window.showAlert('Perangkat ini tidak mendukung fitur Share langsung. Gunakan tombol Download.');
+                }
+            } catch (e) {
+                if (e && e.name !== 'AbortError') {
+                    window.showAlert('Gagal membagikan kartu. Coba gunakan fitur Download.');
+                }
             }
-        } catch (e) {
-            if (e && e.name !== 'AbortError') {
-                window.showAlert('Gagal membagikan kartu. Coba gunakan fitur Download.');
-            }
-        } finally {
-            btn.innerHTML = oldHtml;
-            btn.disabled = false;
         }
     };
 
