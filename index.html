@@ -1490,43 +1490,139 @@
     window.App.siswas = [{id:1,halaqohId:1,name:"Ahmad",kelas:"7A"},{id:2,halaqohId:1,name:"Budi",kelas:"7B"}];
     window.App.subs = [];
 
-    function initData() {
-        try {
-            let ls = localStorage.getItem('tahfidzqu_data');
-            if (ls) {
-                let d = JSON.parse(ls);
-                if (d.juzs) window.App.juzs = d.juzs;
-                if (d.surahs) window.App.surahs = d.surahs;
-                if (d.levels) window.App.levels = d.levels;
-                if (d.segs) window.App.segs = d.segs;
-                if (d.ustadz) window.App.ustadz = d.ustadz;
-                if (d.halaqohs) window.App.halaqohs = d.halaqohs;
-                if (d.siswas) window.App.siswas = d.siswas;
-                if (d.subs) window.App.subs = d.subs;
-            }
-        } catch(e) {}
+    // Render layar awal selagi sinkronisasi database Cloud
+    window.render();
+  </script>
+
+  <!-- FIREBASE CLOUD DATABASE INTEGRATION -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    let firebaseConfig = {};
+    let appId = 'default-app-id';
+    let initialToken = null;
+
+    try {
+        if (typeof __firebase_config !== 'undefined') firebaseConfig = JSON.parse(__firebase_config);
+        if (typeof __app_id !== 'undefined') appId = __app_id;
+        if (typeof __initial_auth_token !== 'undefined') initialToken = __initial_auth_token;
+    } catch(e) {}
+
+    let app, auth, db;
+    try {
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+    } catch (e) {
+        console.error("Firebase Init Error:", e);
+        window.App.firebaseError = "Gagal menginisialisasi sistem Cloud.";
+        window.render(true);
     }
 
-    window.dbSave = function(table, id, data) {
-        let d = {
-            juzs: window.App.juzs,
-            surahs: window.App.surahs,
-            levels: window.App.levels,
-            segs: window.App.segs,
-            ustadz: window.App.ustadz,
-            halaqohs: window.App.halaqohs,
-            siswas: window.App.siswas,
-            subs: window.App.subs
+    let currentUser = null;
+    const tables = ['juzs', 'surahs', 'levels', 'segs', 'ustadz', 'halaqohs', 'siswas', 'subs', 'settings'];
+    let isFirstLoad = {};
+    tables.forEach(t => isFirstLoad[t] = true);
+
+    const setupRealtimeListeners = () => {
+        if (!currentUser || !db) return;
+
+        tables.forEach(table => {
+            const colRef = collection(db, 'artifacts', appId, 'public', 'data', table);
+            
+            // Pasang pendengar data Real-Time
+            onSnapshot(colRef, (snapshot) => {
+                let items = [];
+                snapshot.forEach(docSnapshot => {
+                    let data = docSnapshot.data();
+                    if (table === 'settings' && docSnapshot.id === 'app') {
+                        window.App.schLogo = data.logo || '';
+                        window.App.schSub = data.subtitle || 'Madrasah Tahfidz Quran';
+                    } else if (table !== 'settings') {
+                        items.push(data);
+                    }
+                });
+
+                if (table !== 'settings') {
+                    if (snapshot.empty && isFirstLoad[table] && window.App[table] && window.App[table].length > 0) {
+                        // Jika Cloud kosong di awal, unggah otomatis data bawaan (Source of Truth)
+                        window.App[table].forEach(item => {
+                            window.dbSave(table, item.id, item);
+                        });
+                    } else {
+                        window.App[table] = items;
+                    }
+                }
+                
+                isFirstLoad[table] = false;
+                window.render(true); // Gambar ulang UI tiap ada perubahan data server
+                
+            }, (error) => {
+                console.error("Firestore Listener Error on " + table + ":", error);
+                window.App.firebaseError = "Koneksi data " + table + " terputus: " + error.message;
+                window.render(true);
+            });
+        });
+    };
+
+    if (auth) {
+        const initAuth = async () => {
+            try {
+                if (initialToken) {
+                    await signInWithCustomToken(auth, initialToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch(e) {
+                console.error("Auth error:", e);
+                window.App.firebaseError = "Gagal masuk ke Database Firebase.";
+                window.render(true);
+            }
         };
-        localStorage.setItem('tahfidzqu_data', JSON.stringify(d));
+        initAuth(); // Jalankan login utama
+
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                window.App.firebaseError = "";
+                setupRealtimeListeners();
+            } else {
+                window.App.firebaseError = "Sesi Cloud terputus.";
+                window.render(true);
+            }
+        });
+    }
+
+    // Ganti fungsi penyimpanan lokal menjadi Murni Cloud API
+    window.dbSave = async function(table, id, data) {
+        if (!currentUser || !db) {
+            console.warn("Gagal menyimpan: Belum terhubung ke Cloud.");
+            return;
+        }
+        try {
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', table, String(id));
+            await setDoc(docRef, data);
+        } catch (e) {
+            console.error("Save Error:", e);
+            window.showAlert("Gagal menyimpan ke Cloud: " + e.message);
+        }
     };
 
-    window.dbDelete = function(table, id) {
-        window.dbSave();
+    window.dbDelete = async function(table, id) {
+        if (!currentUser || !db) {
+            console.warn("Gagal menghapus: Belum terhubung ke Cloud.");
+            return;
+        }
+        try {
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', table, String(id));
+            await deleteDoc(docRef);
+        } catch (e) {
+            console.error("Delete Error:", e);
+            window.showAlert("Gagal menghapus dari Cloud: " + e.message);
+        }
     };
-
-    initData();
-    window.render();
   </script>
 </body>
 </html>
