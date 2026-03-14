@@ -625,6 +625,7 @@
         var mediaType = type === 'mic' ? 'rekaman mic' : 'file audio'; var tDate = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}); let audioData = window.App.currentStudentAudioUrl;
         if(type === 'file' && evt && evt.target.files[0]) { audioData = await window.blobToBase64(evt.target.files[0]); }
         
+        let finalSubData = null;
         if (window.App.resubmitId) {
             var existingSub = window.App.subs.find(x => x.id === window.App.resubmitId);
             if (existingSub) { 
@@ -634,6 +635,7 @@
                 existingSub.audioUrl = audioData; 
                 existingSub.duration = window.App.rec.secs; 
                 if(window.dbSave) window.dbSave('subs', existingSub.id, existingSub); 
+                finalSubData = existingSub;
             }
             window.App.resubmitId = null;
         } else {
@@ -655,8 +657,43 @@
             };
             window.App.subs.push(subData);
             if(window.dbSave) window.dbSave('subs', nid, subData);
+            finalSubData = subData;
         }
-        window.App.currentStudentAudioUrl = null; if(window.App.rec.is){clearInterval(window.App.rec.int);window.App.rec.is=false;} window.App.rec.secs = 0; window.switchView(window.App.rec.src); window.showAlert('Setoran Berhasil Terkirim ke Cloud!'); 
+        
+        window.App.currentStudentAudioUrl = null; 
+        if(window.App.rec.is){clearInterval(window.App.rec.int);window.App.rec.is=false;} 
+        window.App.rec.secs = 0; 
+        window.switchView(window.App.rec.src); 
+        
+        if (finalSubData) {
+            let ustadzData = window.App.ustadz.find(u => u.id === finalSubData.ustadzId);
+            let siswaData = window.App.siswas.find(s => s.id === finalSubData.siswaId);
+            let surahData = window.App.surahs.find(s => s.id === finalSubData.surahId);
+            let segData = window.App.segs.find(s => s.id === finalSubData.segmentId);
+            
+            if (ustadzData && ustadzData.phone) {
+                let phone = ustadzData.phone.replace(/\D/g, '');
+                if (phone.startsWith('0')) phone = '62' + phone.substring(1);
+                
+                let textMsg = `Assalamu'alaikum Ustadz/ah *${ustadzData.name}*,\n\nAlhamdulillah, ada setoran hafalan baru masuk:\n\n👤 *Santri:* ${siswaData ? siswaData.name : '-'}\n📖 *Surah:* ${surahData ? surahData.title : '-'} (${segData ? segData.title : '-'})\n\nMohon berkenan untuk menyimak dan memberikan penilaian di aplikasi TahfidzQu. Syukron.`;
+                
+                // MENGIRIM PESAN OTOMATIS DI BACKGROUND (SISTEM/BOT YANG MENGIRIM)
+                // Menggunakan contoh API Gateway dari Fonnte (fonnte.com) yang populer & gratis
+                const waApiToken = "MwQYzC2XsY4UdA7n8Ury"; 
+                
+                if (waApiToken !== "TOKEN_API_WA_KAMU_DISINI") {
+                    fetch("https://api.fonnte.com/send", {
+                        method: "POST",
+                        headers: { "Authorization": waApiToken },
+                        body: new URLSearchParams({ target: phone, message: textMsg })
+                    }).catch(e => console.log("Gagal kirim Notifikasi WA API:", e));
+                }
+                
+                window.showAlert('Setoran Berhasil Terkirim ke Cloud! Ustadz akan mendapat notifikasi otomatis.');
+            } else {
+                window.showAlert('Setoran Berhasil Terkirim ke Cloud!'); 
+            }
+        }
     };
 
     window.submitGrade = async function(id, grade) {
@@ -1126,7 +1163,7 @@
                 let textCls = isAct ? 'text-white' : 'text-slate-800 dark:text-white';
                 let subCls = isAct ? 'text-purple-100' : 'text-slate-400';
                 let btnCls = isAct ? 'text-white hover:bg-white/20' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-[#15241e]';
-                return '<div onclick="window.App.hierSel.u=' + u.id + ';window.App.hierSel.h=null;window.App.search=\'\';window.App.searchSiswa=\'\';window.render(true)" class="group flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ' + actCls + '"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ' + iconBg + '"><i class="ph-fill ph-user text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate transition-colors ' + textCls + '">' + window.esc(u.name) + '</span><span class="text-[10px] font-mono mt-0.5 flex items-center gap-1.5 transition-colors ' + subCls + '"><i class="ph-fill ph-identification-card"></i> ' + window.esc(u.username) + '</span></div></div>' + (isSuper ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ' + (isAct?'opacity-100':'') + '"><button onclick="event.stopPropagation();window.App.modal=\'ustadz\';window.App.modalData=' + u.id + ';window.render(true)" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-blue-500"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="event.stopPropagation();window.confirmDelete(\'ustadz\', ' + u.id + ')" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-red-500"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
+                return '<div onclick="window.App.hierSel.u=' + u.id + ';window.App.hierSel.h=null;window.App.search=\'\';window.App.searchSiswa=\'\';window.render(true)" class="group flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ' + actCls + '"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ' + iconBg + '"><i class="ph-fill ph-user text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate transition-colors ' + textCls + '">' + window.esc(u.name) + '</span><span class="text-[10px] font-mono mt-0.5 flex items-center gap-1.5 transition-colors ' + subCls + '"><i class="ph-fill ph-identification-card"></i> ' + window.esc(u.username) + (u.phone ? ' &bull; <i class="ph-fill ph-whatsapp-logo text-emerald-400"></i> ' + window.esc(u.phone) : '') + '</span></div></div>' + (isSuper ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ' + (isAct?'opacity-100':'') + '"><button onclick="event.stopPropagation();window.App.modal=\'ustadz\';window.App.modalData=' + u.id + ';window.render(true)" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-blue-500"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="event.stopPropagation();window.confirmDelete(\'ustadz\', ' + u.id + ')" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-red-500"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
             }).join('');
         }
         html += '</div></div>';
@@ -1370,7 +1407,7 @@
             </div>`;
         } else if (window.App.modal === 'ustadz') {
             let u = window.App.modalData ? window.App.ustadz.find(x=>x.id===window.App.modalData) : null;
-            mHtml += '<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">' + (u ? 'Edit' : 'Tambah') + ' Ustadz</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let id=' + (window.App.modalData||'null') + ';let n=window.val(\'m_n\').trim(), un=window.val(\'m_un\').trim(), pw=window.val(\'m_pw\').trim();let nD={id:(id||Date.now()),name:n,username:un,password:pw};if(!id)window.App.ustadz.push(nD);else{let o=window.App.ustadz.find(x=>x.id===id);if(o){o.name=n;o.username=un;o.password=pw;}}window.dbSave(\'ustadz\',nD.id,nD);window.App.modal=null;window.render(true)"><div class="mb-4"><label class="block text-[10px] text-slate-500 font-bold mb-1.5 uppercase tracking-widest">Nama Lengkap</label><input type="text" id="m_n" required value="' + (u ? window.esc(u.name) : '') + '" class="input-std" placeholder="Nama Ustadz/ah..."></div><div class="mb-4"><label class="block text-[10px] text-slate-500 font-bold mb-1.5 uppercase tracking-widest">Username</label><input type="text" id="m_un" required value="' + (u ? window.esc(u.username) : '') + '" class="input-std" placeholder="Untuk login..."></div><div class="mb-6"><label class="block text-[10px] text-slate-500 font-bold mb-1.5 uppercase tracking-widest">Password</label><input type="text" id="m_pw" required value="' + (u ? window.esc(u.password) : '') + '" class="input-std font-mono" placeholder="Password..."></div><button type="submit" class="btn-std !bg-purple-600 hover:!bg-purple-700 shadow-purple-500/30">Simpan Data</button></form></div></div>';
+            mHtml += '<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">' + (u ? 'Edit' : 'Tambah') + ' Ustadz</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let id=' + (window.App.modalData||'null') + ';let n=window.val(\'m_n\').trim(), un=window.val(\'m_un\').trim(), pw=window.val(\'m_pw\').trim(), ph=window.val(\'m_ph\').trim();let nD={id:(id||Date.now()),name:n,username:un,password:pw,phone:ph};if(!id)window.App.ustadz.push(nD);else{let o=window.App.ustadz.find(x=>x.id===id);if(o){o.name=n;o.username=un;o.password=pw;o.phone=ph;}}window.dbSave(\'ustadz\',nD.id,nD);window.App.modal=null;window.render(true)"><div class="mb-4"><label class="block text-[10px] text-slate-500 font-bold mb-1.5 uppercase tracking-widest">Nama Lengkap</label><input type="text" id="m_n" required value="' + (u ? window.esc(u.name) : '') + '" class="input-std" placeholder="Nama Ustadz/ah..."></div><div class="mb-4"><label class="block text-[10px] text-slate-500 font-bold mb-1.5 uppercase tracking-widest">No. WhatsApp</label><input type="text" id="m_ph" value="' + (u && u.phone ? window.esc(u.phone) : '') + '" class="input-std" placeholder="Contoh: 081234567890"></div><div class="mb-4"><label class="block text-[10px] text-slate-500 font-bold mb-1.5 uppercase tracking-widest">Username</label><input type="text" id="m_un" required value="' + (u ? window.esc(u.username) : '') + '" class="input-std" placeholder="Untuk login..."></div><div class="mb-6"><label class="block text-[10px] text-slate-500 font-bold mb-1.5 uppercase tracking-widest">Password</label><input type="text" id="m_pw" required value="' + (u ? window.esc(u.password) : '') + '" class="input-std font-mono" placeholder="Password..."></div><button type="submit" class="btn-std !bg-purple-600 hover:!bg-purple-700 shadow-purple-500/30">Simpan Data</button></form></div></div>';
         } else if (window.App.modal === 'halaqoh') {
             let h = window.App.modalData ? window.App.halaqohs.find(x=>x.id===window.App.modalData) : null;
             mHtml += '<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">' + (h ? 'Edit' : 'Tambah') + ' Halaqoh</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let id=' + (window.App.modalData||'null') + ';let n=window.val(\'m_n\').trim();let nD={id:(id||Date.now()),ustadzId:' + window.App.hierSel.u + ',name:n};if(!id)window.App.halaqohs.push(nD);else{let o=window.App.halaqohs.find(x=>x.id===id);if(o){o.name=n;}}window.dbSave(\'halaqohs\',nD.id,nD);window.App.modal=null;window.render(true)"><div class="mb-6"><label class="block text-[10px] text-slate-500 font-bold mb-1.5 uppercase tracking-widest">Nama Halaqoh</label><input type="text" id="m_n" required value="' + (h ? window.esc(h.name) : '') + '" class="input-std" placeholder="Contoh: Halaqoh Al-A\'raaf..."></div><button type="submit" class="btn-std !bg-blue-600 hover:!bg-blue-700 shadow-blue-500/30">Simpan Data</button></form></div></div>';
