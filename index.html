@@ -215,7 +215,7 @@
       theme: localStorage.getItem('tahfidzqu_theme') || 'light',
       adminLvl: 0, view: 'home', schLogo: localStorage.getItem('tahfidzqu_logo') || '',
       schSub: localStorage.getItem('tahfidzqu_subtitle') || 'Madrasah Tahfidz Quran',
-      search: '', loginAttempts: 0, lockoutTime: 0, loginError: '', inactivityTimer: null,
+      search: '', searchSiswa: '', loginAttempts: 0, lockoutTime: 0, loginError: '', inactivityTimer: null,
       customDialog: { show: false, type: 'alert', message: '', onConfirm: null },
       juzs: [], surahs: [], levels: [], segs: [], ustadz: [], halaqohs: [], siswas: [], subs: [],
       actJuzId: 1, actSurahId: null, actSegId: null,
@@ -369,6 +369,7 @@
       }
       
       window.App.search = ''; 
+      window.App.searchSiswa = '';
       window.App.view = viewTarget;
       window.render(true);
     };
@@ -1094,10 +1095,14 @@
         if (window.App.adminLvl === 2 && !window.App.hierSel.u) window.App.hierSel.u = window.App.loggedInUstadzId;
         
         let sQ = window.App.search.toLowerCase();
+        let sQSiswa = (window.App.searchSiswa || '').toLowerCase();
+
         let ul = window.App.adminLvl === 2 ? window.App.ustadz.filter(x=>x.id == window.App.loggedInUstadzId) : window.App.ustadz;
         if(sQ) ul = ul.filter(u => u.name.toLowerCase().includes(sQ) || u.username.toLowerCase().includes(sQ));
+        
         let hl = sQ ? window.App.halaqohs.filter(h => h.name.toLowerCase().includes(sQ)) : (window.App.hierSel.u ? window.App.halaqohs.filter(h=>h.ustadzId==window.App.hierSel.u) : []);
-        let sl = sQ ? window.App.siswas.filter(s => s.name.toLowerCase().includes(sQ) || s.kelas.toLowerCase().includes(sQ)) : (window.App.hierSel.h ? window.App.siswas.filter(s=>s.halaqohId==window.App.hierSel.h) : []);
+        
+        let sl = (sQ || sQSiswa) ? window.App.siswas.filter(s => s.name.toLowerCase().includes(sQ || sQSiswa) || s.kelas.toLowerCase().includes(sQ || sQSiswa)) : (window.App.hierSel.h ? window.App.siswas.filter(s=>s.halaqohId==window.App.hierSel.h) : []);
         
         html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 min-h-0"><div class="max-w-7xl mx-auto w-full">' + mobileSearchBar + '<div class="mb-6 lg:mb-8 shrink-0"><div><h1 class="text-2xl md:text-3xl lg:text-4xl font-serif text-purple-600 dark:text-purple-500 mb-1 md:mb-2 flex items-center gap-2"><i class="ph-fill ph-database text-3xl"></i> Data Master</h1><p class="text-xs md:text-sm text-slate-500 dark:text-gray-400">Atur hierarki aplikasi dan kelola pengguna.</p></div></div>';
         
@@ -1121,7 +1126,7 @@
                 let textCls = isAct ? 'text-white' : 'text-slate-800 dark:text-white';
                 let subCls = isAct ? 'text-purple-100' : 'text-slate-400';
                 let btnCls = isAct ? 'text-white hover:bg-white/20' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-[#15241e]';
-                return '<div onclick="window.App.hierSel.u=' + u.id + ';window.App.hierSel.h=null;window.App.search=\'\';window.render(true)" class="group flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ' + actCls + '"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ' + iconBg + '"><i class="ph-fill ph-user text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate transition-colors ' + textCls + '">' + window.esc(u.name) + '</span><span class="text-[10px] font-mono mt-0.5 flex items-center gap-1.5 transition-colors ' + subCls + '"><i class="ph-fill ph-identification-card"></i> ' + window.esc(u.username) + '</span></div></div>' + (isSuper ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ' + (isAct?'opacity-100':'') + '"><button onclick="event.stopPropagation();window.App.modal=\'ustadz\';window.App.modalData=' + u.id + ';window.render(true)" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-blue-500"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="event.stopPropagation();window.confirmDelete(\'ustadz\', ' + u.id + ')" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-red-500"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
+                return '<div onclick="window.App.hierSel.u=' + u.id + ';window.App.hierSel.h=null;window.App.search=\'\';window.App.searchSiswa=\'\';window.render(true)" class="group flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ' + actCls + '"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ' + iconBg + '"><i class="ph-fill ph-user text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate transition-colors ' + textCls + '">' + window.esc(u.name) + '</span><span class="text-[10px] font-mono mt-0.5 flex items-center gap-1.5 transition-colors ' + subCls + '"><i class="ph-fill ph-identification-card"></i> ' + window.esc(u.username) + '</span></div></div>' + (isSuper ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ' + (isAct?'opacity-100':'') + '"><button onclick="event.stopPropagation();window.App.modal=\'ustadz\';window.App.modalData=' + u.id + ';window.render(true)" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-blue-500"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="event.stopPropagation();window.confirmDelete(\'ustadz\', ' + u.id + ')" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-red-500"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
             }).join('');
         }
         html += '</div></div>';
@@ -1139,17 +1144,22 @@
                 let iconBg = isAct ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 dark:bg-[#15241e]';
                 let textCls = isAct ? 'text-white' : 'text-slate-800 dark:text-white';
                 let btnCls = isAct ? 'text-white hover:bg-white/20' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-[#15241e]';
-                return '<div onclick="window.App.hierSel.h=' + h.id + ';window.App.search=\'\';window.render(true)" class="group flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ' + actCls + '"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ' + iconBg + '"><i class="ph-fill ph-users-three text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate transition-colors ' + textCls + '">' + window.esc(h.name) + '</span></div></div>' + (isAdmin ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ' + (isAct?'opacity-100':'') + '"><button onclick="event.stopPropagation();window.App.modal=\'halaqoh\';window.App.modalData=' + h.id + ';window.render(true)" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-purple-500"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="event.stopPropagation();window.confirmDelete(\'halaqoh\', ' + h.id + ')" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-red-500"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
+                return '<div onclick="window.App.hierSel.h=' + h.id + ';window.App.search=\'\';window.App.searchSiswa=\'\';window.render(true)" class="group flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ' + actCls + '"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ' + iconBg + '"><i class="ph-fill ph-users-three text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate transition-colors ' + textCls + '">' + window.esc(h.name) + '</span></div></div>' + (isAdmin ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ' + (isAct?'opacity-100':'') + '"><button onclick="event.stopPropagation();window.App.modal=\'halaqoh\';window.App.modalData=' + h.id + ';window.render(true)" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-purple-500"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="event.stopPropagation();window.confirmDelete(\'halaqoh\', ' + h.id + ')" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-red-500"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
             }).join('');
         }
         html += '</div></div>';
 
         // --- NEW COLUMN 3: SANTRI ---
         html += '<div class="bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-[2rem] flex flex-col h-[500px] lg:h-[700px] shadow-soft overflow-hidden">';
-        html += '<div class="p-5 border-b border-slate-100 dark:border-[#1a2e26] flex justify-between items-center bg-slate-50 dark:bg-[#0a120f] shrink-0"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 flex items-center justify-center"><i class="ph-fill ph-user-circle text-2xl"></i></div><div><h3 class="font-bold text-slate-800 dark:text-white leading-tight">Santri</h3><p class="text-[11px] text-slate-500 font-medium">' + sl.length + ' Data</p></div></div>' + (isAdmin && window.App.hierSel.h && !sQ ? '<button onclick="window.App.modal=\'siswa\';window.App.modalData=null;window.render(true)" class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition shadow-md shadow-emerald-500/30 active:scale-95"><i class="ph-bold ph-plus text-lg"></i></button>' : '') + '</div>';
+        
+        html += '<div class="p-5 border-b border-slate-100 dark:border-[#1a2e26] flex flex-col gap-4 bg-slate-50 dark:bg-[#0a120f] shrink-0">';
+        html += '<div class="flex justify-between items-center"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 flex items-center justify-center"><i class="ph-fill ph-user-circle text-2xl"></i></div><div><h3 class="font-bold text-slate-800 dark:text-white leading-tight">Santri</h3><p class="text-[11px] text-slate-500 font-medium">' + sl.length + ' Data</p></div></div>' + (isAdmin && window.App.hierSel.h && !sQ && !sQSiswa ? '<button onclick="window.App.modal=\'siswa\';window.App.modalData=null;window.render(true)" class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition shadow-md shadow-emerald-500/30 active:scale-95"><i class="ph-bold ph-plus text-lg"></i></button>' : '') + '</div>';
+        html += '<div class="relative"><i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i><input id="search-siswa-local" type="text" placeholder="Cari nama atau kelas..." value="' + window.esc(window.App.searchSiswa||'') + '" oninput="window.App.searchSiswa=this.value;window.render(true)" class="w-full bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-xl py-2.5 pl-9 pr-3 text-xs focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-colors shadow-sm text-slate-700 dark:text-gray-200"></div>';
+        html += '</div>';
+        
         html += '<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">';
-        if(!window.App.hierSel.h && !sQ) html += '<div class="flex flex-col items-center justify-center h-full opacity-50"><i class="ph-fill ph-users-three text-5xl mb-4 text-slate-400"></i><p class="text-xs font-bold text-slate-500 uppercase tracking-widest text-center">Pilih Halaqoh<br>terlebih dahulu</p></div>';
-        else if(!sl.length) html += '<div class="text-xs text-slate-500 italic p-6 text-center border border-dashed border-slate-200 dark:border-[#1a2e26] rounded-2xl">' + (sQ?'Tidak ditemukan.':'Belum ada data.') + '</div>';
+        if(!window.App.hierSel.h && !sQ && !sQSiswa) html += '<div class="flex flex-col items-center justify-center h-full opacity-50"><i class="ph-fill ph-users-three text-5xl mb-4 text-slate-400"></i><p class="text-xs font-bold text-slate-500 uppercase tracking-widest text-center">Pilih Halaqoh<br>terlebih dahulu</p></div>';
+        else if(!sl.length) html += '<div class="text-xs text-slate-500 italic p-6 text-center border border-dashed border-slate-200 dark:border-[#1a2e26] rounded-2xl">' + ((sQ||sQSiswa)?'Tidak ditemukan.':'Belum ada data.') + '</div>';
         else {
             html += sl.map(es=>{
                 return '<div class="group flex items-center justify-between p-3.5 rounded-2xl border bg-white dark:bg-[#0a120f] border-slate-100 dark:border-[#1a2e26] hover:border-emerald-300 hover:shadow-md transition-all"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 dark:bg-[#15241e] dark:text-emerald-400 flex items-center justify-center shrink-0"><i class="ph-fill ph-user text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate text-slate-800 dark:text-white">' + window.esc(es.name) + '</span><span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 block">Kelas ' + window.esc(es.kelas) + '</span></div></div>' + (isAdmin ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"><button onclick="window.App.modal=\'siswa\';window.App.modalData=' + es.id + ';window.render(true)" class="p-2 rounded-xl text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-[#15241e] transition-colors"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="window.confirmDelete(\'siswa\', ' + es.id + ')" class="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-[#15241e] transition-colors"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
@@ -1257,7 +1267,7 @@
         } else if (window.App.modal === 'grade') {
             let sb = window.App.subs.find(x=>x.id===window.App.modalData);
             let btns = '';
-            ['A+','A','B+','B','C'].forEach(g=>{
+            ['A','B+','B','B-'].forEach(g=>{
                 btns += '<button type="button" onclick="window.submitGrade(' + sb.id + ', \'' + g + '\')" class="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 font-bold text-lg hover:bg-emerald-50 hover:border-emerald-500 hover:text-white hover:shadow-lg hover:shadow-emerald-500/30 hover:-translate-y-1 dark:bg-[#0a120f] dark:border-[#1a2e26] dark:text-white transition-all shadow-sm">' + g + '</button>';
             });
             let audioHTML = window.App.currentGradingAudioUrl ? window.renderCustomAudio('grade_modal', window.App.currentGradingAudioUrl, 0, true) : '<span class="text-[10px] md:text-xs text-slate-500 dark:text-gray-400 truncate">' + (window.App.isGradingRecording ? 'Merekam...' : 'Ketuk Mic untuk merekam suara') + '</span>';
@@ -1273,11 +1283,10 @@
             let schName = window.App.schSub || 'Madrasah Tahfidz Quran';
             
             let getPredikat = (g) => {
-                if(g==='A+') return 'Mumtaz';
-                if(g==='A') return 'Jayyid Jiddan';
-                if(g==='B+') return 'Jayyid';
-                if(g==='B') return 'Maqbul';
-                if(g==='C') return 'Naqis';
+                if(g==='A') return 'Mumtaz';
+                if(g==='B+') return 'Jayyid Jiddan';
+                if(g==='B') return 'Jayyid';
+                if(g==='B-') return 'Maqbul';
                 return 'Lulus';
             };
 
