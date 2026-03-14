@@ -675,7 +675,7 @@
                 let phone = ustadzData.phone.replace(/\D/g, '');
                 if (phone.startsWith('0')) phone = '62' + phone.substring(1);
                 
-                let textMsg = `Assalamu'alaikum Ustadz/ah *${ustadzData.name}*,\n\nAlhamdulillah, ada setoran hafalan baru masuk:\n\n👤 *Santri:* ${siswaData ? siswaData.name : '-'}\n📖 *Surah:* ${surahData ? surahData.title : '-'} (${segData ? segData.title : '-'})\n\nMohon berkenan untuk menyimak dan memberikan penilaian di aplikasi TahfidzQu. Syukron.`;
+                let textMsg = `Assalamu'alaikum *${ustadzData.name}*,\n\nAlhamdulillah, ada setoran hafalan baru masuk:\n\n👤 *Santri:* ${siswaData ? siswaData.name : '-'}\n📖 *Surah:* ${surahData ? surahData.title : '-'} (${segData ? segData.title : '-'})\n\nMohon berkenan untuk menyimak dan memberikan penilaian di aplikasi TahfidzQu. Syukron.`;
                 
                 // MENGIRIM PESAN OTOMATIS DI BACKGROUND (SISTEM/BOT YANG MENGIRIM)
                 // Menggunakan contoh API Gateway dari Fonnte (fonnte.com) yang populer & gratis
@@ -744,6 +744,54 @@
             if (type === 'siswa') { window.App.siswas = window.App.siswas.filter(x=>x.id!==id); if(window.dbDelete) window.dbDelete('siswas', id); }
             window.render(true);
         });
+    };
+
+    window.processImport = function(type) {
+        let textInput = document.getElementById('import_text');
+        if (!textInput || !textInput.value.trim()) {
+            window.showAlert("Paste data dari spreadsheet terlebih dahulu!");
+            return;
+        }
+        
+        let btn = textInput.nextElementSibling;
+        let oldHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-lg"></i> Memproses...';
+        btn.disabled = true;
+
+        setTimeout(() => {
+            let text = textInput.value;
+            let rows = text.split('\n').map(r => r.trim()).filter(r => r.length > 0);
+            let successCount = 0;
+            let baseId = Date.now();
+
+            if (type === 'halaqoh') {
+                rows.forEach((row, idx) => {
+                    let cols = row.split('\t'); // Mendeteksi kolom dari copy-paste spreadsheet (tab separated)
+                    let name = cols[0] ? cols[0].trim().replace(/^"|"$/g, '') : '';
+                    if (name) {
+                        let nD = { id: baseId + idx, ustadzId: window.App.hierSel.u, name: name };
+                        window.App.halaqohs.push(nD);
+                        window.dbSave('halaqohs', nD.id, nD);
+                        successCount++;
+                    }
+                });
+            } else if (type === 'siswa') {
+                rows.forEach((row, idx) => {
+                    let cols = row.split('\t'); // Mendeteksi kolom dari copy-paste spreadsheet (tab separated)
+                    let name = cols[0] ? cols[0].trim().replace(/^"|"$/g, '') : '';
+                    let kelas = cols.length > 1 ? cols[1].trim().replace(/^"|"$/g, '') : '-';
+                    if (name) {
+                        let nD = { id: baseId + idx, halaqohId: window.App.hierSel.h, name: name, kelas: kelas };
+                        window.App.siswas.push(nD);
+                        window.dbSave('siswas', nD.id, nD);
+                        successCount++;
+                    }
+                });
+            }
+            window.App.modal = null;
+            window.render(true);
+            window.showAlert(`Berhasil mengimpor ${successCount} data.`);
+        }, 100);
     };
 
     window.render = function() {
@@ -1170,7 +1218,7 @@
 
         // --- NEW COLUMN 2: HALAQOH ---
         html += '<div class="bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-[2rem] flex flex-col h-[500px] lg:h-[700px] shadow-soft overflow-hidden">';
-        html += '<div class="p-5 border-b border-slate-100 dark:border-[#1a2e26] flex justify-between items-center bg-slate-50 dark:bg-[#0a120f] shrink-0"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 flex items-center justify-center"><i class="ph-fill ph-users-three text-2xl"></i></div><div><h3 class="font-bold text-slate-800 dark:text-white leading-tight">Halaqoh</h3><p class="text-[11px] text-slate-500 font-medium">' + hl.length + ' Data</p></div></div>' + (isAdmin && window.App.hierSel.u && !sQ ? '<button onclick="window.App.modal=\'halaqoh\';window.App.modalData=null;window.render(true)" class="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600 transition shadow-md shadow-blue-500/30 active:scale-95"><i class="ph-bold ph-plus text-lg"></i></button>' : '') + '</div>';
+        html += '<div class="p-5 border-b border-slate-100 dark:border-[#1a2e26] flex justify-between items-center bg-slate-50 dark:bg-[#0a120f] shrink-0"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 flex items-center justify-center"><i class="ph-fill ph-users-three text-2xl"></i></div><div><h3 class="font-bold text-slate-800 dark:text-white leading-tight">Halaqoh</h3><p class="text-[11px] text-slate-500 font-medium">' + hl.length + ' Data</p></div></div>' + (isAdmin && window.App.hierSel.u && !sQ ? '<div class="flex gap-1.5"><button onclick="window.App.modal=\'import_halaqoh\';window.render(true)" class="w-10 h-10 rounded-xl bg-slate-100 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition shadow-sm active:scale-95 text-lg dark:bg-[#15241e] dark:hover:bg-blue-900/30" title="Import CSV"><i class="ph-bold ph-upload-simple"></i></button><button onclick="window.App.modal=\'halaqoh\';window.App.modalData=null;window.render(true)" class="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600 transition shadow-md shadow-blue-500/30 active:scale-95"><i class="ph-bold ph-plus text-lg"></i></button></div>' : '') + '</div>';
         html += '<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">';
         if(!window.App.hierSel.u && !sQ) html += '<div class="flex flex-col items-center justify-center h-full opacity-50"><i class="ph-fill ph-chalkboard-teacher text-5xl mb-4 text-slate-400"></i><p class="text-xs font-bold text-slate-500 uppercase tracking-widest text-center">Pilih Ustadz/ah<br>terlebih dahulu</p></div>';
         else if(!hl.length) html += '<div class="text-xs text-slate-500 italic p-6 text-center border border-dashed border-slate-200 dark:border-[#1a2e26] rounded-2xl">' + (sQ?'Tidak ditemukan.':'Belum ada data.') + '</div>';
@@ -1190,7 +1238,7 @@
         html += '<div class="bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-[2rem] flex flex-col h-[500px] lg:h-[700px] shadow-soft overflow-hidden">';
         
         html += '<div class="p-5 border-b border-slate-100 dark:border-[#1a2e26] flex flex-col gap-4 bg-slate-50 dark:bg-[#0a120f] shrink-0">';
-        html += '<div class="flex justify-between items-center"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 flex items-center justify-center"><i class="ph-fill ph-user-circle text-2xl"></i></div><div><h3 class="font-bold text-slate-800 dark:text-white leading-tight">Santri</h3><p class="text-[11px] text-slate-500 font-medium">' + sl.length + ' Data</p></div></div>' + (isAdmin && window.App.hierSel.h && !sQ && !sQSiswa ? '<button onclick="window.App.modal=\'siswa\';window.App.modalData=null;window.render(true)" class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition shadow-md shadow-emerald-500/30 active:scale-95"><i class="ph-bold ph-plus text-lg"></i></button>' : '') + '</div>';
+        html += '<div class="flex justify-between items-center"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 flex items-center justify-center"><i class="ph-fill ph-user-circle text-2xl"></i></div><div><h3 class="font-bold text-slate-800 dark:text-white leading-tight">Santri</h3><p class="text-[11px] text-slate-500 font-medium">' + sl.length + ' Data</p></div></div>' + (isAdmin && window.App.hierSel.h && !sQ && !sQSiswa ? '<div class="flex gap-1.5"><button onclick="window.App.modal=\'import_siswa\';window.render(true)" class="w-10 h-10 rounded-xl bg-slate-100 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition shadow-sm active:scale-95 text-lg dark:bg-[#15241e] dark:hover:bg-emerald-900/30" title="Import CSV"><i class="ph-bold ph-upload-simple"></i></button><button onclick="window.App.modal=\'siswa\';window.App.modalData=null;window.render(true)" class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition shadow-md shadow-emerald-500/30 active:scale-95"><i class="ph-bold ph-plus text-lg"></i></button></div>' : '') + '</div>';
         html += '<div class="relative"><i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i><input id="search-siswa-local" type="text" placeholder="Cari nama atau kelas..." value="' + window.esc(window.App.searchSiswa||'') + '" oninput="window.App.searchSiswa=this.value;window.render(true)" class="w-full bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-xl py-2.5 pl-9 pr-3 text-xs focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-colors shadow-sm text-slate-700 dark:text-gray-200"></div>';
         html += '</div>';
         
@@ -1411,11 +1459,15 @@
         } else if (window.App.modal === 'halaqoh') {
             let h = window.App.modalData ? window.App.halaqohs.find(x=>x.id===window.App.modalData) : null;
             mHtml += '<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">' + (h ? 'Edit' : 'Tambah') + ' Halaqoh</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let id=' + (window.App.modalData||'null') + ';let n=window.val(\'m_n\').trim();let nD={id:(id||Date.now()),ustadzId:' + window.App.hierSel.u + ',name:n};if(!id)window.App.halaqohs.push(nD);else{let o=window.App.halaqohs.find(x=>x.id===id);if(o){o.name=n;}}window.dbSave(\'halaqohs\',nD.id,nD);window.App.modal=null;window.render(true)"><div class="mb-6"><label class="block text-[10px] text-slate-500 font-bold mb-1.5 uppercase tracking-widest">Nama Halaqoh</label><input type="text" id="m_n" required value="' + (h ? window.esc(h.name) : '') + '" class="input-std" placeholder="Contoh: Halaqoh Al-A\'raaf..."></div><button type="submit" class="btn-std !bg-blue-600 hover:!bg-blue-700 shadow-blue-500/30">Simpan Data</button></form></div></div>';
+        } else if (window.App.modal === 'import_halaqoh') {
+            mHtml += '<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">Import Halaqoh</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white"><i class="ph ph-x text-xl"></i></button></div><div class="mb-4 text-sm text-slate-600 dark:text-gray-300 bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30"><strong>Copy (Salin)</strong> sel dari Excel/Google Sheets lalu <strong>Paste (Tempel)</strong> di kotak bawah ini.<br>Hanya butuh 1 kolom:<br><br><code class="bg-white dark:bg-black px-2 py-1 rounded shadow-sm text-xs text-blue-600 dark:text-blue-400 font-mono block mb-1">Nama Halaqoh</code></div><textarea id="import_text" rows="6" class="input-std mb-6" placeholder="Paste data dari spreadsheet di sini..."></textarea><button type="button" onclick="window.processImport(\'halaqoh\')" class="btn-std !bg-blue-600 hover:!bg-blue-700 shadow-blue-500/30 flex items-center justify-center gap-2"><i class="ph-bold ph-clipboard-text text-lg"></i> Proses Import</button></div></div>';
         } else if (window.App.modal === 'siswa') {
             let s = window.App.modalData ? window.App.siswas.find(x=>x.id===window.App.modalData) : null;
             let allowedHals = window.App.adminLvl === 2 ? window.App.halaqohs.filter(h => h.ustadzId == window.App.loggedInUstadzId) : window.App.halaqohs;
             let halOptions = allowedHals.map(h => '<option value="' + h.id + '" ' + (s ? (s.halaqohId==h.id?'selected':'') : (window.App.hierSel.h==h.id?'selected':'')) + '>' + window.esc(h.name) + ' - ' + window.getUName(h.ustadzId) + '</option>').join('');
             mHtml += '<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">' + (s ? 'Edit' : 'Tambah') + ' Santri</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let id=' + (window.App.modalData||'null') + ';let n=window.val(\'m_n\').trim(), k=window.val(\'m_k\').trim(), hId=Number(window.val(\'m_h\'));let nD={id:(id||Date.now()),halaqohId:hId,name:n,kelas:k};if(!id)window.App.siswas.push(nD);else{let o=window.App.siswas.find(x=>x.id===id);if(o){o.name=n;o.kelas=k;o.halaqohId=hId;}}window.dbSave(\'siswas\',nD.id,nD);window.App.modal=null;window.render(true)"><div class="mb-4"><label class="block text-[10px] text-slate-500 font-bold mb-1.5 uppercase tracking-widest">Nama Lengkap</label><input type="text" id="m_n" required value="' + (s ? window.esc(s.name) : '') + '" class="input-std" placeholder="Nama Santri..."></div><div class="mb-4"><label class="block text-[10px] text-slate-500 font-bold mb-1.5 uppercase tracking-widest">Halaqoh</label><select id="m_h" class="input-std cursor-pointer">' + halOptions + '</select></div><div class="mb-6"><label class="block text-[10px] text-slate-500 font-bold mb-1.5 uppercase tracking-widest">Kelas / Jenjang</label><input type="text" id="m_k" required value="' + (s ? window.esc(s.kelas) : '') + '" class="input-std" placeholder="Contoh: 7A, 8B, Iqro 1..."></div><button type="submit" class="btn-std !bg-emerald-500 hover:!bg-emerald-600 shadow-emerald-500/30">Simpan Data</button></form></div></div>';
+        } else if (window.App.modal === 'import_siswa') {
+            mHtml += '<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">Import Santri</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white"><i class="ph ph-x text-xl"></i></button></div><div class="mb-4 text-sm text-slate-600 dark:text-gray-300 bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30"><strong>Copy (Salin)</strong> sel dari Excel/Google Sheets lalu <strong>Paste (Tempel)</strong> di kotak bawah ini.<br>Butuh 2 kolom berurutan:<br><br><div class="flex gap-2"><code class="bg-white dark:bg-black px-2 py-1 rounded shadow-sm text-xs text-emerald-600 dark:text-emerald-400 font-mono block mb-1 flex-1 text-center">Nama Santri</code><code class="bg-white dark:bg-black px-2 py-1 rounded shadow-sm text-xs text-emerald-600 dark:text-emerald-400 font-mono block mb-1 flex-1 text-center">Kelas</code></div></div><textarea id="import_text" rows="6" class="input-std mb-6" placeholder="Paste data dari spreadsheet di sini..."></textarea><button type="button" onclick="window.processImport(\'siswa\')" class="btn-std !bg-emerald-500 hover:!bg-emerald-600 shadow-emerald-500/30 flex items-center justify-center gap-2"><i class="ph-bold ph-clipboard-text text-lg"></i> Proses Import</button></div></div>';
         }
 
         if (window.App.customDialog && window.App.customDialog.show) {
