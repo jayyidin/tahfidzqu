@@ -368,7 +368,7 @@
         return lvls.length > 0 ? lvls[0].id : null;
     };
     
-    // UPDATED: Fitur Sort by Order
+    // Sort array berdasarkan property 'order'
     window.getSgs = () => {
         let arr = window.App.segs.filter(s=>s.surahId===window.App.actSurahId&&s.levelId===window.getLvl());
         arr.sort((a,b) => {
@@ -388,25 +388,89 @@
     window.toArabicNumeral = en => (""+en).replace(/[0-9]/g, t=>String.fromCharCode(t.charCodeAt(0)+1584));
     window.extractVideoId = url => { if(!url)return null; var m=url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/); return (m&&m[2].length===11)?m[2]:null; };
 
-    // NEW: Fungsi untuk Memindahkan Posisi Ayat (Up / Down)
+    // Fungsi geser panah manual Up/Down
     window.moveSeg = function(id, dir) {
         let sgs = window.getSgs();
         let idx = sgs.findIndex(x => x.id === id);
         if (idx === -1 || idx + dir < 0 || idx + dir >= sgs.length) return;
         
-        // Pastikan semua punya property order
         sgs.forEach((s, i) => { if (s.order === undefined) s.order = i; });
         
-        // Tukar urutan
         let temp = sgs[idx].order;
         sgs[idx].order = sgs[idx+dir].order;
         sgs[idx+dir].order = temp;
         
-        // Simpan hanya yang berubah untuk hemat bandwidth
         if(window.dbSave) {
             window.dbSave('segs', sgs[idx].id, sgs[idx]);
             window.dbSave('segs', sgs[idx+dir].id, sgs[idx+dir]);
         }
+        window.render(true);
+    };
+
+    // FITUR BARU: Fungsi untuk menyimpan & menyisipkan ulang urutan dari input manual form edit ayat
+    window.saveSegment = function(e, id) {
+        e.preventDefault();
+        let sm=parseInt(window.val('sm')||0), ss=parseInt(window.val('ss')||0);
+        let em=parseInt(window.val('em')||0), es=parseInt(window.val('es')||0);
+        let t=window.val('st'), a=window.val('sa'), tr=window.val('str');
+        
+        // Ambil nilai urutan (Order) dari input (dikurangi 1 karena index array mulai dari 0)
+        let newOrderInput = parseInt(window.val('so'));
+        let newOrderIdx = (isNaN(newOrderInput) || newOrderInput < 1) ? 0 : newOrderInput - 1;
+        
+        let start = sm*60+ss; let end = em*60+es;
+        let curSgs = window.getSgs(); // array ayat yang sudah urut
+        
+        if (id) {
+            // PROSES EDIT AYAT LAMA
+            let o = window.App.segs.find(x=>x.id===id);
+            if (o) {
+                o.title=t; o.start=start; o.end=end; o.arabic=a; o.translation=tr;
+                let oldIdx = curSgs.findIndex(x=>x.id===id);
+                
+                // Jika urutan (angka) diubah melalui input box
+                if (newOrderIdx !== oldIdx && newOrderIdx >= 0) {
+                    if (newOrderIdx >= curSgs.length) newOrderIdx = curSgs.length - 1;
+                    
+                    // Copot dari posisi lama
+                    curSgs.splice(oldIdx, 1);
+                    // Sisipkan ke posisi baru
+                    curSgs.splice(newOrderIdx, 0, o);
+                    
+                    // Tulis ulang seluruh order di level tersebut agar tidak ada bentrok
+                    curSgs.forEach((seg, idx) => {
+                        let actualSeg = window.App.segs.find(x=>x.id === seg.id);
+                        if(actualSeg) { 
+                            actualSeg.order = idx; 
+                            if(window.dbSave) window.dbSave('segs', actualSeg.id, actualSeg); 
+                        }
+                    });
+                } else {
+                    // Jika urutan tetap, langsung simpan datanya saja
+                    if(window.dbSave) window.dbSave('segs', id, o);
+                }
+            }
+        } else {
+            // PROSES TAMBAH AYAT BARU
+            let nid = Date.now();
+            if (newOrderIdx > curSgs.length) newOrderIdx = curSgs.length;
+            
+            let nD = {id:nid, surahId:window.App.actSurahId, levelId:window.getLvl(), title:t, start:start, end:end, arabic:a, translation:tr, order:newOrderIdx};
+            window.App.segs.push(nD);
+            
+            // Sisipkan ayat baru tersebut ke urutan yang dipilih
+            curSgs.splice(newOrderIdx, 0, nD);
+            
+            // Tulis ulang seluruh order di level tersebut menyesuaikan sisipan baru
+            curSgs.forEach((seg, idx) => {
+                let actualSeg = window.App.segs.find(x=>x.id === seg.id);
+                if(actualSeg) { 
+                    actualSeg.order = idx; 
+                    if(window.dbSave) window.dbSave('segs', actualSeg.id, actualSeg); 
+                }
+            });
+        }
+        window.App.modal=null; 
         window.render(true);
     };
 
@@ -1276,7 +1340,6 @@
         
         html += '<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 flex-1 pb-10">';
         
-        // --- NEW COLUMN 1: USTADZ ---
         html += '<div class="bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-[2rem] flex flex-col h-[500px] lg:h-[700px] shadow-soft overflow-hidden">';
         html += '<div class="p-5 border-b border-slate-100 dark:border-[#1a2e26] flex justify-between items-center bg-slate-50 dark:bg-[#0a120f] shrink-0"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 flex items-center justify-center"><i class="ph-fill ph-chalkboard-teacher text-2xl"></i></div><div><h3 class="font-bold text-slate-800 dark:text-white leading-tight">Ustadz/ah</h3><p class="text-[11px] text-slate-500 font-medium">' + ul.length + ' Data</p></div></div>' + (isSuper ? '<div class="flex gap-1.5"><button onclick="window.App.modal=\'import_ustadz\';window.render(true)" class="w-10 h-10 rounded-xl bg-slate-100 text-purple-600 flex items-center justify-center hover:bg-purple-100 transition shadow-sm active:scale-95 text-lg dark:bg-[#15241e] dark:hover:bg-purple-900/30" title="Import Spreadsheet"><i class="ph-bold ph-upload-simple"></i></button><button onclick="window.App.modal=\'ustadz\';window.App.modalData=null;window.render(true)" class="w-10 h-10 rounded-xl bg-purple-500 text-white flex items-center justify-center hover:bg-purple-600 transition shadow-md shadow-purple-500/30 active:scale-95"><i class="ph-bold ph-plus text-lg"></i></button></div>' : '') + '</div>';
         html += '<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">';
@@ -1294,7 +1357,6 @@
         }
         html += '</div></div>';
 
-        // --- NEW COLUMN 2: HALAQOH ---
         html += '<div class="bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-[2rem] flex flex-col h-[500px] lg:h-[700px] shadow-soft overflow-hidden">';
         html += '<div class="p-5 border-b border-slate-100 dark:border-[#1a2e26] flex justify-between items-center bg-slate-50 dark:bg-[#0a120f] shrink-0"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 flex items-center justify-center"><i class="ph-fill ph-users-three text-2xl"></i></div><div><h3 class="font-bold text-slate-800 dark:text-white leading-tight">Halaqoh</h3><p class="text-[11px] text-slate-500 font-medium">' + hl.length + ' Data</p></div></div>' + (isAdmin && window.App.hierSel.u && !sQ ? '<div class="flex gap-1.5"><button onclick="window.App.modal=\'import_halaqoh\';window.render(true)" class="w-10 h-10 rounded-xl bg-slate-100 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition shadow-sm active:scale-95 text-lg dark:bg-[#15241e] dark:hover:bg-blue-900/30" title="Import CSV"><i class="ph-bold ph-upload-simple"></i></button><button onclick="window.App.modal=\'halaqoh\';window.App.modalData=null;window.render(true)" class="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600 transition shadow-md shadow-blue-500/30 active:scale-95"><i class="ph-bold ph-plus text-lg"></i></button></div>' : '') + '</div>';
         html += '<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">';
@@ -1312,7 +1374,6 @@
         }
         html += '</div></div>';
 
-        // --- NEW COLUMN 3: SANTRI ---
         html += '<div class="bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-[2rem] flex flex-col h-[500px] lg:h-[700px] shadow-soft overflow-hidden">';
         
         html += '<div class="p-5 border-b border-slate-100 dark:border-[#1a2e26] flex flex-col gap-4 bg-slate-50 dark:bg-[#0a120f] shrink-0">';
@@ -1372,7 +1433,6 @@
             let isAct = s.id===(cSg?.id);
             let absoluteIdx = allSgs.findIndex(x => x.id === s.id);
             
-            // TOMBOL UP & DOWN UNTUK PINDAH URUTAN
             let upB = absoluteIdx <= 0 ? '<button disabled class="p-1.5 lg:p-2 text-slate-300 bg-slate-50 dark:bg-[#111c18] dark:text-slate-600 rounded-lg shadow-sm border border-slate-200 dark:border-[#1a2e26] cursor-not-allowed"><i class="ph-bold ph-caret-up text-sm lg:text-base"></i></button>' : '<button onclick="event.stopPropagation(); window.moveSeg(' + s.id + ', -1)" class="p-1.5 lg:p-2 text-slate-400 hover:text-emerald-500 bg-white dark:bg-[#0a120f] rounded-lg shadow-sm border border-slate-200 dark:border-[#1a2e26] transition-colors" title="Naikkan Urutan"><i class="ph-bold ph-caret-up text-sm lg:text-base"></i></button>';
             let downB = absoluteIdx >= allSgs.length - 1 ? '<button disabled class="p-1.5 lg:p-2 text-slate-300 bg-slate-50 dark:bg-[#111c18] dark:text-slate-600 rounded-lg shadow-sm border border-slate-200 dark:border-[#1a2e26] cursor-not-allowed"><i class="ph-bold ph-caret-down text-sm lg:text-base"></i></button>' : '<button onclick="event.stopPropagation(); window.moveSeg(' + s.id + ', 1)" class="p-1.5 lg:p-2 text-slate-400 hover:text-emerald-500 bg-white dark:bg-[#0a120f] rounded-lg shadow-sm border border-slate-200 dark:border-[#1a2e26] transition-colors" title="Turunkan Urutan"><i class="ph-bold ph-caret-down text-sm lg:text-base"></i></button>';
             
@@ -1445,7 +1505,11 @@
             let vidId = actSurah ? actSurah.videoId : null;
             let vidHtml = vidId ? '<div class="mb-4 w-full aspect-video bg-black rounded-xl overflow-hidden shadow-inner"><iframe width="100%" height="100%" src="https://www.youtube-nocookie.com/embed/' + vidId + '?rel=0&controls=1" frameborder="0" allowfullscreen></iframe></div>' : '<div class="mb-4 w-full p-4 bg-slate-50 dark:bg-[#0a120f] rounded-xl text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-[#1a2e26]">Video belum ditambahkan di Surah ini.</div>';
             
-            mHtml += '<div class="modal-overlay !flex"><div class="modal-box !max-w-xl"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold dark:text-white">' + (sg ? 'Edit' : 'Tambah') + ' Ayat</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white"><i class="ph ph-x text-xl"></i></button></div>' + vidHtml + '<div id="segment-loading" class="hidden text-center py-10 text-emerald-500 font-bold animate-pulse">Memuat data ayat Al-Qur\'an...</div><form id="sf" onsubmit="event.preventDefault();let id=' + (window.App.modalData||'null') + ';let sm=parseInt(window.val(\'sm\')||0),ss=parseInt(window.val(\'ss\')||0),em=parseInt(window.val(\'em\')||0),es=parseInt(window.val(\'es\')||0);let t=window.val(\'st\'),a=window.val(\'sa\'),tr=window.val(\'str\');let start=sm*60+ss;let end=em*60+es;if(id){let o=window.App.segs.find(x=>x.id===id);if(o){o.title=t;o.start=start;o.end=end;o.arabic=a;o.translation=tr;window.dbSave(\'segs\',id,o);}}else{let nid=Date.now();let curSgs=window.getSgs();let maxO=curSgs.length>0?Math.max(...curSgs.map(x=>x.order!==undefined?x.order:0)):0;let nD={id:nid,surahId:' + window.App.actSurahId + ',levelId:' + window.getLvl() + ',title:t,start:start,end:end,arabic:a,translation:tr,order:maxO+1};window.App.segs.push(nD);window.dbSave(\'segs\',nid,nD);}window.App.modal=null;window.render(true)"><div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mb-4"><div><label class="block text-[10px] text-emerald-600 font-bold mb-1">AWAL AYAT</label><select id="seg-start-ayat" onchange="window.autoFillAyat()" class="input-std cursor-pointer"></select></div><div><label class="block text-[10px] text-emerald-600 font-bold mb-1">AKHIR AYAT</label><select id="seg-end-ayat" onchange="window.autoFillAyat()" class="input-std cursor-pointer"></select></div></div><div class="mb-4"><label class="block text-[10px] text-emerald-600 font-bold mb-1">JUDUL</label><input type="text" id="st" required value="' + (sg?window.esc(sg.title):'') + '" class="input-std bg-slate-100 dark:bg-[#1a2e26] pointer-events-none text-slate-500" readonly></div><div class="mb-4"><label class="block text-[10px] text-slate-500 font-bold mb-1">TEKS ARAB</label><textarea id="sa" rows="3" dir="rtl" class="input-std font-arabic text-xl">' + (sg?window.esc(sg.arabic):'') + '</textarea></div><div class="mb-4"><label class="block text-[10px] text-slate-500 font-bold mb-1">TERJEMAH</label><textarea id="str" rows="2" class="input-std text-xs md:text-sm">' + (sg?window.esc(sg.translation):'') + '</textarea></div><div class="grid grid-cols-2 gap-3 md:gap-4 mb-6"><div><label class="block text-[10px] text-slate-500 font-bold text-center mb-2">MULAI (M:D)</label><div class="flex justify-center items-center gap-1"><input type="number" id="sm" value="' + (sg?Math.floor(sg.start/60):'0') + '" class="input-std !w-14 !p-1.5 text-center"><span class="font-bold">:</span><input type="number" id="ss" value="' + (sg?sg.start%60:'0') + '" class="input-std !w-14 !p-1.5 text-center"></div></div><div><label class="block text-[10px] text-slate-500 font-bold text-center mb-2">SELESAI (M:D)</label><div class="flex justify-center items-center gap-1"><input type="number" id="em" value="' + (sg?Math.floor(sg.end/60):'0') + '" class="input-std !w-14 !p-1.5 text-center"><span class="font-bold">:</span><input type="number" id="es" value="' + (sg?sg.end%60:'0') + '" class="input-std !w-14 !p-1.5 text-center"></div></div></div><button type="submit" class="btn-std w-full">Simpan Segmen</button></form></div></div>';
+            // Mengambil order untuk ditampilkan di input form
+            let curSgsForModal = window.getSgs();
+            let currentOrderVal = sg ? (curSgsForModal.findIndex(x=>x.id===sg.id) + 1) : (curSgsForModal.length + 1);
+
+            mHtml += '<div class="modal-overlay !flex"><div class="modal-box !max-w-xl"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold dark:text-white">' + (sg ? 'Edit' : 'Tambah') + ' Ayat</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white"><i class="ph ph-x text-xl"></i></button></div>' + vidHtml + '<div id="segment-loading" class="hidden text-center py-10 text-emerald-500 font-bold animate-pulse">Memuat data ayat Al-Qur\'an...</div><form id="sf" onsubmit="window.saveSegment(event, ' + (window.App.modalData||'null') + ')"><div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mb-4"><div><label class="block text-[10px] text-emerald-600 font-bold mb-1">AWAL AYAT</label><select id="seg-start-ayat" onchange="window.autoFillAyat()" class="input-std cursor-pointer"></select></div><div><label class="block text-[10px] text-emerald-600 font-bold mb-1">AKHIR AYAT</label><select id="seg-end-ayat" onchange="window.autoFillAyat()" class="input-std cursor-pointer"></select></div></div><div class="grid grid-cols-12 gap-3 mb-4"><div class="col-span-3 md:col-span-2"><label class="block text-[10px] text-emerald-600 font-bold mb-1" title="Ubah angka ini untuk memindahkan urutan ayat">URUTAN</label><input type="number" id="so" min="1" required value="' + currentOrderVal + '" class="input-std text-center font-bold text-emerald-600 shadow-sm" style="background-color: #f8fafc;"></div><div class="col-span-9 md:col-span-10"><label class="block text-[10px] text-emerald-600 font-bold mb-1">JUDUL AYAT</label><input type="text" id="st" required value="' + (sg?window.esc(sg.title):'') + '" class="input-std bg-slate-100 dark:bg-[#1a2e26] pointer-events-none text-slate-500" readonly></div></div><div class="mb-4"><label class="block text-[10px] text-slate-500 font-bold mb-1">TEKS ARAB</label><textarea id="sa" rows="3" dir="rtl" class="input-std font-arabic text-xl">' + (sg?window.esc(sg.arabic):'') + '</textarea></div><div class="mb-4"><label class="block text-[10px] text-slate-500 font-bold mb-1">TERJEMAH</label><textarea id="str" rows="2" class="input-std text-xs md:text-sm">' + (sg?window.esc(sg.translation):'') + '</textarea></div><div class="grid grid-cols-2 gap-3 md:gap-4 mb-6"><div><label class="block text-[10px] text-slate-500 font-bold text-center mb-2">MULAI (M:D)</label><div class="flex justify-center items-center gap-1"><input type="number" id="sm" value="' + (sg?Math.floor(sg.start/60):'0') + '" class="input-std !w-14 !p-1.5 text-center"><span class="font-bold">:</span><input type="number" id="ss" value="' + (sg?sg.start%60:'0') + '" class="input-std !w-14 !p-1.5 text-center"></div></div><div><label class="block text-[10px] text-slate-500 font-bold text-center mb-2">SELESAI (M:D)</label><div class="flex justify-center items-center gap-1"><input type="number" id="em" value="' + (sg?Math.floor(sg.end/60):'0') + '" class="input-std !w-14 !p-1.5 text-center"><span class="font-bold">:</span><input type="number" id="es" value="' + (sg?sg.end%60:'0') + '" class="input-std !w-14 !p-1.5 text-center"></div></div></div><button type="submit" class="btn-std w-full">Simpan Segmen</button></form></div></div>';
         } else if (window.App.modal === 'grade') {
             let sb = window.App.subs.find(x=>x.id===window.App.modalData);
             let btns = '';
