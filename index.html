@@ -110,7 +110,6 @@
         if (el.readyState >= 1) { doFix(); }
     };
 
-    // Fitur Flash Kamera untuk Efek Screenshot Murni
     window.simulateScreenshot = function() {
         let f = document.createElement('div');
         f.style.position = 'fixed';
@@ -132,7 +131,6 @@
         setTimeout(() => { if(f.parentNode) f.parentNode.removeChild(f); }, 500);
     };
 
-    // Fungsi Share & Download Menggunakan modern-screenshot
     window.downloadCard = function() {
         let node = document.getElementById('achievement-card-node');
         let btn = document.getElementById('btn-download-card');
@@ -211,7 +209,6 @@
 
     const Q_SURAHS = JSON.parse('[{"no":1,"name":"Al-Fatihah","juz":[1]},{"no":2,"name":"Al-Baqarah","juz":[1,2,3]},{"no":3,"name":"Ali \'Imran","juz":[3,4]},{"no":4,"name":"An-Nisa\'","juz":[4,5,6]},{"no":5,"name":"Al-Ma\'idah","juz":[6,7]},{"no":6,"name":"Al-An\'am","juz":[7,8]},{"no":7,"name":"Al-A\'raf","juz":[8,9]},{"no":8,"name":"Al-Anfal","juz":[9,10]},{"no":9,"name":"At-Taubah","juz":[10,11]},{"no":10,"name":"Yunus","juz":[11]},{"no":11,"name":"Hud","juz":[11,12]},{"no":12,"name":"Yusuf","juz":[12,13]},{"no":13,"name":"Ar-Ra\'d","juz":[13]},{"no":14,"name":"Ibrahim","juz":[13]},{"no":15,"name":"Al-Hijr","juz":[14]},{"no":16,"name":"An-Nahl","juz":[14]},{"no":17,"name":"Al-Isra\'","juz":[15]},{"no":18,"name":"Al-Kahf","juz":[15,16]},{"no":19,"name":"Maryam","juz":[16]},{"no":20,"name":"Taha","juz":[16]},{"no":21,"name":"Al-Anbiya\'","juz":[17]},{"no":22,"name":"Al-Hajj","juz":[17]},{"no":23,"name":"Al-Mu\'minun","juz":[18]},{"no":24,"name":"An-Nur","juz":[18]},{"no":25,"name":"Al-Furqan","juz":[18,19]},{"no":26,"name":"Asy-Syu\'ara\'","juz":[19]},{"no":27,"name":"An-Naml","juz":[19,20]},{"no":28,"name":"Al-Qasas","juz":[20]},{"no":29,"name":"Al-\'Ankabut","juz":[20,21]},{"no":30,"name":"Ar-Rum","juz":[21]},{"no":31,"name":"Luqman","juz":[21]},{"no":32,"name":"As-Sajdah","juz":[21]},{"no":33,"name":"Al-Ahzab","juz":[21,22]},{"no":34,"name":"Saba\'","juz":[22]},{"no":35,"name":"Fatir","juz":[22]},{"no":36,"name":"Yasin","juz":[22,23]},{"no":37,"name":"As-Saffat","juz":[23]},{"no":38,"name":"Sad","juz":[23]},{"no":39,"name":"Az-Zumar","juz":[23,24]},{"no":40,"name":"Ghafir","juz":[24]},{"no":41,"name":"Fussilat","juz":[24,25]},{"no":42,"name":"Asy-Syura","juz":[25]},{"no":43,"name":"Az-Zukhruf","juz":[25]},{"no":44,"name":"Ad-Dukhan","juz":[25]},{"no":45,"name":"Al-Jasiyah","juz":[25]},{"no":46,"name":"Al-Ahqaf","juz":[26]},{"no":47,"name":"Muhammad","juz":[26]},{"no":48,"name":"Al-Fath","juz":[26]},{"no":49,"name":"Al-Hujurat","juz":[26]},{"no":50,"name":"Qaf","juz":[26]},{"no":51,"name":"Az-Zariyat","juz":[26,27]},{"no":52,"name":"At-Tur","juz":[27]},{"no":53,"name":"An-Najm","juz":[27]},{"no":54,"name":"Al-Qamar","juz":[27]},{"no":55,"name":"Ar-Rahman","juz":[27]},{"no":56,"name":"Al-Waqi\'ah","juz":[27]},{"no":57,"name":"Al-Hadid","juz":[27]},{"no":58,"name":"Al-Mujadilah","juz":[28]},{"no":59,"name":"Al-Hasyr","juz":[28]},{"no":60,"name":"Al-Mumtahanah","juz":[28]},{"no":61,"name":"As-Saff","juz":[28]},{"no":62,"name":"Al-Jumu\'ah","juz":[28]},{"no":63,"name":"Al-Munafiqun","juz":[28]},{"no":64,"name":"At-Tagabun","juz":[28]},{"no":65,"name":"At-Talaq","juz":[28]},{"no":66,"name":"At-Tahrim","juz":[28]},{"no":67,"name":"Al-Mulk","juz":[29]},{"no":68,"name":"Al-Qalam","juz":[29]},{"no":69,"name":"Al-Haqqah","juz":[29]},{"no":70,"name":"Al-Ma\'arij","juz":[29]},{"no":71,"name":"Nuh","juz":[29]},{"no":72,"name":"Al-Jinn","juz":[29]},{"no":73,"name":"Al-Muzzammil","juz":[29]},{"no":74,"name":"Al-Muddassir","juz":[29]},{"no":75,"name":"Al-Qiyamah","juz":[29]},{"no":76,"name":"Al-Insan","juz":[29]},{"no":77,"name":"Al-Mursalat","juz":[29]},{"no":78,"name":"An-Naba\'","juz":[30]},{"no":79,"name":"An-Nazi\'at","juz":[30]},{"no":80,"name":"\'Abasa","juz":[30]},{"no":81,"name":"At-Takwir","juz":[30]},{"no":82,"name":"Al-Infitar","juz":[30]},{"no":83,"name":"Al-Mutaffifin","juz":[30]},{"no":84,"name":"Al-Insyiqaq","juz":[30]},{"no":85,"name":"Al-Buruj","juz":[30]},{"no":86,"name":"At-Tariq","juz":[30]},{"no":87,"name":"Al-A\'la","juz":[30]},{"no":88,"name":"Al-Gasyiyah","juz":[30]},{"no":89,"name":"Al-Fajr","juz":[30]},{"no":90,"name":"Al-Balad","juz":[30]},{"no":91,"name":"Asy-Syams","juz":[30]},{"no":92,"name":"Al-Lail","juz":[30]},{"no":93,"name":"Ad-Duha","juz":[30]},{"no":94,"name":"Al-Insyirah","juz":[30]},{"no":95,"name":"At-Tin","juz":[30]},{"no":96,"name":"Al-\'Alaq","juz":[30]},{"no":97,"name":"Al-Qadr","juz":[30]},{"no":98,"name":"Al-Bayyinah","juz":[30]},{"no":99,"name":"Az-Zalzalah","juz":[30]},{"no":100,"name":"Al-\'Adiyat","juz":[30]},{"no":101,"name":"Al-Qari\'ah","juz":[30]},{"no":102,"name":"At-Takasur","juz":[30]},{"no":103,"name":"Al-\'Asr","juz":[30]},{"no":104,"name":"Al-Humazah","juz":[30]},{"no":105,"name":"Al-Fil","juz":[30]},{"no":106,"name":"Quraisy","juz":[30]},{"no":107,"name":"Al-Ma\'un","juz":[30]},{"no":108,"name":"Al-Kausar","juz":[30]},{"no":109,"name":"Al-Kafirun","juz":[30]},{"no":110,"name":"An-Nasr","juz":[30]},{"no":111,"name":"Al-Lahab","juz":[30]},{"no":112,"name":"Al-Ikhlas","juz":[30]},{"no":113,"name":"Al-Falaq","juz":[30]},{"no":114,"name":"An-Nas","juz":[30]}]');
 
-    // LOGIKA PENDETEKSI REFRESH VS TAB BARU
     let savedNavState = {};
     try { 
         let isReload = false;
@@ -221,11 +218,9 @@
             else if(window.performance.navigation && window.performance.navigation.type === 1) isReload = true;
         }
         
-        // Jika halamannya di-Refresh (F5), gunakan data sessionStorage (halaman tidak pindah)
         if(isReload){
             savedNavState = JSON.parse(sessionStorage.getItem('tahfidzqu_nav_state')) || {}; 
         } 
-        // Jika buka Tab Baru / Duplicate Tab, hapus salinan data agar kembali ke Beranda / Fresh
         else {
             sessionStorage.removeItem('tahfidzqu_nav_state');
         }
@@ -240,7 +235,6 @@
       search: '', searchSiswa: '', loginAttempts: 0, lockoutTime: 0, loginError: '', inactivityTimer: null,
       customDialog: { show: false, type: 'alert', message: '', onConfirm: null },
       juzs: [], surahs: [], levels: [], segs: [], ustadz: [], halaqohs: [], siswas: [], subs: [],
-      // Default initial actJuzId is set to 30. If not saved, prioritize Juz 30.
       actJuzId: savedNavState.actJuzId || 30, 
       actSurahId: savedNavState.actSurahId || null, 
       actLevelId: savedNavState.actLevelId || null,
@@ -365,16 +359,6 @@
         return '<div class="flex items-center gap-2 md:gap-3 bg-slate-50 dark:bg-[#0a120f] border border-slate-200 dark:border-[#1a2e26] p-1.5 md:p-2 rounded-full w-full shadow-sm" onclick="event.stopPropagation();"><button type="button" id="audio-btn-' + id + '" onclick="window.playCustomAudio(\'' + id + '\', \'' + url + '\', ' + duration + '); event.stopPropagation();" class="' + btnSize + ' rounded-full ' + btnColor + ' text-white flex items-center justify-center shrink-0 transition-colors shadow-md active:scale-95"><i class="ph-fill ' + ic + ' ' + iconSize + '"></i></button><div class="flex-1 flex items-center gap-2 pr-2 md:pr-3"><div class="h-1.5 flex-1 bg-slate-200 dark:bg-[#15241e] rounded-full overflow-hidden relative"><div id="audio-bar-' + id + '" class="absolute left-0 top-0 h-full ' + barColor + ' rounded-full transition-all duration-100" style="width: ' + (isPlay?'auto':'0%') + '"></div></div><span id="audio-time-' + id + '" class="text-[9px] md:text-[10px] font-mono font-medium text-slate-500 dark:text-gray-400 w-8 text-right">00:00</span></div></div>';
     };
 
-    // HELPER BARU: Mengambil ayat dengan sorting cerdas berdasarkan `order`
-    window.getSortedSegs = (surahId) => {
-        return window.App.segs.filter(s => s.surahId === surahId).sort((a, b) => {
-            let orderA = typeof a.order === 'number' ? a.order : a.start;
-            let orderB = typeof b.order === 'number' ? b.order : b.start;
-            if (orderA === orderB) return a.start - b.start; // Fallback jika urutan sama persis
-            return orderA - orderB;
-        });
-    };
-
     window.getLvl = () => {
         var lvls = window.App.levels.filter(l=>l.surahId===window.App.actSurahId);
         if (window.App.actLevelId) {
@@ -384,9 +368,18 @@
         return lvls.length > 0 ? lvls[0].id : null;
     };
     
-    // UPDATE: Gunakan helper sorting baru
-    window.getSgs = () => window.getSortedSegs(window.App.actSurahId).filter(s=>s.levelId===window.getLvl());
-    
+    // UPDATED: Fitur Sort by Order
+    window.getSgs = () => {
+        let arr = window.App.segs.filter(s=>s.surahId===window.App.actSurahId&&s.levelId===window.getLvl());
+        arr.sort((a,b) => {
+            if (a.order !== undefined && b.order !== undefined) return a.order - b.order;
+            if (a.order !== undefined) return -1;
+            if (b.order !== undefined) return 1;
+            return a.start - b.start;
+        });
+        return arr;
+    };
+
     window.getActSeg = () => { var s=window.getSgs(); if(s.length===0)return null; return s.find(x=>x.id===window.App.actSegId)||s[0]; };
     window.getUName = id => window.esc(window.App.ustadz.find(x=>x.id==id)?.name||"-");
     window.getHName = id => window.esc(window.App.halaqohs.find(x=>x.id==id)?.name||"-");
@@ -394,6 +387,28 @@
     window.getSKelas = id => window.esc(window.App.siswas.find(x=>x.id==id)?.kelas||"-");
     window.toArabicNumeral = en => (""+en).replace(/[0-9]/g, t=>String.fromCharCode(t.charCodeAt(0)+1584));
     window.extractVideoId = url => { if(!url)return null; var m=url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/); return (m&&m[2].length===11)?m[2]:null; };
+
+    // NEW: Fungsi untuk Memindahkan Posisi Ayat (Up / Down)
+    window.moveSeg = function(id, dir) {
+        let sgs = window.getSgs();
+        let idx = sgs.findIndex(x => x.id === id);
+        if (idx === -1 || idx + dir < 0 || idx + dir >= sgs.length) return;
+        
+        // Pastikan semua punya property order
+        sgs.forEach((s, i) => { if (s.order === undefined) s.order = i; });
+        
+        // Tukar urutan
+        let temp = sgs[idx].order;
+        sgs[idx].order = sgs[idx+dir].order;
+        sgs[idx+dir].order = temp;
+        
+        // Simpan hanya yang berubah untuk hemat bandwidth
+        if(window.dbSave) {
+            window.dbSave('segs', sgs[idx].id, sgs[idx]);
+            window.dbSave('segs', sgs[idx+dir].id, sgs[idx+dir]);
+        }
+        window.render(true);
+    };
 
     window.switchView = function(viewTarget) {
       if(window.App.view === 'player' && viewTarget !== 'player') {
@@ -438,7 +453,7 @@
 
     window.selectSeg = function(id) {
         window.App.actSegId = id; window.App.curRep = 0;
-        let sgs = window.getSortedSegs(window.App.actSurahId); // Gunakan sorting baru
+        let sgs = window.getSgs();
         let sg = sgs.find(x => x.id === id);
         if(!sg) return;
         if(window.App.yt && typeof window.App.yt.seekTo === 'function') { window.App.yt.seekTo(sg.start); window.App.yt.playVideo(); window.App.isPlay = true; }
@@ -451,7 +466,7 @@
     window.toggleYTPlay = function() {
         if(window.App.yt && typeof window.App.yt.playVideo === 'function') {
             if(window.App.isPlay) { window.App.yt.pauseVideo(); } else {
-                let sgs = window.getSortedSegs(window.App.actSurahId); // Gunakan sorting baru
+                let sgs = window.getSgs();
                 let cSg = sgs.find(x => x.id === window.App.actSegId);
                 let t = window.App.yt.getCurrentTime();
                 if(t < (cSg?.start||0) || t >= (cSg?.end||100)) { window.App.yt.seekTo(cSg?.start||0); window.App.curRep = 0; let rt = window.getEl('rep-text'); if(rt) rt.innerText = ''; }
@@ -461,7 +476,7 @@
     };
 
     window.nextSeg = function(dir) {
-        let sgs = window.getSortedSegs(window.App.actSurahId); // Gunakan sorting baru
+        let sgs = window.getSgs();
         let idx = sgs.findIndex(x => x.id === window.App.actSegId);
         if(dir === 1 && idx >= 0 && idx < sgs.length - 1) window.selectSeg(sgs[idx+1].id);
         else if (dir === -1 && idx > 0) window.selectSeg(sgs[idx-1].id);
@@ -486,7 +501,7 @@
 
         window.App.actSurahId = surahId;
         window.App.actSegId = null;
-        window.App.actLevelId = null; // Reset level agar kembali ke awal
+        window.App.actLevelId = null; 
         if(!window.App.levels.some(l => l.surahId == surahId)){
             let nid = Date.now(); let newLvl = {id:nid, surahId:surahId, name:'Level 1'};
             window.App.levels.push(newLvl); if(window.dbSave) window.dbSave('levels', nid, newLvl);
@@ -511,7 +526,6 @@
             pWrap.innerHTML = '<div id="youtube-player" class="w-full h-full"></div>';
         }
 
-        // Hindari Error 2 jika videoId kosong
         if (!vId) return;
 
         window.App.yt = new window.YT.Player('youtube-player', {
@@ -718,10 +732,7 @@
                 
                 let textMsg = `Assalamu'alaikum *${ustadzData.name}*,\n\nAlhamdulillah, ada setoran hafalan baru masuk:\n\n👤 *Santri:* ${siswaData ? siswaData.name : '-'}\n📖 *Surah:* ${surahData ? surahData.title : '-'} (${segData ? segData.title : '-'})\n\nMohon berkenan untuk menyimak dan memberikan penilaian di aplikasi TahfidzQu. Syukron.`;
                 
-                // MENGIRIM PESAN OTOMATIS DI BACKGROUND (SISTEM/BOT YANG MENGIRIM)
-                // Menggunakan contoh API Gateway dari Fonnte (fonnte.com) yang populer & gratis
                 const waApiToken = "MwQYzC2XsY4UdA7n8Ury"; 
-                
                 if (waApiToken !== "TOKEN_API_WA_KAMU_DISINI") {
                     fetch("https://api.fonnte.com/send", {
                         method: "POST",
@@ -807,7 +818,7 @@
 
             if (type === 'ustadz') {
                 rows.forEach((row, idx) => {
-                    let cols = row.split(/\t|\||,/); // Handle tab, pipe, or comma
+                    let cols = row.split(/\t|\||,/);
                     let name = cols[0] ? cols[0].trim().replace(/^"|"$/g, '') : '';
                     let phone = cols.length > 1 ? cols[1].trim().replace(/^"|"$/g, '') : '';
                     let username = cols.length > 2 ? cols[2].trim().replace(/^"|"$/g, '') : '';
@@ -821,7 +832,7 @@
                 });
             } else if (type === 'halaqoh') {
                 rows.forEach((row, idx) => {
-                    let cols = row.split(/\t|\||,/); // Handle tab, pipe, or comma
+                    let cols = row.split(/\t|\||,/); 
                     let name = cols[0] ? cols[0].trim().replace(/^"|"$/g, '') : '';
                     if (name) {
                         let nD = { id: baseId + idx, ustadzId: window.App.hierSel.u, name: name };
@@ -832,7 +843,7 @@
                 });
             } else if (type === 'siswa') {
                 rows.forEach((row, idx) => {
-                    let cols = row.split(/\t|\||,/); // Handle tab, pipe, or comma
+                    let cols = row.split(/\t|\||,/); 
                     let name = cols[0] ? cols[0].trim().replace(/^"|"$/g, '') : '';
                     let kelas = cols.length > 1 ? cols[1].trim().replace(/^"|"$/g, '') : '-';
                     if (name) {
@@ -1114,7 +1125,7 @@
                 strList += `
                 <div class="bg-white border border-slate-100 rounded-[2rem] p-5 md:p-6 shadow-soft flex flex-col gap-4 dark:bg-[#0f1915] dark:border-[#1a2e26] hover:shadow-xl transition-all relative overflow-hidden">
                     ${sb.status==='pending'?'<div class="absolute -top-6 -right-6 w-20 h-20 bg-orange-100 dark:bg-orange-500/10 rounded-full blur-2xl pointer-events-none"></div>':sb.status==='need-repeat'?'<div class="absolute -top-6 -right-6 w-20 h-20 bg-red-100 dark:bg-red-500/10 rounded-full blur-2xl pointer-events-none"></div>':'<div class="absolute -top-6 -right-6 w-20 h-20 bg-emerald-100 dark:bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>'}
-                    <!-- Header Kartu -->
+                    
                     <div class="flex justify-between items-start relative z-10">
                         <div class="flex items-center gap-3">
                             <div class="w-12 h-12 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 rounded-full flex items-center justify-center text-slate-500 shrink-0">
@@ -1128,7 +1139,6 @@
                         <div class="text-[9px] font-mono text-slate-400 bg-slate-50 dark:bg-[#15241e] px-2.5 py-1.5 rounded-lg border border-slate-100 dark:border-[#1a2e26] shrink-0">${sb.date}</div>
                     </div>
 
-                    <!-- Info Surah -->
                     <div class="bg-slate-50 dark:bg-[#15241e] rounded-2xl p-4 border border-slate-100 dark:border-[#1a2e26] relative z-10">
                         <div class="flex items-center justify-between mb-1.5">
                             <div class="flex items-center gap-2 min-w-0">
@@ -1140,15 +1150,12 @@
                         <p class="text-[11px] text-slate-500 font-medium pl-6">${window.esc(sg?sg.title:'-')}</p>
                     </div>
 
-                    <!-- Audio Santri -->
                     <div class="w-full relative z-20">
                         ${studentAudioPlayer}
                     </div>
 
-                    <!-- Catatan Ustadz (Jika ada) -->
                     ${ustNoteHtml}
 
-                    <!-- Footer Kartu -->
                     <div class="pt-4 mt-auto border-t border-slate-100 dark:border-[#1a2e26] flex items-center justify-between gap-3 relative z-20">
                         <div class="flex items-center gap-1.5 text-[10px] md:text-xs font-bold px-3 py-2.5 rounded-xl border ${sColor} shrink-0">
                             <i class="ph-fill ${sIcon} text-sm md:text-base"></i> <span class="hidden sm:inline md:hidden xl:inline">${sText}</span>
@@ -1361,7 +1368,21 @@
         let lbDesk = document.getElementById('levels-box-desktop');
         if (lbDesk) lbDesk.innerHTML = levelsHtml;
         
-        let segsHtml = '<div class="space-y-2 lg:space-y-3">' + (sgs.length ? sgs.map(s=>'<div data-id="' + s.id + '" onclick="window.selectSeg(' + s.id + ')" class="p-3.5 lg:p-5 rounded-2xl border cursor-pointer transition-all ' + (s.id===(cSg?.id)?'bg-emerald-50 border-emerald-300 dark:bg-[#152b22] dark:border-emerald-500/50 shadow-md':'bg-white dark:bg-[#15241e] border-slate-100 dark:border-[#1a2e26] shadow-sm hover:border-emerald-300') + '"><div class="flex justify-between items-center"><div><h4 class="font-bold text-xs lg:text-sm ' + (s.id===(cSg?.id)?'text-emerald-700 dark:text-emerald-400':'text-slate-700 dark:text-gray-200') + '">' + window.esc(s.title) + '</h4><p class="text-[9px] lg:text-[10px] text-slate-400 font-mono mt-1 flex items-center gap-1"><i class="ph ph-clock"></i> ' + window.fmtT(s.start) + ' - ' + window.fmtT(s.end) + '</p></div><div class="flex gap-1 lg:gap-1.5 items-center">' + (isSuper ? '<button onclick="event.stopPropagation();window.App.modal=\'segment\';window.App.modalData=' + s.id + ';window.render(true);setTimeout(window.setupSegmentModal, 10);" class="p-1.5 lg:p-2 text-slate-400 hover:text-blue-500 bg-white dark:bg-[#0a120f] rounded-lg shadow-sm border border-slate-200 dark:border-[#1a2e26] transition-colors"><i class="ph-bold ph-pencil-simple text-sm lg:text-base"></i></button><button onclick="event.stopPropagation(); window.confirmDelete(\'segment\', ' + s.id + ')" class="p-1.5 lg:p-2 text-slate-400 hover:text-red-500 bg-white dark:bg-[#0a120f] rounded-lg shadow-sm border border-slate-200 dark:border-[#1a2e26] transition-colors"><i class="ph-bold ph-trash text-sm lg:text-base"></i></button>' : '') + '<button class="w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center transition-colors ' + (s.id===(cSg?.id)?'bg-emerald-500 text-white shadow-md shadow-emerald-500/40':'bg-slate-50 border border-slate-200 text-slate-400 hover:text-emerald-500 dark:bg-[#0a120f] dark:border-[#1a2e26]') + '"><i class="' + (s.id===(cSg?.id)?'ph-fill':'ph-bold') + ' ph-play text-sm lg:text-base ml-0.5"></i></button></div></div></div>').join('') : '<div class="text-center p-4 lg:p-6 border border-dashed rounded-xl lg:rounded-2xl dark:border-[#1a2e26] text-slate-400 text-[10px] lg:text-xs italic">Pencarian tidak ditemukan.</div>') + '</div>';
+        let segsHtml = '<div class="space-y-2 lg:space-y-3">' + (sgs.length ? sgs.map((s)=>{
+            let isAct = s.id===(cSg?.id);
+            let absoluteIdx = allSgs.findIndex(x => x.id === s.id);
+            
+            // TOMBOL UP & DOWN UNTUK PINDAH URUTAN
+            let upB = absoluteIdx <= 0 ? '<button disabled class="p-1.5 lg:p-2 text-slate-300 bg-slate-50 dark:bg-[#111c18] dark:text-slate-600 rounded-lg shadow-sm border border-slate-200 dark:border-[#1a2e26] cursor-not-allowed"><i class="ph-bold ph-caret-up text-sm lg:text-base"></i></button>' : '<button onclick="event.stopPropagation(); window.moveSeg(' + s.id + ', -1)" class="p-1.5 lg:p-2 text-slate-400 hover:text-emerald-500 bg-white dark:bg-[#0a120f] rounded-lg shadow-sm border border-slate-200 dark:border-[#1a2e26] transition-colors" title="Naikkan Urutan"><i class="ph-bold ph-caret-up text-sm lg:text-base"></i></button>';
+            let downB = absoluteIdx >= allSgs.length - 1 ? '<button disabled class="p-1.5 lg:p-2 text-slate-300 bg-slate-50 dark:bg-[#111c18] dark:text-slate-600 rounded-lg shadow-sm border border-slate-200 dark:border-[#1a2e26] cursor-not-allowed"><i class="ph-bold ph-caret-down text-sm lg:text-base"></i></button>' : '<button onclick="event.stopPropagation(); window.moveSeg(' + s.id + ', 1)" class="p-1.5 lg:p-2 text-slate-400 hover:text-emerald-500 bg-white dark:bg-[#0a120f] rounded-lg shadow-sm border border-slate-200 dark:border-[#1a2e26] transition-colors" title="Turunkan Urutan"><i class="ph-bold ph-caret-down text-sm lg:text-base"></i></button>';
+            
+            let editB = '<button onclick="event.stopPropagation();window.App.modal=\'segment\';window.App.modalData=' + s.id + ';window.render(true);setTimeout(window.setupSegmentModal, 10);" class="p-1.5 lg:p-2 text-slate-400 hover:text-blue-500 bg-white dark:bg-[#0a120f] rounded-lg shadow-sm border border-slate-200 dark:border-[#1a2e26] transition-colors"><i class="ph-bold ph-pencil-simple text-sm lg:text-base"></i></button>';
+            let delB = '<button onclick="event.stopPropagation(); window.confirmDelete(\'segment\', ' + s.id + ')" class="p-1.5 lg:p-2 text-slate-400 hover:text-red-500 bg-white dark:bg-[#0a120f] rounded-lg shadow-sm border border-slate-200 dark:border-[#1a2e26] transition-colors"><i class="ph-bold ph-trash text-sm lg:text-base"></i></button>';
+            
+            let adm = isSuper ? '<div class="flex gap-1 lg:gap-1.5 mr-1 lg:mr-2">' + upB + downB + editB + delB + '</div>' : '';
+            
+            return '<div data-id="' + s.id + '" onclick="window.selectSeg(' + s.id + ')" class="p-3.5 lg:p-5 rounded-2xl border cursor-pointer transition-all ' + (isAct?'bg-emerald-50 border-emerald-300 dark:bg-[#152b22] dark:border-emerald-500/50 shadow-md':'bg-white dark:bg-[#15241e] border-slate-100 dark:border-[#1a2e26] shadow-sm hover:border-emerald-300') + '"><div class="flex justify-between items-center"><div><h4 class="font-bold text-xs lg:text-sm ' + (isAct?'text-emerald-700 dark:text-emerald-400':'text-slate-700 dark:text-gray-200') + '">' + window.esc(s.title) + '</h4><p class="text-[9px] lg:text-[10px] text-slate-400 font-mono mt-1 flex items-center gap-1"><i class="ph ph-clock"></i> ' + window.fmtT(s.start) + ' - ' + window.fmtT(s.end) + '</p></div><div class="flex gap-1 lg:gap-1.5 items-center">' + adm + '<button class="w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center transition-colors ' + (isAct?'bg-emerald-500 text-white shadow-md shadow-emerald-500/40':'bg-slate-50 border border-slate-200 text-slate-400 hover:text-emerald-500 dark:bg-[#0a120f] dark:border-[#1a2e26]') + '"><i class="' + (isAct?'ph-fill':'ph-bold') + ' ph-play text-sm lg:text-base ml-0.5"></i></button></div></div></div>';
+        }).join('') : '<div class="text-center p-4 lg:p-6 border border-dashed rounded-xl lg:rounded-2xl dark:border-[#1a2e26] text-slate-400 text-[10px] lg:text-xs italic">Pencarian tidak ditemukan.</div>') + '</div>';
         
         let sbMob = document.getElementById('segs-box-mobile');
         if (sbMob) sbMob.innerHTML = segsHtml;
@@ -1424,14 +1445,7 @@
             let vidId = actSurah ? actSurah.videoId : null;
             let vidHtml = vidId ? '<div class="mb-4 w-full aspect-video bg-black rounded-xl overflow-hidden shadow-inner"><iframe width="100%" height="100%" src="https://www.youtube-nocookie.com/embed/' + vidId + '?rel=0&controls=1" frameborder="0" allowfullscreen></iframe></div>' : '<div class="mb-4 w-full p-4 bg-slate-50 dark:bg-[#0a120f] rounded-xl text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-[#1a2e26]">Video belum ditambahkan di Surah ini.</div>';
             
-            // KALKULASI DEFAULT URUTAN
-            let currentSgs = window.getSgs();
-            let defaultOrder = 1;
-            if (sg && typeof sg.order === 'number') { defaultOrder = sg.order; }
-            else if (sg) { let idx = currentSgs.findIndex(x=>x.id===sg.id); defaultOrder = idx >= 0 ? idx + 1 : currentSgs.length + 1; }
-            else { defaultOrder = currentSgs.length + 1; }
-
-            mHtml += '<div class="modal-overlay !flex"><div class="modal-box !max-w-xl"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold dark:text-white">' + (sg ? 'Edit' : 'Tambah') + ' Ayat</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white"><i class="ph ph-x text-xl"></i></button></div>' + vidHtml + '<div id="segment-loading" class="hidden text-center py-10 text-emerald-500 font-bold animate-pulse">Memuat data ayat Al-Qur\'an...</div><form id="sf" onsubmit="event.preventDefault();let id=' + (window.App.modalData||'null') + ';let sm=parseInt(window.val(\'sm\')||0),ss=parseInt(window.val(\'ss\')||0),em=parseInt(window.val(\'em\')||0),es=parseInt(window.val(\'es\')||0);let t=window.val(\'st\'),a=window.val(\'sa\'),tr=window.val(\'str\'),ord=parseInt(window.val(\'so\')||0);let start=sm*60+ss;let end=em*60+es;if(id){let o=window.App.segs.find(x=>x.id===id);if(o){o.title=t;o.start=start;o.end=end;o.arabic=a;o.translation=tr;o.order=ord;window.dbSave(\'segs\',id,o);}}else{let nid=Date.now();let nD={id:nid,surahId:' + window.App.actSurahId + ',levelId:' + window.getLvl() + ',title:t,start:start,end:end,arabic:a,translation:tr,order:ord};window.App.segs.push(nD);window.dbSave(\'segs\',nid,nD);}window.App.modal=null;window.render(true)"><div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mb-4"><div><label class="block text-[10px] text-emerald-600 font-bold mb-1">AWAL AYAT</label><select id="seg-start-ayat" onchange="window.autoFillAyat()" class="input-std cursor-pointer"></select></div><div><label class="block text-[10px] text-emerald-600 font-bold mb-1">AKHIR AYAT</label><select id="seg-end-ayat" onchange="window.autoFillAyat()" class="input-std cursor-pointer"></select></div></div><div class="grid grid-cols-3 gap-3 md:gap-4 mb-4"><div class="col-span-2"><label class="block text-[10px] text-emerald-600 font-bold mb-1">JUDUL</label><input type="text" id="st" required value="' + (sg?window.esc(sg.title):'') + '" class="input-std bg-slate-100 dark:bg-[#1a2e26] pointer-events-none text-slate-500" readonly></div><div class="col-span-1"><label class="block text-[10px] text-emerald-600 font-bold mb-1">URUTAN</label><input type="number" id="so" required value="' + defaultOrder + '" class="input-std text-center focus:!bg-white"></div></div><div class="mb-4"><label class="block text-[10px] text-slate-500 font-bold mb-1">TEKS ARAB</label><textarea id="sa" rows="3" dir="rtl" class="input-std font-arabic text-xl">' + (sg?window.esc(sg.arabic):'') + '</textarea></div><div class="mb-4"><label class="block text-[10px] text-slate-500 font-bold mb-1">TERJEMAH</label><textarea id="str" rows="2" class="input-std text-xs md:text-sm">' + (sg?window.esc(sg.translation):'') + '</textarea></div><div class="grid grid-cols-2 gap-3 md:gap-4 mb-6"><div><label class="block text-[10px] text-slate-500 font-bold text-center mb-2">MULAI (M:D)</label><div class="flex justify-center items-center gap-1"><input type="number" id="sm" value="' + (sg?Math.floor(sg.start/60):'0') + '" class="input-std !w-14 !p-1.5 text-center"><span class="font-bold">:</span><input type="number" id="ss" value="' + (sg?sg.start%60:'0') + '" class="input-std !w-14 !p-1.5 text-center"></div></div><div><label class="block text-[10px] text-slate-500 font-bold text-center mb-2">SELESAI (M:D)</label><div class="flex justify-center items-center gap-1"><input type="number" id="em" value="' + (sg?Math.floor(sg.end/60):'0') + '" class="input-std !w-14 !p-1.5 text-center"><span class="font-bold">:</span><input type="number" id="es" value="' + (sg?sg.end%60:'0') + '" class="input-std !w-14 !p-1.5 text-center"></div></div></div><button type="submit" class="btn-std w-full">Simpan Segmen</button></form></div></div>';
+            mHtml += '<div class="modal-overlay !flex"><div class="modal-box !max-w-xl"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold dark:text-white">' + (sg ? 'Edit' : 'Tambah') + ' Ayat</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white"><i class="ph ph-x text-xl"></i></button></div>' + vidHtml + '<div id="segment-loading" class="hidden text-center py-10 text-emerald-500 font-bold animate-pulse">Memuat data ayat Al-Qur\'an...</div><form id="sf" onsubmit="event.preventDefault();let id=' + (window.App.modalData||'null') + ';let sm=parseInt(window.val(\'sm\')||0),ss=parseInt(window.val(\'ss\')||0),em=parseInt(window.val(\'em\')||0),es=parseInt(window.val(\'es\')||0);let t=window.val(\'st\'),a=window.val(\'sa\'),tr=window.val(\'str\');let start=sm*60+ss;let end=em*60+es;if(id){let o=window.App.segs.find(x=>x.id===id);if(o){o.title=t;o.start=start;o.end=end;o.arabic=a;o.translation=tr;window.dbSave(\'segs\',id,o);}}else{let nid=Date.now();let curSgs=window.getSgs();let maxO=curSgs.length>0?Math.max(...curSgs.map(x=>x.order!==undefined?x.order:0)):0;let nD={id:nid,surahId:' + window.App.actSurahId + ',levelId:' + window.getLvl() + ',title:t,start:start,end:end,arabic:a,translation:tr,order:maxO+1};window.App.segs.push(nD);window.dbSave(\'segs\',nid,nD);}window.App.modal=null;window.render(true)"><div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mb-4"><div><label class="block text-[10px] text-emerald-600 font-bold mb-1">AWAL AYAT</label><select id="seg-start-ayat" onchange="window.autoFillAyat()" class="input-std cursor-pointer"></select></div><div><label class="block text-[10px] text-emerald-600 font-bold mb-1">AKHIR AYAT</label><select id="seg-end-ayat" onchange="window.autoFillAyat()" class="input-std cursor-pointer"></select></div></div><div class="mb-4"><label class="block text-[10px] text-emerald-600 font-bold mb-1">JUDUL</label><input type="text" id="st" required value="' + (sg?window.esc(sg.title):'') + '" class="input-std bg-slate-100 dark:bg-[#1a2e26] pointer-events-none text-slate-500" readonly></div><div class="mb-4"><label class="block text-[10px] text-slate-500 font-bold mb-1">TEKS ARAB</label><textarea id="sa" rows="3" dir="rtl" class="input-std font-arabic text-xl">' + (sg?window.esc(sg.arabic):'') + '</textarea></div><div class="mb-4"><label class="block text-[10px] text-slate-500 font-bold mb-1">TERJEMAH</label><textarea id="str" rows="2" class="input-std text-xs md:text-sm">' + (sg?window.esc(sg.translation):'') + '</textarea></div><div class="grid grid-cols-2 gap-3 md:gap-4 mb-6"><div><label class="block text-[10px] text-slate-500 font-bold text-center mb-2">MULAI (M:D)</label><div class="flex justify-center items-center gap-1"><input type="number" id="sm" value="' + (sg?Math.floor(sg.start/60):'0') + '" class="input-std !w-14 !p-1.5 text-center"><span class="font-bold">:</span><input type="number" id="ss" value="' + (sg?sg.start%60:'0') + '" class="input-std !w-14 !p-1.5 text-center"></div></div><div><label class="block text-[10px] text-slate-500 font-bold text-center mb-2">SELESAI (M:D)</label><div class="flex justify-center items-center gap-1"><input type="number" id="em" value="' + (sg?Math.floor(sg.end/60):'0') + '" class="input-std !w-14 !p-1.5 text-center"><span class="font-bold">:</span><input type="number" id="es" value="' + (sg?sg.end%60:'0') + '" class="input-std !w-14 !p-1.5 text-center"></div></div></div><button type="submit" class="btn-std w-full">Simpan Segmen</button></form></div></div>';
         } else if (window.App.modal === 'grade') {
             let sb = window.App.subs.find(x=>x.id===window.App.modalData);
             let btns = '';
@@ -1462,7 +1476,6 @@
             let stuKelas = stu ? window.esc(stu.kelas) : '-';
             let lvName = lv ? window.esc(lv.name) : 'Level';
 
-            // Responsif font size untuk nama yang panjang
             let nameFontSize = '24px';
             if (stuName.length > 22) nameFontSize = '16px';
             else if (stuName.length > 14) nameFontSize = '20px';
@@ -1471,19 +1484,15 @@
             <div class="modal-overlay !flex !items-center !justify-center !p-4 z-[500]">
               <div class="w-full max-w-[380px] mx-auto flex flex-col gap-4 max-h-[95vh] overflow-y-auto overflow-x-auto hide-scrollbar pb-10 sm:pb-0 items-center">
                 
-                <!-- THE REVAMPED ACHIEVEMENT CARD (WHITE BG, SHARP CORNERS, GREEN OUTLINE) -->
                 <div id="achievement-card-node" style="width: 360px; min-width: 360px; height: 520px; min-height: 520px; position: relative; background-color: #ffffff; border-radius: 0px; display: flex; flex-direction: column; align-items: center; padding: 32px 24px; box-sizing: border-box; margin: 0 auto; overflow: hidden;">
                     
-                    <!-- Force Font Embedding for Mobile Screenshots -->
                     <style>
                         @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600;700;800&family=Katibeh&family=Merriweather:wght@700;900&display=swap');
                         @import url('https://fonts.googleapis.com/earlyaccess/thuluth.css');
                     </style>
 
-                    <!-- Decorative Ornaments Background (Subtle Watermark) -->
                     <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: url('https://images.weserv.nl/?url=https://cdn.pixabay.com/photo/2019/05/04/17/36/quran-4178711_1280.jpg&w=800&output=jpg'); background-size: cover; background-position: center; opacity: 0.05; z-index: 0; pointer-events: none;"></div>
 
-                    <!-- Top Content: Logo & School Name -->
                     <div style="position: relative; z-index: 10; width: 100%; text-align: center; margin-bottom: 24px;">
                         ${window.App.schLogo ? `<img src="${window.App.schLogo}" style="height: 50px; max-width: 180px; object-fit: contain; margin: 0 auto; display: block;">` : `<svg width="46" height="46" fill="#059669" viewBox="0 0 256 256" style="margin: 0 auto;"><path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,160H40V56H216V200ZM160,128a8,8,0,0,1-4.06,6.91l-48,28A8,8,0,0,1,96,156V100a8,8,0,0,1,11.94-6.91l48,28A8,8,0,0,1,160,128Z"></path></svg>`}
                         <div style="font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 800; color: #064e3b; text-transform: uppercase; letter-spacing: 0.15em; margin-top: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">
@@ -1499,7 +1508,6 @@
                         <p style="font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 700; color: #059669; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; width: 100%; overflow: hidden; text-overflow: ellipsis;">Kelas ${stuKelas} &bull; ${window.getHName(sb.halaqohId)}</p>
                     </div>
 
-                    <!-- Framed Detail Card -->
                     <div style="position: relative; z-index: 10; background: #ffffff; border: 2px solid #10b981; border-radius: 20px; padding: 20px; width: 100%; text-align: center; flex-shrink: 0; box-sizing: border-box; margin-bottom: 24px;">
                         <p style="font-family: 'Inter', sans-serif; font-size: 9px; font-weight: 800; color: #059669; text-transform: uppercase; letter-spacing: 0.2em; margin: 0 0 6px 0; white-space: nowrap;">Telah Menyetorkan</p>
                         <h3 style="font-family: 'Merriweather', serif; font-size: 17px; font-weight: 800; color: #0f172a; margin: 0 0 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">${window.esc(sur?.title||'')}</h3>
@@ -1517,7 +1525,6 @@
                         </div>
                     </div>
 
-                    <!-- Bottom Footer Text -->
                     <div style="position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; flex-shrink: 0;">
                         <span style="font-family: 'Inter', sans-serif; font-size: 18px; font-weight: 800; letter-spacing: -0.02em;">
                             <span style="color: #1e293b;">Tahfidz</span><span style="color: #10b981;">Qu</span>
@@ -1525,7 +1532,6 @@
                     </div>
                 </div>
 
-                <!-- THE MODAL BUTTONS -->
                 <div class="flex flex-col gap-2.5 w-full max-w-[360px] shrink-0 mt-2">
                     <div class="flex gap-2.5">
                         <button onclick="window.shareCard()" id="btn-share-card" class="flex-1 py-3.5 bg-emerald-500 text-white rounded-xl font-bold text-xs flex justify-center items-center gap-2 hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/30 active:scale-95"><i class="ph-bold ph-share-network text-lg"></i> Share</button>
@@ -1589,7 +1595,6 @@
             let arabText = window.App.currentSurahAyatData[0].ayahs[id].text;
             
             if (i === 1 && !isFatihah) {
-                // Bersihkan Bismillah langsung saat fetch dari API
                 arabText = arabText.replace(/^[\u200B-\u200D\uFEFF\u200E\u200F]*بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\s*/, '').trim();
                 arabText = arabText.replace(/^[\u200B-\u200D\uFEFF\u200E\u200F]*بِسْمِ[\s\S]+?ٱلرَّحِيمِ\s*/, '').trim();
             }
@@ -1601,7 +1606,6 @@
         window.val('st',gt); window.val('sa',aT.join(' ')); window.val('str',iT.join(' '));
     };
 
-    // PENGAMAN: Muat ulang status navigasi terakhir agar tidak reset ke beranda saat di-refresh
     window.addEventListener('DOMContentLoaded', () => {
         if(window.App.yt && typeof window.App.yt.stopVideo === 'function') {
             window.App.yt.stopVideo();
@@ -1702,7 +1706,6 @@
              const obj = snap.val();
              window.App[c] = obj ? Object.keys(obj).map(k => ({id: isNaN(k) ? k : Number(k), ...obj[k]})) : [];
              
-             // --- FIX: Default to Juz 30 if it exists and current actJuzId is invalid/empty ---
              if (c === 'juzs' && window.App.juzs.length > 0) {
                  if (!window.App.juzs.some(j => j.id == window.App.actJuzId)) {
                      let defaultJuz = window.App.juzs.find(j => j.id == 30 || String(j.name).includes("30"));
