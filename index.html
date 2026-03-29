@@ -581,6 +581,7 @@
         }
         
         window.switchView('player');
+        window.initYTPlayer();
     };
 
     window.initYTPlayer = function() {
@@ -588,8 +589,8 @@
         var sur = window.App.surahs.find(s=>s.id===window.App.actSurahId);
         let vId = sur?.videoId || '';
         
-        if (window.App.yt) { 
-            try { if(typeof window.App.yt.destroy === 'function') window.App.yt.destroy(); } catch(e){} 
+        if (window.App.yt && typeof window.App.yt.destroy === 'function') { 
+            try { window.App.yt.destroy(); } catch(e){} 
             window.App.yt = null; 
         }
         
@@ -600,13 +601,9 @@
 
         if (!vId) return;
 
-        let origin = window.location.protocol === 'file:' ? '*' : window.location.origin;
-
         window.App.yt = new window.YT.Player('youtube-player', {
-            videoId: vId, 
-            playerVars: { 
-                controls:0, disablekb:1, rel:0, modestbranding:1, playsinline:1, enablejsapi:1, origin: origin 
-            },
+            host: 'https://www.youtube-nocookie.com', videoId: vId, 
+            playerVars: { controls:0, disablekb:1, rel:0, modestbranding:1, playsinline:1 },
             events: {
                 onReady: e => { e.target.setPlaybackRate(window.App.speed); },
                 onStateChange: e => {
@@ -984,7 +981,7 @@
                   pWrap.classList.add('absolute', 'inset-0', 'z-0');
                   if (pWrap.parentNode !== pDest) {
                       pDest.appendChild(pWrap);
-                      window.initYTPlayer();
+                      setTimeout(() => window.initYTPlayer(), 50);
                   } else if(!window.App.yt) window.initYTPlayer();
               }
               window.updatePlayerDOM();
