@@ -1,0 +1,1841 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>TahfidzQu</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600;700;800&family=Katibeh&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/earlyaccess/thuluth.css" rel="stylesheet">
+  
+  <script src="https://cdn.jsdelivr.net/npm/modern-screenshot"></script>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { 
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { 
+              sans: ['Inter', 'sans-serif'],
+              serif: ['Merriweather', 'serif'] 
+          },
+          boxShadow: { 'soft': '0 4px 20px -2px rgba(0,0,0,0.05)' }
+        }
+      }
+    }
+  </script>
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <style>
+    /* FIX UNTUK LAYAR HP (MOBILE VIEWPORT) */
+    html, body {
+      height: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+      overscroll-behavior-y: none;
+    }
+    @supports (-webkit-touch-callout: none) {
+      html, body {
+        height: -webkit-fill-available;
+      }
+    }
+    
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .dark ::-webkit-scrollbar-thumb { background: #1a2e26; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .font-arabic { font-family: 'Amiri', serif !important; line-height: 2.8 !important; padding-top: 0.5rem; padding-bottom: 0.5rem; direction: rtl; text-align: right; }
+  </style>
+
+  <style type="text/tailwindcss">
+    @layer components {
+      .input-std { @apply w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-sm text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-inner dark:bg-[#15241e] dark:border-[#1a2e26] dark:text-white dark:focus:ring-emerald-500/40 transition-all duration-200; }
+      .btn-std { @apply w-full py-3.5 bg-emerald-500 text-white font-bold rounded-2xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/30 active:scale-95 disabled:opacity-50; }
+      .modal-overlay { @apply fixed inset-0 bg-slate-900/80 flex items-center justify-center z-[100] backdrop-blur-sm transition-all p-4; }
+      .modal-box { @apply bg-white border border-slate-100 rounded-[2rem] w-full max-w-[420px] p-8 shadow-2xl dark:bg-[#0f1915] dark:border-[#1a2e26] transition-all max-h-[90vh] overflow-y-auto; }
+      .card-std { @apply bg-white border border-slate-100 shadow-soft dark:bg-[#15241e] dark:border-[#1a2e26] rounded-3xl p-5 hover:border-emerald-400 hover:shadow-xl dark:hover:border-emerald-500/50 transition-all duration-300 cursor-pointer flex flex-col h-full relative overflow-hidden; }
+      .btn-action { @apply flex-1 bg-slate-50 hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 border border-slate-200 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 dark:bg-[#0a120f] dark:border-[#1a2e26] dark:hover:bg-[#15241e] dark:text-gray-300; }
+      .tab-active { @apply bg-emerald-500 text-white dark:text-black shadow-lg shadow-emerald-500/30 border border-emerald-500 dark:border-transparent px-4 py-2 md:px-6 md:py-2.5 rounded-full font-bold transition-all flex-shrink-0 active:scale-95 text-[11px] md:text-sm; }
+      .tab-inactive { @apply bg-white border border-slate-200 text-slate-500 hover:text-emerald-600 hover:bg-slate-50 dark:bg-[#15241e] dark:border-[#1a2e26] dark:text-gray-400 dark:hover:text-white px-4 py-2 md:px-6 md:py-2.5 rounded-full font-bold transition-all shadow-sm flex-shrink-0 active:scale-95 text-[11px] md:text-sm; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-[#0a120f] dark:text-gray-200 font-sans flex flex-col w-full h-full transition-colors duration-300 antialiased">
+
+  <div id="app-root" class="flex flex-col w-full h-full relative z-10"></div>
+  
+  <div id="modal-root" class="relative z-[300] hidden"></div>
+
+  <div id="persistent-player-wrapper" class="hidden pointer-events-none">
+      <div id="youtube-player" class="w-full h-full"></div>
+  </div>
+
+  <script>
+    window.esc = function(str) {
+        if (!str) return '';
+        return String(str).replace(/[&<>'"]/g, tag => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag] || tag));
+    };
+
+    window.getEl = function(id) { return document.getElementById(id); };
+    window.hide = function(id) { var e = window.getEl(id); if(e) e.classList.add('hidden'); };
+    window.show = function(id) { var e = window.getEl(id); if(e) e.classList.remove('hidden'); };
+    window.val = function(id, v) { var e = window.getEl(id); if(!e) return ''; if(v !== undefined) e.value = v; return e.value; };
+    window.text = function(id, t) { var e = window.getEl(id); if(e) e.innerText = t; };
+
+    window.fixAudio = function(el) {
+        if (el.dataset.fixed === "true") return;
+        let doFix = function() {
+            if (el.dataset.fixed === "true") return;
+            el.dataset.fixed = "true"; 
+            let m = el.muted;
+            el.muted = true; 
+            let onSeeked = function() {
+                el.removeEventListener('seeked', onSeeked);
+                el.currentTime = 0; 
+                setTimeout(() => { el.muted = m; }, 50); 
+            };
+            el.addEventListener('seeked', onSeeked);
+            el.currentTime = 1e8; 
+        };
+        el.addEventListener('play', doFix);
+        if (el.readyState >= 1) { doFix(); }
+    };
+
+    window.simulateScreenshot = function() {
+        let f = document.createElement('div');
+        f.style.position = 'fixed';
+        f.style.top = '0'; f.style.left = '0';
+        f.style.width = '100vw'; f.style.height = '100vh';
+        f.style.backgroundColor = '#ffffff';
+        f.style.zIndex = '999999';
+        f.style.opacity = '0.9';
+        f.style.transition = 'opacity 0.4s ease-out';
+        document.body.appendChild(f);
+        
+        try {
+            let a = new Audio('https://actions.google.com/sounds/v1/ui/camera_shutter.ogg');
+            a.volume = 0.5;
+            a.play().catch(e=>{});
+        } catch(err){}
+
+        setTimeout(() => { f.style.opacity = '0'; }, 50);
+        setTimeout(() => { if(f.parentNode) f.parentNode.removeChild(f); }, 500);
+    };
+
+    window.downloadCard = function() {
+        let node = document.getElementById('achievement-card-node');
+        let btn = document.getElementById('btn-download-card');
+        if(!node || !window.modernScreenshot) return;
+        
+        let oldHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-lg"></i> Menyimpan...';
+        btn.disabled = true;
+
+        window.simulateScreenshot();
+
+        document.fonts.ready.then(() => {
+            setTimeout(() => {
+                modernScreenshot.domToPng(node, { scale: 3, backgroundColor: null })
+                .then(function (dataUrl) {
+                    let link = document.createElement('a');
+                    link.download = 'Syahadah_TahfidzQu.png';
+                    link.href = dataUrl;
+                    link.click();
+                    btn.innerHTML = oldHtml;
+                    btn.disabled = false;
+                })
+                .catch(function (error) {
+                    window.showAlert('Gagal screenshot kartu. ' + error);
+                    btn.innerHTML = oldHtml;
+                    btn.disabled = false;
+                });
+            }, 300);
+        });
+    };
+
+    window.shareCard = function() {
+        let node = document.getElementById('achievement-card-node');
+        let btn = document.getElementById('btn-share-card');
+        if(!node || !window.modernScreenshot) return;
+
+        let oldHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-lg"></i> Memproses...';
+        btn.disabled = true;
+
+        window.simulateScreenshot();
+
+        document.fonts.ready.then(() => {
+            setTimeout(() => {
+                modernScreenshot.domToPng(node, { scale: 3, backgroundColor: null })
+                .then(async function (dataUrl) {
+                    try {
+                        let blob = await (await fetch(dataUrl)).blob();
+                        let file = new File([blob], 'Syahadah_TahfidzQu.png', { type: 'image/png' });
+
+                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                            await navigator.share({
+                                title: 'Syahadah Tahfidz',
+                                text: 'Alhamdulillah, pencapaian hafalan baru!',
+                                files: [file]
+                            });
+                        } else {
+                            window.showAlert('Perangkat ini tidak mendukung fitur Share gambar langsung. Silakan Download gambarnya terlebih dahulu.');
+                        }
+                    } catch (e) {
+                        if (e && e.name !== 'AbortError') {
+                            window.showAlert('Gagal membagikan kartu. Coba gunakan fitur Download.');
+                        }
+                    }
+                    btn.innerHTML = oldHtml;
+                    btn.disabled = false;
+                })
+                .catch(function (error) {
+                    window.showAlert('Gagal memproses kartu. ' + error);
+                    btn.innerHTML = oldHtml;
+                    btn.disabled = false;
+                });
+            }, 300);
+        });
+    };
+
+    const Q_SURAHS = JSON.parse('[{"no":1,"name":"Al-Fatihah","juz":[1]},{"no":2,"name":"Al-Baqarah","juz":[1,2,3]},{"no":3,"name":"Ali \'Imran","juz":[3,4]},{"no":4,"name":"An-Nisa\'","juz":[4,5,6]},{"no":5,"name":"Al-Ma\'idah","juz":[6,7]},{"no":6,"name":"Al-An\'am","juz":[7,8]},{"no":7,"name":"Al-A\'raf","juz":[8,9]},{"no":8,"name":"Al-Anfal","juz":[9,10]},{"no":9,"name":"At-Taubah","juz":[10,11]},{"no":10,"name":"Yunus","juz":[11]},{"no":11,"name":"Hud","juz":[11,12]},{"no":12,"name":"Yusuf","juz":[12,13]},{"no":13,"name":"Ar-Ra\'d","juz":[13]},{"no":14,"name":"Ibrahim","juz":[13]},{"no":15,"name":"Al-Hijr","juz":[14]},{"no":16,"name":"An-Nahl","juz":[14]},{"no":17,"name":"Al-Isra\'","juz":[15]},{"no":18,"name":"Al-Kahf","juz":[15,16]},{"no":19,"name":"Maryam","juz":[16]},{"no":20,"name":"Taha","juz":[16]},{"no":21,"name":"Al-Anbiya\'","juz":[17]},{"no":22,"name":"Al-Hajj","juz":[17]},{"no":23,"name":"Al-Mu\'minun","juz":[18]},{"no":24,"name":"An-Nur","juz":[18]},{"no":25,"name":"Al-Furqan","juz":[18,19]},{"no":26,"name":"Asy-Syu\'ara\'","juz":[19]},{"no":27,"name":"An-Naml","juz":[19,20]},{"no":28,"name":"Al-Qasas","juz":[20]},{"no":29,"name":"Al-\'Ankabut","juz":[20,21]},{"no":30,"name":"Ar-Rum","juz":[21]},{"no":31,"name":"Luqman","juz":[21]},{"no":32,"name":"As-Sajdah","juz":[21]},{"no":33,"name":"Al-Ahzab","juz":[21,22]},{"no":34,"name":"Saba\'","juz":[22]},{"no":35,"name":"Fatir","juz":[22]},{"no":36,"name":"Yasin","juz":[22,23]},{"no":37,"name":"As-Saffat","juz":[23]},{"no":38,"name":"Sad","juz":[23]},{"no":39,"name":"Az-Zumar","juz":[23,24]},{"no":40,"name":"Ghafir","juz":[24]},{"no":41,"name":"Fussilat","juz":[24,25]},{"no":42,"name":"Asy-Syura","juz":[25]},{"no":43,"name":"Az-Zukhruf","juz":[25]},{"no":44,"name":"Ad-Dukhan","juz":[25]},{"no":45,"name":"Al-Jasiyah","juz":[25]},{"no":46,"name":"Al-Ahqaf","juz":[26]},{"no":47,"name":"Muhammad","juz":[26]},{"no":48,"name":"Al-Fath","juz":[26]},{"no":49,"name":"Al-Hujurat","juz":[26]},{"no":50,"name":"Qaf","juz":[26]},{"no":51,"name":"Az-Zariyat","juz":[26,27]},{"no":52,"name":"At-Tur","juz":[27]},{"no":53,"name":"An-Najm","juz":[27]},{"no":54,"name":"Al-Qamar","juz":[27]},{"no":55,"name":"Ar-Rahman","juz":[27]},{"no":56,"name":"Al-Waqi\'ah","juz":[27]},{"no":57,"name":"Al-Hadid","juz":[27]},{"no":58,"name":"Al-Mujadilah","juz":[28]},{"no":59,"name":"Al-Hasyr","juz":[28]},{"no":60,"name":"Al-Mumtahanah","juz":[28]},{"no":61,"name":"As-Saff","juz":[28]},{"no":62,"name":"Al-Jumu\'ah","juz":[28]},{"no":63,"name":"Al-Munafiqun","juz":[28]},{"no":64,"name":"At-Tagabun","juz":[28]},{"no":65,"name":"At-Talaq","juz":[28]},{"no":66,"name":"At-Tahrim","juz":[28]},{"no":67,"name":"Al-Mulk","juz":[29]},{"no":68,"name":"Al-Qalam","juz":[29]},{"no":69,"name":"Al-Haqqah","juz":[29]},{"no":70,"name":"Al-Ma\'arij","juz":[29]},{"no":71,"name":"Nuh","juz":[29]},{"no":72,"name":"Al-Jinn","juz":[29]},{"no":73,"name":"Al-Muzzammil","juz":[29]},{"no":74,"name":"Al-Muddassir","juz":[29]},{"no":75,"name":"Al-Qiyamah","juz":[29]},{"no":76,"name":"Al-Insan","juz":[29]},{"no":77,"name":"Al-Mursalat","juz":[29]},{"no":78,"name":"An-Naba\'","juz":[30]},{"no":79,"name":"An-Nazi\'at","juz":[30]},{"no":80,"name":"\'Abasa","juz":[30]},{"no":81,"name":"At-Takwir","juz":[30]},{"no":82,"name":"Al-Infitar","juz":[30]},{"no":83,"name":"Al-Mutaffifin","juz":[30]},{"no":84,"name":"Al-Insyiqaq","juz":[30]},{"no":85,"name":"Al-Buruj","juz":[30]},{"no":86,"name":"At-Tariq","juz":[30]},{"no":87,"name":"Al-A\'la","juz":[30]},{"no":88,"name":"Al-Gasyiyah","juz":[30]},{"no":89,"name":"Al-Fajr","juz":[30]},{"no":90,"name":"Al-Balad","juz":[30]},{"no":91,"name":"Asy-Syams","juz":[30]},{"no":92,"name":"Al-Lail","juz":[30]},{"no":93,"name":"Ad-Duha","juz":[30]},{"no":94,"name":"Al-Insyirah","juz":[30]},{"no":95,"name":"At-Tin","juz":[30]},{"no":96,"name":"Al-\'Alaq","juz":[30]},{"no":97,"name":"Al-Qadr","juz":[30]},{"no":98,"name":"Al-Bayyinah","juz":[30]},{"no":99,"name":"Az-Zalzalah","juz":[30]},{"no":100,"name":"Al-\'Adiyat","juz":[30]},{"no":101,"name":"Al-Qari\'ah","juz":[30]},{"no":102,"name":"At-Takasur","juz":[30]},{"no":103,"name":"Al-\'Asr","juz":[30]},{"no":104,"name":"Al-Humazah","juz":[30]},{"no":105,"name":"Al-Fil","juz":[30]},{"no":106,"name":"Quraisy","juz":[30]},{"no":107,"name":"Al-Ma\'un","juz":[30]},{"no":108,"name":"Al-Kausar","juz":[30]},{"no":109,"name":"Al-Kafirun","juz":[30]},{"no":110,"name":"An-Nasr","juz":[30]},{"no":111,"name":"Al-Lahab","juz":[30]},{"no":112,"name":"Al-Ikhlas","juz":[30]},{"no":113,"name":"Al-Falaq","juz":[30]},{"no":114,"name":"An-Nas","juz":[30]}]');
+
+    let savedNavState = {};
+    try { 
+        let isReload = false;
+        if(window.performance){
+            let navEntries = window.performance.getEntriesByType("navigation");
+            if(navEntries.length > 0 && navEntries[0].type === "reload") isReload = true;
+            else if(window.performance.navigation && window.performance.navigation.type === 1) isReload = true;
+        }
+        
+        if(isReload){
+            savedNavState = JSON.parse(sessionStorage.getItem('tahfidzqu_nav_state')) || {}; 
+        } 
+        else {
+            sessionStorage.removeItem('tahfidzqu_nav_state');
+        }
+    } catch(e){}
+
+    window.App = {
+      theme: localStorage.getItem('tahfidzqu_theme') || 'light',
+      adminLvl: savedNavState.adminLvl !== undefined ? savedNavState.adminLvl : 0, 
+      view: savedNavState.view || 'home', 
+      schLogo: localStorage.getItem('tahfidzqu_logo') || '',
+      schSub: localStorage.getItem('tahfidzqu_subtitle') || 'Madrasah Tahfidz Quran',
+      search: '', searchSiswa: '', loginAttempts: 0, lockoutTime: 0, loginError: '', inactivityTimer: null,
+      customDialog: { show: false, type: 'alert', message: '', onConfirm: null },
+      juzs: [], surahs: [], levels: [], segs: [], ustadz: [], halaqohs: [], siswas: [], subs: [],
+      actJuzId: savedNavState.actJuzId || 30, 
+      actSurahId: savedNavState.actSurahId || null, 
+      actLevelId: savedNavState.actLevelId || null,
+      actSegId: savedNavState.actSegId || null,
+      yt: null, isPlay: false, repTarget: 7, curRep: 0, speed: 1, interval: null,
+      modal: null, modalData: null, 
+      filter: savedNavState.filter || {u:'all', h:'all', s:'all'}, 
+      hierSel: savedNavState.hierSel || {u:null, h:null, s:null},
+      rec: {is:false, secs:0, int:null, src: savedNavState.recSrc || 'player'}, 
+      resubmitId: savedNavState.resubmitId || null, 
+      segOrder: savedNavState.segOrder || 'asc',
+      editingUstadzId: null, editingHalaqohId: null, editingSiswaId: null,
+      currentGradingAudioUrl: null, isGradingRecording: false, gradingMediaRecorder: null, gradingAudioChunks: [],
+      studentMediaRecorder: null, studentAudioChunks: [], currentStudentAudioUrl: null,
+      audioObj: null, activeAudioId: null, activeAudioDur: 0,
+      loggedInUstadzId: savedNavState.loggedInUstadzId || null,
+      firebaseError: '' 
+    };
+
+    window.fmtT = s => `${Math.floor(s/60).toString().padStart(2,'0')}:${Math.floor(s%60).toString().padStart(2,'0')}`;
+    
+    if (!window.App.audioObj) {
+        window.App.audioObj = new Audio();
+        
+        window.App.audioObj.addEventListener('timeupdate', () => {
+            let id = window.App.activeAudioId;
+            if(!id) return;
+            
+            let elTime = window.getEl('audio-time-' + id);
+            let elBar = window.getEl('audio-bar-' + id);
+            let a = window.App.audioObj;
+            
+            let ct = a.currentTime;
+            if (!ct || isNaN(ct)) ct = 0;
+            
+            if(elTime) elTime.innerText = window.fmtT(ct); 
+            
+            if(elBar) {
+                let d = window.App.activeAudioDur || a.duration;
+                if (!d || isNaN(d) || d === Infinity || d <= 0) d = Math.max(10, ct + 2);
+                let pct = Math.min(100, (ct / d) * 100);
+                elBar.style.width = pct + '%';
+            }
+        });
+        
+        window.App.audioObj.addEventListener('ended', () => {
+            let id = window.App.activeAudioId;
+            if(!id) return;
+            let isUstadz = id.includes('_ust_') || id === 'grade_modal';
+            let btn = window.getEl('audio-btn-' + id);
+            let elBar = window.getEl('audio-bar-' + id);
+            let elTime = window.getEl('audio-time-' + id);
+            if(btn) btn.innerHTML = '<i class="ph-fill ph-play ' + (isUstadz ? 'text-xs' : 'text-sm') + '"></i>';
+            if(elBar) elBar.style.width = '0%';
+            if(elTime) elTime.innerText = '00:00';
+            window.App.activeAudioId = null;
+        });
+
+        window.App.audioObj.addEventListener('error', () => {
+            let id = window.App.activeAudioId;
+            if(id) {
+                let isUstadz = id.includes('_ust_') || id === 'grade_modal';
+                let btn = window.getEl('audio-btn-' + id);
+                if(btn) btn.innerHTML = '<i class="ph-fill ph-play ' + (isUstadz ? 'text-xs' : 'text-sm') + '"></i>';
+                window.App.activeAudioId = null;
+            }
+        });
+    }
+
+    window.playCustomAudio = function(id, url, savedDuration) {
+        if (!window.App.audioObj) return;
+        let a = window.App.audioObj;
+        let isUstadz = id.includes('_ust_') || id === 'grade_modal';
+        let getIcon = (state) => `<i class="ph-fill ${state === 'play' ? 'ph-play' : 'ph-pause'} ${isUstadz ? 'text-xs' : 'text-sm'}"></i>`;
+
+        if (window.App.activeAudioId === id) {
+            if (a.paused) { 
+                a.play(); 
+                let btn = window.getEl('audio-btn-' + id);
+                if(btn) btn.innerHTML = getIcon('pause'); 
+            } else { 
+                a.pause(); 
+                let btn = window.getEl('audio-btn-' + id);
+                if(btn) btn.innerHTML = getIcon('play'); 
+            }
+            return;
+        }
+        
+        if (window.App.activeAudioId) {
+            let oldIsUst = window.App.activeAudioId.includes('_ust_') || window.App.activeAudioId === 'grade_modal';
+            let oldBtn = window.getEl('audio-btn-' + window.App.activeAudioId);
+            if(oldBtn) oldBtn.innerHTML = `<i class="ph-fill ph-play ${oldIsUst ? 'text-xs' : 'text-sm'}"></i>`;
+            let oldBar = window.getEl('audio-bar-' + window.App.activeAudioId);
+            if(oldBar) oldBar.style.width = '0%';
+            let oldTime = window.getEl('audio-time-' + window.App.activeAudioId);
+            if(oldTime) oldTime.innerText = '00:00';
+        }
+        
+        window.App.activeAudioId = id;
+        window.App.activeAudioDur = savedDuration;
+        a.src = url;
+        a.play().catch(e => {
+            window.showAlert('Tidak dapat memutar rekaman. Browser butuh interaksi.');
+            let btn = window.getEl('audio-btn-' + id);
+            if(btn) btn.innerHTML = getIcon('play');
+            window.App.activeAudioId = null;
+        });
+        
+        let newBtn = window.getEl('audio-btn-' + id);
+        if(newBtn) newBtn.innerHTML = getIcon('pause');
+    };
+
+    window.renderCustomAudio = function(id, url, duration, isUstadz = false) {
+        if (!url) return '<span class="text-[10px] md:text-xs text-slate-400 italic bg-slate-50 dark:bg-[#1a2e26] px-4 py-3 rounded-2xl border border-dashed border-slate-200 dark:border-transparent w-full text-center inline-block pointer-events-none">Rekaman tidak tersedia</span>';
+        
+        let isPlay = (window.App.activeAudioId === id && window.App.audioObj && !window.App.audioObj.paused);
+        let ic = isPlay ? 'ph-pause' : 'ph-play';
+        let btnColor = isUstadz ? 'bg-blue-500 hover:bg-blue-600' : 'bg-emerald-500 hover:bg-emerald-600';
+        let barColor = isUstadz ? 'bg-blue-500' : 'bg-emerald-500';
+        let iconSize = isUstadz ? 'text-xs' : 'text-sm';
+        let btnSize = isUstadz ? 'w-8 h-8 md:w-9 md:h-9' : 'w-10 h-10 md:w-11 md:h-11';
+        
+        return '<div class="flex items-center gap-2 md:gap-3 bg-slate-50 dark:bg-[#0a120f] border border-slate-200 dark:border-[#1a2e26] p-1.5 md:p-2 rounded-full w-full shadow-sm" onclick="event.stopPropagation();"><button type="button" id="audio-btn-' + id + '" onclick="window.playCustomAudio(\'' + id + '\', \'' + url + '\', ' + duration + '); event.stopPropagation();" class="' + btnSize + ' rounded-full ' + btnColor + ' text-white flex items-center justify-center shrink-0 transition-colors shadow-md active:scale-95"><i class="ph-fill ' + ic + ' ' + iconSize + '"></i></button><div class="flex-1 flex items-center gap-2 pr-2 md:pr-3"><div class="h-1.5 flex-1 bg-slate-200 dark:bg-[#15241e] rounded-full overflow-hidden relative"><div id="audio-bar-' + id + '" class="absolute left-0 top-0 h-full ' + barColor + ' rounded-full transition-all duration-100" style="width: ' + (isPlay?'auto':'0%') + '"></div></div><span id="audio-time-' + id + '" class="text-[9px] md:text-[10px] font-mono font-medium text-slate-500 dark:text-gray-400 w-8 text-right">00:00</span></div></div>';
+    };
+
+    window.getLvl = () => {
+        var lvls = window.App.levels.filter(l=>l.surahId===window.App.actSurahId);
+        if (window.App.actLevelId) {
+            var actLvl = lvls.find(l=>l.id === window.App.actLevelId);
+            if (actLvl) return actLvl.id;
+        }
+        return lvls.length > 0 ? lvls[0].id : null;
+    };
+    
+    // Sort array berdasarkan property 'order'
+    window.getSgs = () => {
+        let arr = window.App.segs.filter(s=>s.surahId===window.App.actSurahId&&s.levelId===window.getLvl());
+        arr.sort((a,b) => {
+            if (a.order !== undefined && b.order !== undefined) return a.order - b.order;
+            if (a.order !== undefined) return -1;
+            if (b.order !== undefined) return 1;
+            return a.start - b.start;
+        });
+        return arr;
+    };
+
+    window.toggleSegOrder = function() {
+        const orders = ['asc', 'desc', 'random'];
+        let idx = orders.indexOf(window.App.segOrder || 'asc');
+        window.App.segOrder = orders[(idx + 1) % orders.length];
+        window.render(true);
+    };
+
+    window.getOrderedSgs = () => {
+        let sgs = window.getSgs();
+        if (window.App.segOrder === 'desc') {
+            sgs.reverse();
+        } else if (window.App.segOrder === 'random') {
+            for (let i = sgs.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [sgs[i], sgs[j]] = [sgs[j], sgs[i]];
+            }
+        }
+        return sgs;
+    };
+
+    window.getActSeg = () => { var s=window.getOrderedSgs(); if(s.length===0)return null; return s.find(x=>x.id===window.App.actSegId)||s[0]; };
+    window.getUName = id => window.esc(window.App.ustadz.find(x=>x.id==id)?.name||"-");
+    window.getHName = id => window.esc(window.App.halaqohs.find(x=>x.id==id)?.name||"-");
+    window.getSName = id => window.esc(window.App.siswas.find(x=>x.id==id)?.name||"-");
+    window.getSKelas = id => window.esc(window.App.siswas.find(x=>x.id==id)?.kelas||"-");
+    window.toArabicNumeral = en => (""+en).replace(/[0-9]/g, t=>String.fromCharCode(t.charCodeAt(0)+1584));
+    window.extractVideoId = url => { if(!url)return null; var m=url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/); return (m&&m[2].length===11)?m[2]:null; };
+
+    // Fungsi geser panah manual Up/Down
+    window.moveSeg = function(id, dir) {
+        let sgs = window.getSgs();
+        let idx = sgs.findIndex(x => x.id === id);
+        if (idx === -1 || idx + dir < 0 || idx + dir >= sgs.length) return;
+        
+        sgs.forEach((s, i) => { if (s.order === undefined) s.order = i; });
+        
+        let temp = sgs[idx].order;
+        sgs[idx].order = sgs[idx+dir].order;
+        sgs[idx+dir].order = temp;
+        
+        if(window.dbSave) {
+            window.dbSave('segs', sgs[idx].id, sgs[idx]);
+            window.dbSave('segs', sgs[idx+dir].id, sgs[idx+dir]);
+        }
+        window.render(true);
+    };
+
+    // FITUR BARU: Fungsi untuk menyimpan & menyisipkan ulang urutan dari input manual form edit ayat
+    window.saveSegment = function(e, id) {
+        e.preventDefault();
+        let sm=parseInt(window.val('sm')||0), ss=parseInt(window.val('ss')||0);
+        let em=parseInt(window.val('em')||0), es=parseInt(window.val('es')||0);
+        let t=window.val('st'), a=window.val('sa'), tr=window.val('str');
+        
+        // Ambil nilai urutan (Order) dari input (dikurangi 1 karena index array mulai dari 0)
+        let newOrderInput = parseInt(window.val('so'));
+        let newOrderIdx = (isNaN(newOrderInput) || newOrderInput < 1) ? 0 : newOrderInput - 1;
+        
+        let start = sm*60+ss; let end = em*60+es;
+        let curSgs = window.getSgs(); 
+        
+        if (id) {
+            let o = window.App.segs.find(x=>x.id===id);
+            if (o) {
+                o.title=t; o.start=start; o.end=end; o.arabic=a; o.translation=tr;
+                let oldIdx = curSgs.findIndex(x=>x.id===id);
+                
+                if (newOrderIdx !== oldIdx && newOrderIdx >= 0) {
+                    if (newOrderIdx >= curSgs.length) newOrderIdx = curSgs.length - 1;
+                    
+                    curSgs.splice(oldIdx, 1);
+                    curSgs.splice(newOrderIdx, 0, o);
+                    
+                    curSgs.forEach((seg, idx) => {
+                        let actualSeg = window.App.segs.find(x=>x.id === seg.id);
+                        if(actualSeg) { 
+                            actualSeg.order = idx; 
+                            if(window.dbSave) window.dbSave('segs', actualSeg.id, actualSeg); 
+                        }
+                    });
+                } else {
+                    if(window.dbSave) window.dbSave('segs', id, o);
+                }
+            }
+        } else {
+            let nid = Date.now();
+            if (newOrderIdx > curSgs.length) newOrderIdx = curSgs.length;
+            
+            let nD = {id:nid, surahId:window.App.actSurahId, levelId:window.getLvl(), title:t, start:start, end:end, arabic:a, translation:tr, order:newOrderIdx};
+            window.App.segs.push(nD);
+            
+            curSgs.splice(newOrderIdx, 0, nD);
+            curSgs.forEach((seg, idx) => {
+                let actualSeg = window.App.segs.find(x=>x.id === seg.id);
+                if(actualSeg) { 
+                    actualSeg.order = idx; 
+                    if(window.dbSave) window.dbSave('segs', actualSeg.id, actualSeg); 
+                }
+            });
+        }
+        window.App.modal=null; 
+        window.render(true);
+    };
+
+    window.switchView = function(viewTarget) {
+      if(window.App.view === 'player' && viewTarget !== 'player') {
+          if(window.App.yt && typeof window.App.yt.pauseVideo === 'function') {
+              window.App.yt.pauseVideo(); window.App.isPlay = false;
+          }
+      }
+      if(window.App.audioObj && !window.App.audioObj.paused) {
+          window.App.audioObj.pause();
+          window.App.activeAudioId = null;
+      }
+      
+      if (window.App.adminLvl === 2) {
+          window.App.hierSel.u = window.App.loggedInUstadzId;
+          window.App.filter.u = window.App.loggedInUstadzId;
+      }
+      
+      window.App.search = ''; 
+      window.App.searchSiswa = '';
+      window.App.view = viewTarget;
+      window.render(true);
+    };
+
+    window.resetTimer = function() {
+        clearTimeout(window.App.inactivityTimer);
+        if (window.App.adminLvl > 0) {
+            window.App.inactivityTimer = setTimeout(() => {
+                window.App.adminLvl = 0;
+                window.App.loggedInUstadzId = null;
+                window.showAlert("Sesi keamanan Anda telah habis (15 menit tidak ada aktivitas). Anda otomatis dikeluarkan.");
+                window.switchView('home');
+            }, 15 * 60 * 1000);
+        }
+    };
+    document.addEventListener('mousemove', window.resetTimer, {passive: true});
+    document.addEventListener('keypress', window.resetTimer, {passive: true});
+    document.addEventListener('touchstart', window.resetTimer, {passive: true});
+
+    window.showAlert = function(msg) { window.App.customDialog = { show: true, type: 'alert', message: msg, onConfirm: null }; window.render(); };
+    window.showConfirm = function(msg, cb) { window.App.customDialog = { show: true, type: 'confirm', message: msg, onConfirm: cb }; window.render(); };
+    window.closeDialog = function() { window.App.customDialog.show = false; window.render(); };
+
+    window.selectSeg = function(id) {
+        window.App.actSegId = id; window.App.curRep = 0;
+        let sgs = window.getSgs();
+        let sg = sgs.find(x => x.id === id);
+        if(!sg) return;
+        if(window.App.yt && typeof window.App.yt.seekTo === 'function') { window.App.yt.seekTo(sg.start); window.App.yt.playVideo(); window.App.isPlay = true; }
+        window.updatePlayerDOM();
+        let btn = window.getEl('play-pause-btn'); if(btn) btn.innerHTML = '<i class="ph-fill ph-pause text-2xl lg:text-3xl hover:text-emerald-400"></i>';
+        let bigBtn = window.getEl('big-play-btn'); if(bigBtn) { bigBtn.classList.replace('scale-100', 'scale-95'); bigBtn.classList.replace('opacity-100', 'opacity-0'); }
+        let rt = window.getEl('rep-text'); if(rt) rt.innerText = '';
+    };
+
+    window.toggleYTPlay = function() {
+        if(window.App.yt && typeof window.App.yt.playVideo === 'function') {
+            if(window.App.isPlay) { window.App.yt.pauseVideo(); } else {
+                let sgs = window.getSgs();
+                let cSg = sgs.find(x => x.id === window.App.actSegId);
+                let t = window.App.yt.getCurrentTime();
+                if(t < (cSg?.start||0) || t >= (cSg?.end||100)) { window.App.yt.seekTo(cSg?.start||0); window.App.curRep = 0; let rt = window.getEl('rep-text'); if(rt) rt.innerText = ''; }
+                window.App.yt.playVideo();
+            }
+        }
+    };
+
+    window.nextSeg = function(dir) {
+        let sgs = window.getOrderedSgs();
+        let idx = sgs.findIndex(x => x.id === window.App.actSegId);
+        if(dir === 1 && idx >= 0 && idx < sgs.length - 1) window.selectSeg(sgs[idx+1].id);
+        else if (dir === -1 && idx > 0) window.selectSeg(sgs[idx-1].id);
+    };
+
+    window.updateRepTarget = function(delta) {
+        window.App.repTarget = Math.max(1, window.App.repTarget + delta);
+        let el = window.getEl('rep-target-val'); if(el) el.innerText = window.App.repTarget + 'x';
+    };
+
+    window.updateSpeed = function(delta) {
+        window.App.speed = Math.max(0.25, Math.min(2, window.App.speed + delta));
+        let el = window.getEl('speed-val'); if(el) el.innerText = window.App.speed + 'x';
+        if(window.App.yt && typeof window.App.yt.setPlaybackRate === 'function') { window.App.yt.setPlaybackRate(window.App.speed); }
+    };
+
+    window.openSurah = function(surahId, videoId) {
+        if (window.App.yt && typeof window.App.yt.stopVideo === 'function') {
+            window.App.yt.stopVideo();
+        }
+        window.App.isPlay = false;
+
+        window.App.actSurahId = surahId;
+        window.App.actSegId = null;
+        window.App.actLevelId = null; 
+        if(!window.App.levels.some(l => l.surahId == surahId)){
+            let nid = Date.now(); let newLvl = {id:nid, surahId:surahId, name:'Level 1'};
+            window.App.levels.push(newLvl); if(window.dbSave) window.dbSave('levels', nid, newLvl);
+        }
+        
+        window.switchView('player');
+    };
+
+    window.initYTPlayer = function() {
+        if(!window.YT || !window.YT.Player) return;
+        var sur = window.App.surahs.find(s=>s.id===window.App.actSurahId);
+        let vId = sur?.videoId || '';
+        
+        if (window.App.yt) { 
+            try { if(typeof window.App.yt.destroy === 'function') window.App.yt.destroy(); } catch(e){} 
+            window.App.yt = null; 
+        }
+        
+        let pWrap = window.getEl('persistent-player-wrapper');
+        if (pWrap) {
+            pWrap.innerHTML = '<div id="youtube-player" class="w-full h-full"></div>';
+        }
+
+        if (!vId) return;
+
+        let origin = window.location.protocol === 'file:' ? '*' : window.location.origin;
+
+        window.App.yt = new window.YT.Player('youtube-player', {
+            videoId: vId, 
+            playerVars: { 
+                controls:0, disablekb:1, rel:0, modestbranding:1, playsinline:1, enablejsapi:1, origin: origin 
+            },
+            events: {
+                onReady: e => { e.target.setPlaybackRate(window.App.speed); },
+                onStateChange: e => {
+                    if(e.data===window.YT.PlayerState.PLAYING){
+                        window.App.isPlay=true;
+                        let btn = window.getEl('play-pause-btn'); if(btn) btn.innerHTML = '<i class="ph-fill ph-pause text-2xl lg:text-3xl hover:text-emerald-400"></i>';
+                        let bigBtn = window.getEl('big-play-btn'); if(bigBtn) { bigBtn.classList.replace('scale-100', 'scale-95'); bigBtn.classList.replace('opacity-100', 'opacity-0'); }
+                    } else if(e.data===window.YT.PlayerState.PAUSED||e.data===window.YT.PlayerState.ENDED){
+                        window.App.isPlay=false;
+                        let btn = window.getEl('play-pause-btn'); if(btn) btn.innerHTML = '<i class="ph-fill ph-play text-2xl lg:text-3xl hover:text-emerald-400"></i>';
+                        let bigBtn = window.getEl('big-play-btn'); if(bigBtn) { bigBtn.classList.replace('scale-95', 'scale-100'); bigBtn.classList.replace('opacity-0', 'opacity-100'); }
+                    }
+                },
+                onError: e => { window.App.isPlay=false; console.error("YouTube Error", e); }
+            }
+        });
+    };
+
+    window.onYouTubeIframeAPIReady = function() { if (window.App && window.App.view === 'player') window.initYTPlayer(); };
+    var tag = document.createElement('script'); tag.src = "https://www.youtube.com/iframe_api"; document.head.appendChild(tag);
+
+    window.handleLogoUpload = function(e) {
+      var f = e.target.files[0];
+      if (f) {
+        if(f.size > 102400) { window.showAlert("Ukuran file terlalu besar! (Maks 100KB)"); e.target.value = ''; return; }
+        var r = new FileReader();
+        r.onload = function(ev) { 
+            try { 
+                window.App.schLogo = ev.target.result; 
+                localStorage.setItem('tahfidzqu_logo', window.App.schLogo); 
+                if(window.dbSave) window.dbSave('settings', 'app', {logo: window.App.schLogo, subtitle: window.App.schSub});
+                window.render(true); 
+            } catch(err) { window.showAlert("Gagal menyimpan logo."); } 
+        };
+        r.readAsDataURL(f);
+      }
+    };
+    window.removeLogo = function() { 
+        window.App.schLogo = ''; 
+        try { localStorage.removeItem('tahfidzqu_logo'); } catch(e){} 
+        if(window.dbSave) window.dbSave('settings', 'app', {logo: '', subtitle: window.App.schSub});
+        window.render(true); 
+    };
+    window.saveSchoolSubtitle = function() { 
+        var input = window.getEl('i-sub'); 
+        if (input) { 
+            window.App.schSub = window.esc(input.value.trim()); 
+            try { localStorage.setItem('tahfidzqu_subtitle', window.App.schSub); } catch(e){} 
+            if(window.dbSave) window.dbSave('settings', 'app', {logo: window.App.schLogo, subtitle: window.App.schSub});
+            window.render(true); 
+        } 
+    };
+
+    window.handleAdminLogin = function() {
+        const u = document.getElementById('m_u').value.trim(); const p = document.getElementById('m_p').value.trim();
+        if (Date.now() < window.App.lockoutTime) { let remain = Math.ceil((window.App.lockoutTime - Date.now()) / 1000); window.App.loginError = `Akses Terkunci! Tunggu ${remain} detik.`; window.render(); return; }
+        if(u === 'jayyidin' && p === 'offthewallba123') { 
+            window.App.adminLvl = 1; 
+            window.App.modal = null; 
+            window.App.loginError = ''; 
+            window.App.loginAttempts = 0; 
+            window.App.loggedInUstadzId = null;
+            window.App.filter.u = 'all';
+            window.resetTimer(); 
+            window.switchView('admin'); 
+        } 
+        else {
+            let ust = window.App.ustadz.find(x => x.username === u && x.password === p);
+            if(ust) { 
+                window.App.adminLvl = 2; 
+                window.App.modal = null; 
+                window.App.loginError = ''; 
+                window.App.loginAttempts = 0; 
+                window.App.loggedInUstadzId = ust.id;
+                window.App.filter.u = ust.id;
+                window.App.hierSel.u = ust.id;
+                window.resetTimer(); 
+                window.switchView('admin'); 
+            } 
+            else {
+                window.App.loginAttempts++;
+                if (window.App.loginAttempts >= 3) { window.App.lockoutTime = Date.now() + 30000; window.App.loginError = 'Akun terkunci sementara karena gagal 3 kali berturut-turut.'; } 
+                else { window.App.loginError = `Username atau Password salah! (Sisa percobaan: ${3 - window.App.loginAttempts})`; }
+                window.render();
+            }
+        }
+    };
+
+    window.blobToBase64 = function(blob) { return new Promise((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result); reader.readAsDataURL(blob); }); };
+
+    window.startStudentRecord = async function() {
+        try {
+            var stream = await navigator.mediaDevices.getUserMedia({audio: true}); 
+            
+            let mimeType = '';
+            if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4'; 
+            else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mimeType = 'audio/webm;codecs=opus';
+            else if (MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
+            
+            var options = mimeType ? { mimeType: mimeType } : {};
+            window.App.studentMediaRecorder = new MediaRecorder(stream, options); 
+            window.App.studentAudioChunks = [];
+            
+            window.App.studentMediaRecorder.ondataavailable = e => { if(e.data.size > 0) window.App.studentAudioChunks.push(e.data); };
+            window.App.studentMediaRecorder.onstop = async () => { 
+                var b = new Blob(window.App.studentAudioChunks, { type: mimeType || 'audio/webm' }); 
+                window.App.currentStudentAudioUrl = await window.blobToBase64(b); 
+                stream.getTracks().forEach(t => t.stop()); 
+                window.render(true); 
+            };
+            
+            window.App.studentMediaRecorder.start(); 
+            window.App.rec.is = true; 
+            window.App.rec.secs = 0; 
+            window.render(true);
+            
+            window.App.rec.int = setInterval(()=>{ 
+                window.App.rec.secs++; 
+                let tEl = window.getEl('rec-timer-display');
+                if (tEl) {
+                    tEl.innerText = window.fmtT(window.App.rec.secs);
+                } else {
+                    window.render(true);
+                }
+            }, 1000);
+        } catch(e) { window.showAlert("Gagal mengakses mikrofon. Pastikan browser diizinkan merekam suara."); }
+    };
+
+    window.stopStudentRecord = function() { if(window.App.studentMediaRecorder && window.App.rec.is) { window.App.studentMediaRecorder.stop(); window.App.rec.is = false; clearInterval(window.App.rec.int); window.render(true); } };
+
+    window.submitRec = async function(type, evt=null) { 
+        if(!window.App.hierSel.s) { if(evt) evt.target.value=''; window.showAlert('Pilih identitas santri terlebih dahulu!'); return; }
+        
+        if (!window.App.resubmitId) {
+            let sIdNum = Number(window.App.hierSel.s);
+            let segIdNum = window.App.actSegId;
+            let hIdNum = Number(window.App.hierSel.h); 
+            
+            let exists = window.App.subs.some(x => x.siswaId === sIdNum && x.segmentId === segIdNum && x.halaqohId === hIdNum);
+            if (exists) {
+                if(evt) evt.target.value='';
+                window.showAlert('Santri ini sudah pernah menyetorkan hafalan untuk segmen ini di Halaqoh saat ini. Tidak bisa mengirim data ganda.');
+                return;
+            }
+        }
+
+        var mediaType = type === 'mic' ? 'rekaman mic' : 'file audio'; var tDate = new Date().toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}); let audioData = window.App.currentStudentAudioUrl;
+        if(type === 'file' && evt && evt.target.files[0]) { audioData = await window.blobToBase64(evt.target.files[0]); }
+        
+        let finalSubData = null;
+        if (window.App.resubmitId) {
+            var existingSub = window.App.subs.find(x => x.id === window.App.resubmitId);
+            if (existingSub) { 
+                existingSub.status = 'pending'; 
+                existingSub.type = mediaType; 
+                existingSub.date = tDate; 
+                existingSub.audioUrl = audioData; 
+                existingSub.duration = window.App.rec.secs; 
+                if(window.dbSave) window.dbSave('subs', existingSub.id, existingSub); 
+                finalSubData = existingSub;
+            }
+            window.App.resubmitId = null;
+        } else {
+            let nid = Date.now();
+            let subData = { 
+                id: nid, 
+                siswaId: Number(window.App.hierSel.s), 
+                halaqohId: Number(window.App.hierSel.h), 
+                ustadzId: Number(window.App.hierSel.u), 
+                surahId: window.App.actSurahId, 
+                segmentId: window.App.actSegId, 
+                type: mediaType, 
+                date: tDate, 
+                status: 'pending', 
+                grade: null, 
+                note: null, 
+                audioUrl: audioData,
+                duration: window.App.rec.secs 
+            };
+            window.App.subs.push(subData);
+            if(window.dbSave) window.dbSave('subs', nid, subData);
+            finalSubData = subData;
+        }
+        
+        window.App.currentStudentAudioUrl = null; 
+        if(window.App.rec.is){clearInterval(window.App.rec.int);window.App.rec.is=false;} 
+        window.App.rec.secs = 0; 
+        window.switchView(window.App.rec.src); 
+        
+        if (finalSubData) {
+            let ustadzData = window.App.ustadz.find(u => u.id === finalSubData.ustadzId);
+            let siswaData = window.App.siswas.find(s => s.id === finalSubData.siswaId);
+            let surahData = window.App.surahs.find(s => s.id === finalSubData.surahId);
+            let segData = window.App.segs.find(s => s.id === finalSubData.segmentId);
+            
+            if (ustadzData && ustadzData.phone) {
+                let phone = ustadzData.phone.replace(/\D/g, '');
+                if (phone.startsWith('0')) phone = '62' + phone.substring(1);
+                
+                let textMsg = `Assalamu'alaikum *${ustadzData.name}*,\n\nAlhamdulillah, ada setoran hafalan baru masuk:\n\n👤 *Santri:* ${siswaData ? siswaData.name : '-'}\n📖 *Surah:* ${surahData ? surahData.title : '-'} (${segData ? segData.title : '-'})\n\nMohon berkenan untuk menyimak dan memberikan penilaian di aplikasi TahfidzQu. Syukron.`;
+                
+                const waApiToken = "MwQYzC2XsY4UdA7n8Ury"; 
+                if (waApiToken !== "TOKEN_API_WA_KAMU_DISINI") {
+                    fetch("https://api.fonnte.com/send", {
+                        method: "POST",
+                        headers: { "Authorization": waApiToken },
+                        body: new URLSearchParams({ target: phone, message: textMsg })
+                    }).catch(e => console.log("Gagal kirim Notifikasi WA API:", e));
+                }
+                
+                window.showAlert('Setoran Berhasil Terkirim ke Cloud! Ustadz akan mendapat notifikasi otomatis.');
+            } else {
+                window.showAlert('Setoran Berhasil Terkirim ke Cloud!'); 
+            }
+        }
+    };
+
+    window.submitGrade = async function(id, grade) {
+        let sub = window.App.subs.find(x => x.id == id);
+        if(sub) { sub.status = grade === 'repeat' ? 'need-repeat' : 'graded'; sub.grade = grade === 'repeat' ? null : grade; sub.note = window.esc(window.val('gn')); sub.voiceNote = window.App.currentGradingAudioUrl; if(window.dbSave) window.dbSave('subs', id, sub); }
+        window.App.currentGradingAudioUrl = null; window.App.modal = null; window.render(true);
+    };
+
+    window.toggleGradingRecord = async function() {
+        if(window.App.isGradingRecording) { window.App.gradingMediaRecorder.stop(); window.App.isGradingRecording=false; window.render(); } 
+        else {
+            try {
+                var s = await navigator.mediaDevices.getUserMedia({audio:true}); 
+                
+                let mimeType = '';
+                if (MediaRecorder.isTypeSupported('audio/mp4')) mimeType = 'audio/mp4';
+                else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) mimeType = 'audio/webm;codecs=opus';
+                else if (MediaRecorder.isTypeSupported('audio/webm')) mimeType = 'audio/webm';
+                
+                var options = mimeType ? { mimeType: mimeType } : {};
+                window.App.gradingMediaRecorder = new MediaRecorder(s, options); 
+                window.App.gradingAudioChunks = [];
+                
+                window.App.gradingMediaRecorder.ondataavailable = e => {if(e.data.size>0)window.App.gradingAudioChunks.push(e.data);};
+                window.App.gradingMediaRecorder.onstop = async () => { 
+                    var b = new Blob(window.App.gradingAudioChunks,{type: mimeType || 'audio/webm'}); 
+                    window.App.currentGradingAudioUrl = await window.blobToBase64(b); 
+                    window.render(); 
+                    s.getTracks().forEach(t=>t.stop()); 
+                };
+                window.App.gradingMediaRecorder.start(); window.App.isGradingRecording = true; window.render();
+            } catch(e) { window.showAlert("Akses mikrofon ditolak oleh browser."); }
+        }
+    };
+
+    window.deleteGradingAudio = function() { window.App.currentGradingAudioUrl = null; window.render(); };
+
+    window.deleteSubmission = function(id) { window.showConfirm('Yakin ingin menghapus riwayat setoran ini secara permanen dari Cloud?', function() { window.App.subs = window.App.subs.filter(x=>x.id!==id); if(window.dbDelete) window.dbDelete('subs', id); window.render(true); }); };
+
+    window.confirmDelete = function(type, id) {
+        window.showConfirm('Yakin ingin menghapus data ini secara permanen dari Cloud?', function() {
+            if (type === 'juz') { window.App.juzs = window.App.juzs.filter(x=>x.id!==id); if(window.dbDelete) window.dbDelete('juzs', id); }
+            if (type === 'surah') { window.App.surahs = window.App.surahs.filter(x=>x.id!==id); if(window.dbDelete) window.dbDelete('surahs', id); }
+            if (type === 'level') { window.App.levels = window.App.levels.filter(x=>x.id!==id); if(window.dbDelete) window.dbDelete('levels', id); window.App.actSegId = null; }
+            if (type === 'segment') { window.App.segs = window.App.segs.filter(x=>x.id!==id); if(window.dbDelete) window.dbDelete('segs', id); }
+            if (type === 'ustadz') { window.App.ustadz = window.App.ustadz.filter(x=>x.id!==id); if(window.dbDelete) window.dbDelete('ustadz', id); if(window.App.hierSel.u == id){window.App.hierSel.u=null;window.App.hierSel.h=null;} }
+            if (type === 'halaqoh') { window.App.halaqohs = window.App.halaqohs.filter(x=>x.id!==id); if(window.dbDelete) window.dbDelete('halaqohs', id); if(window.App.hierSel.h == id){window.App.hierSel.h=null;} }
+            if (type === 'siswa') { window.App.siswas = window.App.siswas.filter(x=>x.id!==id); if(window.dbDelete) window.dbDelete('siswas', id); }
+            window.render(true);
+        });
+    };
+
+    window.processImport = function(type) {
+        let textInput = document.getElementById('import_text');
+        if (!textInput || !textInput.value.trim()) {
+            window.showAlert("Paste data dari spreadsheet terlebih dahulu!");
+            return;
+        }
+        
+        let btn = textInput.nextElementSibling;
+        let oldHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-lg"></i> Memproses...';
+        btn.disabled = true;
+
+        setTimeout(() => {
+            let text = textInput.value;
+            let rows = text.split('\n').map(r => r.trim()).filter(r => r.length > 0);
+            let successCount = 0;
+            let baseId = Date.now();
+
+            if (type === 'ustadz') {
+                rows.forEach((row, idx) => {
+                    let cols = row.split(/\t|\||,/);
+                    let name = cols[0] ? cols[0].trim().replace(/^"|"$/g, '') : '';
+                    let phone = cols.length > 1 ? cols[1].trim().replace(/^"|"$/g, '') : '';
+                    let username = cols.length > 2 ? cols[2].trim().replace(/^"|"$/g, '') : '';
+                    let password = cols.length > 3 ? cols[3].trim().replace(/^"|"$/g, '') : '';
+                    if (name && username && password) {
+                        let nD = { id: baseId + idx, name: name, phone: phone, username: username, password: password };
+                        window.App.ustadz.push(nD);
+                        window.dbSave('ustadz', nD.id, nD);
+                        successCount++;
+                    }
+                });
+            } else if (type === 'halaqoh') {
+                rows.forEach((row, idx) => {
+                    let cols = row.split(/\t|\||,/); 
+                    let name = cols[0] ? cols[0].trim().replace(/^"|"$/g, '') : '';
+                    if (name) {
+                        let nD = { id: baseId + idx, ustadzId: window.App.hierSel.u, name: name };
+                        window.App.halaqohs.push(nD);
+                        window.dbSave('halaqohs', nD.id, nD);
+                        successCount++;
+                    }
+                });
+            } else if (type === 'siswa') {
+                rows.forEach((row, idx) => {
+                    let cols = row.split(/\t|\||,/); 
+                    let name = cols[0] ? cols[0].trim().replace(/^"|"$/g, '') : '';
+                    let kelas = cols.length > 1 ? cols[1].trim().replace(/^"|"$/g, '') : '-';
+                    if (name) {
+                        let nD = { id: baseId + idx, halaqohId: window.App.hierSel.h, name: name, kelas: kelas };
+                        window.App.siswas.push(nD);
+                        window.dbSave('siswas', nD.id, nD);
+                        successCount++;
+                    }
+                });
+            }
+            window.App.modal = null;
+            window.render(true);
+            window.showAlert(`Berhasil mengimpor ${successCount} data.`);
+        }, 100);
+    };
+
+    window.render = function() {
+      let isForced = arguments[0] === true; let activeEl = document.activeElement; let focusedId = activeEl ? activeEl.id : null; let selStart = 0, selEnd = 0;
+      
+      try {
+          sessionStorage.setItem('tahfidzqu_nav_state', JSON.stringify({
+              adminLvl: window.App.adminLvl,
+              view: window.App.view,
+              actJuzId: window.App.actJuzId,
+              actSurahId: window.App.actSurahId,
+              actLevelId: window.App.actLevelId,
+              actSegId: window.App.actSegId,
+              filter: window.App.filter,
+              hierSel: window.App.hierSel,
+              segOrder: window.App.segOrder,
+              recSrc: window.App.rec.src,
+              resubmitId: window.App.resubmitId,
+              loggedInUstadzId: window.App.loggedInUstadzId
+          }));
+      } catch(e){}
+
+      let sc = window.getEl('main-scroll'); 
+      let sPos = sc ? sc.scrollTop : 0;
+
+      if (focusedId && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) { try { selStart = activeEl.selectionStart; selEnd = activeEl.selectionEnd; } catch(e){} }
+      if(window.App.theme==='dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark');
+      
+      let pWrap = window.getEl('persistent-player-wrapper');
+      
+      if (window.App.view === 'player' && pWrap && pWrap.parentNode && pWrap.parentNode.id === 'player-destination' && !isForced && !window.App.modal) {
+          window.updatePlayerDOM();
+      } else {
+          if (pWrap) {
+              pWrap.classList.add('hidden');
+              pWrap.classList.add('pointer-events-none');
+              if (pWrap.parentNode !== document.body) {
+                  document.body.appendChild(pWrap);
+              }
+          }
+          
+          window.getEl('app-root').innerHTML = window.generateMainHtml();
+          
+          if(window.App.view === 'player') {
+              let pDest = window.getEl('player-destination');
+              if (pWrap && pDest) {
+                  pWrap.classList.remove('hidden', 'pointer-events-none');
+                  pWrap.classList.add('absolute', 'inset-0', 'z-0');
+                  if (pWrap.parentNode !== pDest) {
+                      pDest.appendChild(pWrap);
+                      window.initYTPlayer();
+                  } else if(!window.App.yt) window.initYTPlayer();
+              }
+              window.updatePlayerDOM();
+          }
+      }
+
+      let nSc = window.getEl('main-scroll'); 
+      if (nSc) nSc.scrollTop = sPos;
+
+      if (focusedId) { let el = document.getElementById(focusedId); if (el) { el.focus(); try { el.setSelectionRange(selStart, selEnd); } catch(e){} } }
+      window.renderModal();
+    };
+
+    window.generateMainHtml = function() {
+      const isAdmin = window.App.adminLvl > 0;
+      const isSuper = window.App.adminLvl === 1;
+      const pend = window.App.subs.filter(s=>s.status==='pending').length;
+      
+      let searchPh = 'Cari...';
+      if (window.App.view === 'home') searchPh = 'Cari Judul Surah...'; else if (window.App.view === 'hub' || window.App.view === 'admin') searchPh = 'Cari Nama Santri atau Surah...'; else if (window.App.view === 'master') searchPh = 'Cari Ustadz / Halaqoh / Santri...'; else if (window.App.view === 'player') searchPh = 'Cari Ayat / Arti...';
+      const mobileSearchBar = '<div class="md:hidden mb-6"><div class="relative"><i class="ph-bold ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i><input id="search-mobile" type="text" placeholder="' + searchPh + '" value="' + window.esc(window.App.search) + '" oninput="window.App.search=this.value;window.render()" class="input-std !w-full !rounded-full !pl-12 py-3.5 shadow-sm"></div></div>';
+
+      let errorBanner = window.App.firebaseError ? '<div class="bg-red-500 text-white text-[10px] md:text-xs font-bold p-3 text-center w-full shadow-md animate-pulse"><i class="ph-bold ph-warning-circle text-lg align-middle mr-1"></i> ' + window.App.firebaseError + '</div>' : '';
+
+      let html = errorBanner + '<header class="shrink-0 border-b border-slate-200/60 dark:border-[#1a2e26] sticky top-0 z-50 backdrop-blur-xl bg-white/90 dark:bg-[#0a120f]/90 shadow-sm"><div class="flex items-center justify-between px-5 md:px-8 py-3.5 md:py-4"><div class="flex items-center gap-3 text-emerald-500 font-extrabold cursor-pointer transition-transform hover:scale-[1.02]" onclick="window.switchView(\'home\')">';
+      html += window.App.schLogo ? '<img src="' + window.App.schLogo + '" class="h-8 md:h-10 max-w-[120px] object-contain">' : '<i class="ph-fill ph-monitor-play text-[2rem] md:text-4xl"></i>';
+      html += '<div class="flex flex-col justify-center"><span class="text-xl md:text-2xl leading-none tracking-tight text-slate-800 dark:text-white">Tahfidz<span class="text-emerald-500">Qu</span></span>' + (window.App.schSub?'<span class="text-[9px] text-slate-400 mt-1 uppercase tracking-widest font-bold">' + window.App.schSub + '</span>':'') + '</div></div>';
+      html += '<div class="flex items-center gap-2 md:hidden"><button onclick="window.App.theme=window.App.theme===\'dark\'?\'light\':\'dark\';window.render(true)" class="w-11 h-11 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 flex items-center justify-center transition-transform active:scale-95"><i class="ph-fill ' + (window.App.theme==='dark'?'ph-sun':'ph-moon') + ' text-lg"></i></button>';
+      html += isAdmin ? '<button onclick="window.App.adminLvl=0;window.App.loggedInUstadzId=null;window.App.filter.u=\'all\';window.switchView(\'home\');" class="w-11 h-11 rounded-full bg-red-50 text-red-500 flex items-center justify-center transition-transform active:scale-95"><i class="ph-bold ph-sign-out text-lg"></i></button>' : '<button onclick="window.App.modal=\'login\';window.render()" class="w-11 h-11 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 flex items-center justify-center transition-transform active:scale-95"><i class="ph-fill ph-lock-key text-lg"></i></button>';
+      html += '</div><div class="hidden md:flex items-center gap-4"><div class="relative"><i class="ph-bold ph-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i><input id="search-desktop" type="text" placeholder="' + searchPh + '" value="' + window.esc(window.App.search) + '" oninput="window.App.search=this.value;window.render()" class="input-std !w-full !rounded-full !pl-14 transition-all focus:!w-80 shadow-sm"></div>';
+      html += '<button onclick="window.App.theme=window.App.theme===\'dark\'?\'light\':\'dark\';window.render(true)" class="w-12 h-12 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 hover:text-emerald-500 flex items-center justify-center transition shadow-sm"><i class="ph-fill ' + (window.App.theme==='dark'?'ph-sun':'ph-moon') + ' text-xl"></i></button>';
+      html += isAdmin ? '<button onclick="window.App.adminLvl=0;window.App.loggedInUstadzId=null;window.App.filter.u=\'all\';window.switchView(\'home\');" class="w-12 h-12 rounded-full bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition shadow-sm" title="Keluar Akun"><i class="ph-bold ph-sign-out text-xl"></i></button>' : '<button onclick="window.App.modal=\'login\';window.render()" class="w-12 h-12 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 flex items-center justify-center transition shadow-sm"><i class="ph-fill ph-lock-key text-xl"></i></button>';
+      html += '</div></div><div class="px-5 md:px-8 flex gap-8 text-[13px] font-bold pt-2 overflow-x-auto hide-scrollbar">';
+      html += '<button onclick="window.switchView(\'home\')" class="' + (window.App.view==='home'?'text-emerald-600 border-b-[3px] border-emerald-500':'text-slate-400 hover:text-slate-800 dark:text-gray-400 dark:hover:text-white') + ' pb-3 transition whitespace-nowrap flex items-center gap-1.5"><i class="ph-fill ph-house text-lg"></i> Beranda</button>';
+      html += '<button onclick="window.switchView(\'hub\')" class="' + (window.App.view==='hub'?'text-emerald-600 border-b-[3px] border-emerald-500':'text-slate-400 hover:text-slate-800 dark:text-gray-400 dark:hover:text-white') + ' pb-3 transition whitespace-nowrap flex items-center gap-1.5"><i class="ph-fill ph-clipboard-text text-lg"></i> Setoran Hub</button>';
+      if (isAdmin) {
+          html += '<button onclick="window.switchView(\'admin\')" class="' + (window.App.view==='admin'?'text-orange-500 border-b-[3px] border-orange-500':'text-slate-400 hover:text-slate-800 dark:text-gray-400 dark:hover:text-white') + ' pb-3 transition whitespace-nowrap flex items-center gap-1.5"><i class="ph-fill ph-tray text-lg"></i> Antrean ' + (pend>0?'<span class="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full shadow-md">' + pend + '</span>':'') + '</button>';
+          html += '<button onclick="window.switchView(\'master\')" class="' + (window.App.view==='master'?'text-purple-600 border-b-[3px] border-purple-500':'text-slate-400 hover:text-slate-800 dark:text-gray-400 dark:hover:text-white') + ' pb-3 transition whitespace-nowrap flex items-center gap-1.5"><i class="ph-fill ph-database text-lg"></i> Data Master</button>';
+      }
+      html += '</div></header><div class="flex-1 overflow-hidden flex flex-col w-full bg-slate-50/50 dark:bg-[#111c18]">';
+
+      if(window.App.view === 'home') {
+        const jName = window.App.juzs.find(j=>j.id===window.App.actJuzId)?.name||'';
+        const sList = window.App.search ? window.App.surahs.filter(s=>s.title.toLowerCase().includes(window.App.search.toLowerCase())) : window.App.surahs.filter(s=>s.juzId===window.App.actJuzId);
+        sList.sort((a,b)=> (Q_SURAHS.find(q=>q.name===a.title.replace("Surah ",""))?.no||999) - (Q_SURAHS.find(q=>q.name===b.title.replace("Surah ",""))?.no||999));
+        
+        html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-10 min-h-0 relative"><div class="max-w-7xl mx-auto w-full">' + mobileSearchBar + '<div class="mb-6 md:mb-10 shrink-0"><h1 class="text-2xl md:text-4xl font-serif dark:text-white mb-1.5 md:mb-2 flex items-center gap-2 md:gap-3 tracking-tight"><i class="ph-fill ph-books text-emerald-500"></i> Perpustakaan Surah</h1><p class="text-[11px] md:text-sm text-slate-500">Pilih materi hafalan dari daftar surah yang tersedia di sistem.</p></div>';
+        if (!window.App.search) {
+            html += '<div class="flex items-center gap-2 md:gap-3 border-b border-slate-200/60 dark:border-[#1a2e26] pb-4 md:pb-6 mb-6 md:mb-8 overflow-x-auto hide-scrollbar shrink-0">' + window.App.juzs.map(j=>'<div class="flex shrink-0 mr-1"><button onclick="window.App.actJuzId=' + j.id + ';window.render(true)" class="' + (j.id===window.App.actJuzId?'tab-active':'tab-inactive') + '">' + window.esc(j.name) + '</button>' + (isSuper?'<div class="flex ml-1 md:ml-2 items-center"><button onclick="window.App.modal=\'juz\';window.App.modalData=' + j.id + ';window.render(true)" class="p-1.5 md:p-2 text-slate-400 hover:text-blue-500 transition-colors"><i class="ph-bold ph-pencil-simple text-base md:text-lg"></i></button><button onclick="window.confirmDelete(\'juz\', ' + j.id + ')" class="p-1.5 md:p-2 text-slate-400 hover:text-red-500 transition-colors"><i class="ph-bold ph-trash text-base md:text-lg"></i></button></div>':'') + '</div>').join('') + (isSuper?'<button onclick="window.App.modal=\'juz\';window.App.modalData=null;window.render(true)" class="tab-inactive !bg-transparent border-dashed border-2 hover:border-emerald-400 flex items-center gap-1.5"><i class="ph-bold ph-plus text-base md:text-lg"></i> Tambah</button>':'') + '</div>';
+        }
+        html += '<div class="flex justify-between items-center mb-6 md:mb-8 shrink-0"><div><h2 class="text-lg md:text-xl font-bold dark:text-white tracking-tight">' + (window.App.search?'Hasil Pencarian':'Daftar Surah') + '</h2><p class="text-[10px] md:text-xs text-slate-400 mt-1">' + (window.App.search?'Menampilkan: "' + window.esc(window.App.search) + '"':'Juz yang dipilih: ' + window.esc(jName)) + '</p></div>' + (isSuper?'<button onclick="window.App.modal=\'surah\';window.App.modalData=null;window.render(true)" class="bg-emerald-500 hover:scale-105 transition-transform shadow-lg shadow-emerald-500/30 text-white px-4 py-2 md:px-5 md:py-2.5 rounded-xl md:rounded-full font-bold flex gap-1.5 items-center text-[11px] md:text-sm"><i class="ph-bold ph-plus text-base md:text-lg"></i> <span class="hidden sm:inline">Tambah Surah</span><span class="sm:hidden">Tambah</span></button>':'') + '</div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-5 lg:gap-6 pb-10">';
+        html += sList.length ? sList.map(s=>'<div class="bg-white border border-slate-100 shadow-sm dark:bg-[#15241e] dark:border-[#1a2e26] rounded-2xl md:rounded-3xl p-4 md:p-5 hover:border-emerald-400 hover:shadow-xl transition-all duration-300 cursor-pointer flex flex-col relative overflow-hidden group" onclick="window.openSurah(' + s.id + ', \'' + (s.videoId||'') + '\')"><div class="flex items-center gap-3 md:gap-4"><div class="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 group-hover:rotate-3"><i class="ph-fill ph-book-open text-2xl md:text-3xl"></i></div><div class="flex-1 min-w-0"><h3 class="text-base md:text-xl font-bold dark:text-white break-words whitespace-normal leading-tight tracking-tight mb-1 md:mb-1.5">' + window.esc(s.title) + '</h3><p class="text-[10px] md:text-xs text-slate-400 font-mono mb-4 flex items-center gap-1.5"><i class="ph-fill ph-list-numbers"></i> ' + window.App.segs.filter(x=>x.surahId==s.id).length + ' Segmen Hafalan</p></div><div class="shrink-0 ' + (s.videoId?'bg-red-50 dark:bg-red-500/10 text-red-500':'bg-slate-50 dark:bg-[#111c18] text-slate-300') + ' p-2 md:p-2.5 rounded-lg md:rounded-xl"><i class="ph-fill ' + (s.videoId?'ph-youtube-logo':'ph-video-camera-slash') + ' text-lg md:text-xl"></i></div></div>' + (isSuper?'<div class="flex gap-2 border-t border-slate-100 dark:border-[#1a2e26] pt-3 md:pt-4 mt-3 md:mt-4"><button onclick="event.stopPropagation();window.App.modal=\'surah\';window.App.modalData=' + s.id + ';window.render(true)" class="flex-1 bg-slate-50 hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 border border-slate-200 py-2 rounded-lg text-[10px] md:text-xs font-bold transition-all flex items-center justify-center gap-1.5 dark:bg-[#0a120f] dark:border-[#1a2e26] dark:hover:bg-[#15241e]"><i class="ph-bold ph-pencil-simple text-sm"></i> Edit</button><button onclick="event.stopPropagation();window.confirmDelete(\'surah\', ' + s.id + ')" class="flex-1 bg-slate-50 hover:bg-red-50 text-slate-500 hover:text-red-600 border border-slate-200 py-2 rounded-lg text-[10px] md:text-xs font-bold transition-all flex items-center justify-center gap-1.5 dark:bg-[#0a120f] dark:border-[#1a2e26] dark:hover:bg-[#15241e]"><i class="ph-bold ph-trash text-sm"></i> Hapus</button></div>':'') + '</div>').join('') : '<div class="col-span-full py-16 md:py-20 text-center"><div class="w-16 h-16 md:w-20 md:h-20 bg-slate-100 dark:bg-[#15241e] rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4 text-slate-300"><i class="ph-fill ph-books text-3xl md:text-4xl"></i></div><p class="text-xs md:text-sm text-slate-500 font-medium">Belum ada data materi hafalan.</p></div>';
+        html += '</div></div></div>';
+      }
+      else if(window.App.view === 'player') {
+        const sur = window.App.surahs.find(s=>s.id===window.App.actSurahId);
+        
+        html += '<div class="flex flex-col lg:flex-row w-full h-full overflow-hidden bg-slate-50 dark:bg-[#0a120f]">';
+
+        html += '<div class="hidden lg:flex w-64 bg-white border-r border-slate-200/60 p-6 flex-col shrink-0 dark:bg-[#15241e] dark:border-[#1a2e26] z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">';
+        html += '<button onclick="window.switchView(\'home\')" class="flex items-center gap-2 text-slate-400 hover:text-emerald-500 font-bold text-sm mb-8 whitespace-nowrap shrink-0 transition-colors"><i class="ph-bold ph-arrow-left text-lg"></i> Kembali</button>';
+        html += '<div class="flex justify-between items-center mb-4"><h3 class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Pilih Level</h3>' + (isSuper?'<button onclick="window.App.modal=\'level\';window.render(true)" class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-500/20 flex items-center justify-center hover:bg-emerald-50 hover:text-white transition-all"><i class="ph-bold ph-plus text-sm"></i></button>':'') + '</div>';
+        html += '<div class="flex flex-col gap-2 w-full overflow-y-auto hide-scrollbar pb-10" id="levels-box-desktop"></div>';
+        html += '</div>';
+
+        html += '<div id="main-scroll" class="flex-1 overflow-y-auto flex flex-col relative w-full bg-slate-50/50 dark:bg-[#111c18]">';
+        
+        html += '<div class="lg:hidden flex items-center justify-between p-4 bg-white dark:bg-[#15241e] border-b border-slate-100 dark:border-[#1a2e26] sticky top-0 z-30 shadow-sm shrink-0">';
+        html += '<button onclick="window.switchView(\'home\')" class="text-slate-500 hover:text-emerald-500 transition-colors p-1 -ml-1"><i class="ph-bold ph-arrow-left text-xl"></i></button>';
+        html += '<h1 class="text-sm font-bold text-slate-800 dark:text-white line-clamp-2 leading-tight px-3 flex-1 text-center tracking-tight">' + window.esc(sur?.title||'') + '</h1>';
+        html += (isSuper?'<button onclick="window.App.modal=\'video\';window.render(true)" class="text-slate-400 hover:text-emerald-500 p-1 -mr-1"><i class="ph-bold ph-link text-xl"></i></button>':'<div class="w-7"></div>');
+        html += '</div>';
+
+        html += '<div class="hidden lg:block p-8 pb-6 max-w-5xl mx-auto w-full shrink-0">';
+        html += '<div class="flex justify-between items-end">';
+        html += '<div>';
+        html += '<div class="flex items-center gap-3 mb-1.5">';
+        html += '<h1 class="text-3xl lg:text-4xl font-serif font-bold dark:text-white tracking-tight flex items-center gap-3">' + window.esc(sur?.title||'') + '</h1>';
+        html += (isSuper?'<button onclick="window.App.modal=\'video\';window.render(true)" class="p-2 bg-white dark:bg-[#15241e] rounded-xl border border-slate-200 dark:border-[#1a2e26] text-slate-400 hover:text-emerald-500 hover:border-emerald-300 transition-all shadow-sm"><i class="ph-bold ph-link text-lg"></i></button>':'');
+        html += '</div>';
+        html += '<p class="text-xs text-slate-500 flex items-center gap-1.5 font-medium"><i class="ph-fill ph-youtube-logo text-red-500 text-base"></i> Materi Media YouTube</p>';
+        html += '</div></div></div>';
+
+        html += '<div class="w-full lg:max-w-5xl lg:mx-auto lg:px-8 shrink-0 bg-black lg:bg-transparent z-20">';
+        html += '<div class="relative lg:rounded-3xl overflow-hidden bg-black aspect-video lg:shadow-xl ring-1 ring-slate-900/5 dark:ring-white/5" id="yt-player-wrapper">';
+        html += '<div id="player-destination" class="absolute inset-0"></div>';
+        html += '<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-4 lg:p-6 pointer-events-none">';
+        html += '<div class="absolute inset-0 flex items-center justify-center pointer-events-none"><button id="big-play-btn" onclick="window.toggleYTPlay()" class="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-emerald-500/90 backdrop-blur-sm flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.3)] pointer-events-auto transition-all ' + (window.App.isPlay?'scale-95 opacity-0':'scale-100 opacity-100 hover:scale-105') + '"><i class="ph-fill ph-play text-3xl lg:text-4xl text-white ml-1.5"></i></button></div>';
+        html += '<div class="w-full mb-3 lg:mb-4 relative"><div class="h-1.5 bg-gray-600/60 rounded-full overflow-hidden flex relative backdrop-blur-md" id="progress-box"></div><div id="current-time-indicator" class="absolute h-3 w-3 bg-white rounded-full top-1/2 -translate-y-1/2 shadow-[0_0_10px_white] transition-all" style="left:0%; margin-left:-6px;"></div></div>';
+        html += '<div class="flex justify-between items-center text-white relative"><div class="flex gap-6 pointer-events-auto items-center"><button onclick="window.nextSeg(-1)" class="hover:text-emerald-400 transition-colors"><i class="ph-fill ph-skip-back text-xl"></i></button><button id="play-pause-btn" onclick="window.toggleYTPlay()" class="hover:text-emerald-400 transition-colors"><i class="ph-fill ' + (window.App.isPlay?'ph-pause':'ph-play') + ' text-3xl"></i></button><button onclick="window.nextSeg(1)" class="hover:text-emerald-400 transition-colors"><i class="ph-fill ph-skip-forward text-xl"></i></button></div><div class="text-[10px] lg:text-xs font-mono font-medium tracking-wider bg-black/40 px-2.5 py-1 rounded-lg backdrop-blur-md" id="time-display">00:00 / 00:00</div></div>';
+        html += '</div></div></div>';
+
+        html += '<div class="lg:hidden w-full bg-white dark:bg-[#15241e] border-b border-slate-100 dark:border-[#1a2e26] p-3 overflow-x-auto hide-scrollbar shrink-0 z-10 shadow-sm">';
+        html += '<div class="flex items-center gap-3 w-max px-1" id="levels-box-mobile"></div>';
+        html += '</div>';
+
+        html += '<div class="p-4 lg:p-8 max-w-5xl mx-auto w-full flex flex-col gap-4 lg:gap-6 shrink-0 pb-24 lg:pb-10">';
+        
+        html += '<div class="grid grid-cols-2 gap-3 lg:gap-5">';
+        html += '<div class="bg-white border border-slate-100 shadow-sm dark:bg-[#15241e] dark:border-[#1a2e26] rounded-2xl p-3 lg:p-4 flex flex-col justify-between hover:border-emerald-300 transition-colors"><span class="text-[9px] lg:text-[10px] text-emerald-600 font-bold tracking-widest uppercase mb-2 block">Pengulangan</span><div class="flex justify-between items-center"><div class="text-lg lg:text-2xl font-bold dark:text-white leading-none"><span id="rep-target-val">' + window.App.repTarget + 'x</span> <span id="rep-text" class="text-[9px] lg:text-[10px] text-emerald-500 font-normal ml-0.5"></span></div><div class="flex gap-1"><button onclick="window.updateRepTarget(-1)" class="w-8 h-8 lg:w-9 lg:h-9 rounded-lg bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors font-bold text-base flex items-center justify-center">-</button><button onclick="window.updateRepTarget(1)" class="w-8 h-8 lg:w-9 lg:h-9 rounded-lg bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors font-bold text-base flex items-center justify-center">+</button></div></div></div>';
+        html += '<div class="bg-white border border-slate-100 shadow-sm dark:bg-[#15241e] dark:border-[#1a2e26] rounded-2xl p-3 lg:p-4 flex flex-col justify-between hover:border-emerald-300 transition-colors"><span class="text-[9px] lg:text-[10px] text-emerald-600 font-bold tracking-widest uppercase mb-2 block">Kecepatan (Speed)</span><div class="flex justify-between items-center"><span class="text-lg lg:text-2xl font-bold dark:text-white leading-none" id="speed-val">' + window.App.speed + 'x</span><div class="flex gap-1"><button onclick="window.updateSpeed(-0.25)" class="w-8 h-8 lg:w-9 lg:h-9 rounded-lg bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors font-bold text-xs flex items-center justify-center"><i class="ph-bold ph-minus"></i></button><button onclick="window.updateSpeed(0.25)" class="w-8 h-8 lg:w-9 lg:h-9 rounded-lg bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 transition-colors font-bold text-xs flex items-center justify-center"><i class="ph-bold ph-plus"></i></button></div></div></div>';
+        html += '</div>';
+
+        html += '<div class="bg-white border border-slate-100 shadow-sm dark:bg-[#15241e] dark:border-[#1a2e26] rounded-2xl lg:rounded-3xl p-5 lg:p-8 hidden relative overflow-hidden" id="quran-box"><div class="absolute top-0 right-0 w-20 h-20 bg-emerald-50 dark:bg-emerald-500/5 rounded-bl-full -mr-5 -mt-5 pointer-events-none"></div><h3 id="quran-title" class="inline-block bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 font-bold text-[10px] lg:text-[11px] px-3 py-1.5 rounded-lg mb-5 lg:mb-6 uppercase tracking-widest text-left relative z-10"></h3><p id="quran-arabic" class="font-arabic text-3xl lg:text-4xl dark:text-white mb-6 lg:mb-8 relative z-10 leading-[2.5] lg:leading-[2.5] text-right"></p><div class="border-t border-slate-100 dark:border-[#1a2e26] pt-4 lg:pt-5"><p id="quran-trans" class="text-[11px] lg:text-sm text-slate-500 dark:text-gray-400 italic text-left leading-relaxed relative z-10"></p></div></div>';
+
+        let sortIcon = 'ph-sort-ascending';
+        let sortLabel = 'Normal';
+        if(window.App.segOrder === 'desc') { sortIcon = 'ph-sort-descending'; sortLabel = 'Terbalik'; }
+        else if(window.App.segOrder === 'random') { sortIcon = 'ph-shuffle'; sortLabel = 'Acak'; }
+        const sortBtnHtml = '<button onclick="window.toggleSegOrder()" class="text-[9px] lg:text-[10px] bg-slate-50 dark:bg-[#0a120f] px-2.5 py-1.5 rounded-lg text-slate-500 font-bold flex items-center gap-1 hover:text-emerald-500 transition-colors uppercase tracking-widest border border-slate-200 dark:border-[#1a2e26]"><i class="ph-bold ' + sortIcon + '"></i> ' + sortLabel + '</button>';
+
+        html += '<div class="lg:hidden mt-2 flex flex-col gap-3">';
+        html += '<div class="flex justify-between items-center px-1"><h2 class="text-sm font-bold dark:text-white flex items-center gap-1.5"><i class="ph-fill ph-list-numbers text-emerald-500 text-lg"></i> Daftar Ayat</h2><div class="flex items-center gap-2">' + sortBtnHtml + (isSuper?'<button onclick="window.App.modal=\'segment\';window.App.modalData=null;window.render(true);setTimeout(window.setupSegmentModal, 10);" class="text-[9px] bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1.5 rounded-md text-emerald-600 font-bold flex items-center gap-1 uppercase tracking-widest"><i class="ph-bold ph-plus"></i> Baru</button>':'') + '</div></div>';
+        html += '<div class="relative"><i class="ph-bold ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i><input id="search-mobile-segs" type="text" placeholder="Cari Ayat/Arti..." value="' + window.esc(window.App.search) + '" oninput="window.App.search=this.value;window.render()" class="input-std !w-full !rounded-xl !pl-10 !py-3 shadow-sm text-xs"></div>';
+        html += '<div class="flex-1 space-y-2 mt-1" id="segs-box-mobile"></div>';
+        html += '</div>';
+
+        html += '</div>'; 
+        
+        html += '<div class="lg:hidden sticky bottom-0 left-0 w-full p-4 bg-white/90 dark:bg-[#0a120f]/90 backdrop-blur-md border-t border-slate-200/60 dark:border-[#1a2e26] z-40 mt-auto"><button onclick="if(!window.App.actSegId){window.showAlert(\'Pilih segmen hafalan terlebih dahulu!\');}else{window.App.rec.src=\'player\';window.App.resubmitId=null;window.switchView(\'setoran\');}" class="btn-std w-full shadow-emerald-500/30 flex items-center justify-center gap-2"><i class="ph-fill ph-microphone-stage text-xl"></i> Setor Hafalan</button></div>';
+        
+        html += '</div>'; 
+
+        html += '<div class="hidden lg:flex w-80 xl:w-96 bg-white dark:bg-[#15241e] border-l border-slate-200/60 dark:border-[#1a2e26] flex-col shrink-0 h-full z-10 shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">';
+        html += '<div class="p-6 border-b border-slate-100 dark:border-[#1a2e26] shrink-0"><div class="flex justify-between items-center mb-5"><h2 class="text-lg font-bold dark:text-white flex items-center gap-2 tracking-tight"><i class="ph-fill ph-list-numbers text-emerald-500 text-xl"></i> Daftar Ayat</h2><div class="flex items-center gap-2">' + sortBtnHtml + (isSuper?'<button onclick="window.App.modal=\'segment\';window.App.modalData=null;window.render(true);setTimeout(window.setupSegmentModal, 10);" class="text-[10px] bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded-lg text-emerald-600 font-bold flex items-center gap-1 hover:bg-emerald-500 hover:text-white transition-all uppercase tracking-widest"><i class="ph-bold ph-plus"></i> Baru</button>':'') + '</div></div>';
+        html += '<div class="relative mb-5"><i class="ph-bold ph-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i><input id="search-desktop-segs" type="text" placeholder="Cari Ayat/Arti..." value="' + window.esc(window.App.search) + '" oninput="window.App.search=this.value;window.render()" class="input-std !w-full !rounded-2xl !pl-12 py-3 shadow-sm"></div>';
+        html += '<button onclick="if(!window.App.actSegId){window.showAlert(\'Pilih segmen hafalan terlebih dahulu!\');}else{window.App.rec.src=\'player\';window.App.resubmitId=null;window.switchView(\'setoran\');}" class="btn-std !py-3.5 !text-sm flex items-center justify-center gap-2 shadow-xl"><i class="ph-fill ph-microphone-stage text-xl"></i> Setor Hafalan</button>';
+        html += '</div><div class="flex-1 overflow-y-auto p-4 space-y-3" id="segs-box-desktop"></div></div>';
+
+        html += '</div>';
+      }
+      else if(window.App.view === 'setoran') {
+        const seg = window.App.segs.find(s=>s.id===window.App.actSegId);
+        const sur = window.App.surahs.find(s=>s.id===window.App.actSurahId);
+        if(window.App.adminLvl === 2) window.App.hierSel.u = window.App.loggedInUstadzId;
+        const uId = window.App.hierSel.u||''; const hId = window.App.hierSel.h||''; const sId = window.App.hierSel.s||'';
+        const hList = window.App.halaqohs.filter(h=>h.ustadzId==uId);
+        const sList = window.App.siswas.filter(s=>s.halaqohId==hId);
+        const isResubmit = window.App.resubmitId !== null;
+        let uListSetoran = window.App.adminLvl === 2 ? window.App.ustadz.filter(x => x.id == window.App.loggedInUstadzId) : window.App.ustadz;
+
+        html += '<div id="main-scroll" class="flex-1 flex flex-col w-full h-full bg-slate-50 dark:bg-[#111c18] overflow-y-auto"><header class="h-16 md:h-20 flex justify-between items-center px-5 md:px-8 bg-white border-b border-slate-200/60 dark:bg-[#0a120f] dark:border-[#1a2e26] shrink-0 sticky top-0 z-20"><button onclick="if(window.App.rec.is){window.stopStudentRecord();} window.App.resubmitId=null;window.switchView(window.App.rec.src);" class="font-bold text-slate-500 hover:text-emerald-500 flex gap-2 items-center text-sm transition-colors"><i class="ph-bold ph-arrow-left text-lg"></i> Batal</button><div class="text-emerald-500 font-bold text-lg md:text-xl flex items-center gap-2 tracking-tight"><i class="ph-fill ph-microphone-stage text-2xl"></i> ' + (isResubmit?'Setor Ulang Hafalan':'Ujian Hafalan') + '</div><div class="w-16 md:w-20"></div></header><div class="flex-1 p-4 py-8 md:p-10 relative bg-gradient-to-br from-emerald-50/50 to-slate-100 dark:from-[#0a120f] dark:to-[#111c18]"><div class="w-full max-w-[480px] bg-white border border-slate-100 rounded-[2.5rem] p-6 sm:p-8 md:p-10 shadow-2xl dark:bg-[#15241e] dark:border-[#1a2e26] text-center mx-auto mt-2 md:mt-6 relative"><div class="inline-flex p-4 bg-emerald-50 text-emerald-600 rounded-[1.5rem] mb-4 dark:bg-emerald-900/30 shadow-inner"><i class="ph-fill ph-waveform text-4xl"></i></div><h2 class="text-emerald-600 font-bold tracking-[0.2em] text-[10px] md:text-xs uppercase mb-2 break-words whitespace-normal">' + window.esc(sur?.title||'') + '</h2><h1 class="text-2xl md:text-3xl font-serif font-bold dark:text-white mb-8 tracking-tight">' + window.esc(seg?.title||'') + '</h1><div class="text-left flex flex-col gap-4 mb-8 bg-slate-50 p-5 rounded-3xl border border-slate-100 dark:bg-[#0a120f] dark:border-[#1a2e26]"><div><label class="block text-[10px] text-slate-500 font-bold mb-2 uppercase tracking-widest flex items-center gap-1.5"><i class="ph-fill ph-chalkboard-teacher text-emerald-500 text-sm"></i> Penguji</label><select id="setoran-ustadz" onchange="window.App.hierSel.u=this.value;window.App.hierSel.h=\'\';window.App.hierSel.s=\'\';window.render(true)" class="input-std !bg-white dark:!bg-[#15241e] cursor-pointer ' + (isResubmit||window.App.adminLvl===2?'opacity-50 pointer-events-none':'') + '" ' + (isResubmit||window.App.adminLvl===2?'disabled':'') + '>' + (window.App.adminLvl !== 2 ? '<option value="" disabled ' + (!uId?'selected':'') + '>-- Pilih Ustadz --</option>' : '') + uListSetoran.map(u=>'<option value="' + u.id + '" ' + (uId==u.id?'selected':'') + '>' + window.esc(u.name) + '</option>').join('') + '</select></div><div class="grid grid-cols-1 sm:grid-cols-2 gap-4"><div><label class="block text-[10px] text-slate-500 font-bold mb-2 uppercase tracking-widest flex items-center gap-1.5"><i class="ph-fill ph-users-three text-blue-500 text-sm"></i> Halaqoh</label><select id="setoran-halaqoh" onchange="window.App.hierSel.h=this.value;window.App.hierSel.s=\'\';window.render(true)" class="input-std !bg-white dark:!bg-[#15241e] cursor-pointer ' + (!uId||isResubmit?'opacity-50 pointer-events-none':'') + '" ' + (!uId||isResubmit?'disabled':'') + '><option value="" disabled ' + (!hId?'selected':'') + '>-- Pilih --</option>' + hList.map(h=>'<option value="' + h.id + '" ' + (hId==h.id?'selected':'') + '>' + window.esc(h.name) + '</option>').join('') + '</select></div><div><label class="block text-[10px] text-slate-500 font-bold mb-2 uppercase tracking-widest flex items-center gap-1.5"><i class="ph-fill ph-user-circle text-purple-500 text-sm"></i> Santri</label><select id="setoran-siswa" onchange="window.App.hierSel.s=this.value;window.render(true)" class="input-std !bg-white dark:!bg-[#15241e] cursor-pointer ' + (!hId||isResubmit?'opacity-50 pointer-events-none':'') + '" ' + (!hId||isResubmit?'disabled':'') + '><option value="" disabled ' + (!sId?'selected':'') + '>-- Pilih --</option>' + sList.map(s=>'<option value="' + s.id + '" ' + (sId==s.id?'selected':'') + '>' + window.esc(s.name) + ' (' + window.esc(s.kelas) + ')</option>').join('') + '</select></div></div></div><div class="bg-white border-2 border-dashed border-emerald-200 p-8 rounded-[2rem] mb-5 dark:bg-transparent dark:border-emerald-500/20"><div class="relative w-24 h-24 md:w-28 md:h-28 mx-auto mb-4">' + (window.App.rec.is?'<div class="absolute inset-0 bg-red-500/30 rounded-full animate-ping pointer-events-none"></div>':'') + '<button onclick="if(!window.App.hierSel.s){window.showAlert(\'Pilih identitas santri terlebih dahulu!\');return;} if(!window.App.rec.is){window.startStudentRecord();}else{window.stopStudentRecord();}" class="relative w-full h-full ' + (window.App.rec.is?'bg-red-500':'bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-xl shadow-emerald-500/40 hover:-translate-y-1') + ' text-white rounded-full flex items-center justify-center transition-all duration-300 active:scale-95"><i class="ph-fill ' + (window.App.rec.is?'ph-stop':'ph-microphone') + ' text-4xl md:text-5xl"></i></button></div><div id="rec-timer-display" class="text-base md:text-lg font-mono text-slate-700 dark:text-gray-200 font-bold tracking-widest">' + (window.App.rec.is ? window.fmtT(window.App.rec.secs) : (window.App.rec.secs>0 ? 'Selesai: '+window.fmtT(window.App.rec.secs) : 'Ketuk untuk Merekam')) + '</div>' + (window.App.rec.secs>0 && !window.App.rec.is ? '<div class="flex gap-3 mt-8 pt-8 border-t border-slate-100 dark:border-[#1a2e26]"><button onclick="window.App.rec.secs=0;window.App.currentStudentAudioUrl=null;window.render(true)" class="flex-1 py-4 bg-slate-100 rounded-2xl text-slate-500 font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition-colors dark:bg-[#0a120f] dark:hover:bg-[#1A2E26]">Ulangi</button><button onclick="window.submitRec(\'mic\')" class="flex-[2] py-4 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-emerald-500/30 hover:opacity-90 transition-all flex items-center justify-center gap-2"><i class="ph-bold ph-paper-plane-tilt text-lg"></i> Kirim</button></div>' : '') + '</div>' + (window.App.rec.secs===0 && !window.App.rec.is ? '<div class="pt-2"><div class="relative flex items-center py-2 mb-3"><div class="flex-grow border-t border-slate-200 dark:border-[#1a2e26]"></div><span class="mx-4 text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em]">Atau</span><div class="flex-grow border-t border-slate-200 dark:border-[#1a2e26]"></div></div><input type="file" id="au-up" accept="audio/*" class="hidden" onchange="window.submitRec(\'file\', event)"><button onclick="if(!window.App.hierSel.s){window.showAlert(\'Pilih identitas santri terlebih dahulu!\');return;} document.getElementById(\'au-up\').click()" class="w-full py-4 bg-slate-50 text-slate-600 border border-slate-200 rounded-2xl font-bold flex justify-center items-center gap-2 hover:bg-white hover:border-emerald-400 hover:text-emerald-600 hover:shadow-md transition-all dark:bg-[#0a120f] dark:border-[#1a2e26] dark:text-gray-400 text-xs uppercase tracking-widest"><i class="ph-bold ph-upload-simple text-lg"></i> Upload File Audio</button></div>' : '') + '</div></div></div>';
+      }
+      else if(window.App.view === 'hub') {
+        if (window.App.adminLvl === 2) window.App.filter.u = window.App.loggedInUstadzId;
+        const uListHub = window.App.adminLvl === 2 ? window.App.ustadz.filter(x=>x.id == window.App.loggedInUstadzId) : window.App.ustadz;
+        const oU = (window.App.adminLvl !== 2 ? '<option value="all">-- Semua Ustadz/ah --</option>' : '') + uListHub.map(u=>'<option value="' + u.id + '" ' + (window.App.filter.u==u.id?'selected':'') + '>' + window.esc(u.name) + '</option>').join('');
+        const hl = window.App.filter.u!=='all'?window.App.halaqohs.filter(h=>h.ustadzId==window.App.filter.u):window.App.halaqohs;
+        const oH = '<option value="all">-- Semua Halaqoh --</option>'+hl.map(h=>'<option value="' + h.id + '" ' + (window.App.filter.h==h.id?'selected':'') + '>' + window.esc(h.name) + '</option>').join('');
+        let sl = window.App.siswas; if(window.App.filter.h!=='all')sl=sl.filter(s=>s.halaqohId==window.App.filter.h);else if(window.App.filter.u!=='all'){let ids=hl.map(x=>x.id);sl=sl.filter(s=>ids.includes(s.halaqohId))}
+        const oS = '<option value="all">-- Semua Siswa --</option>'+window.App.siswas.map(s=>'<option value="' + s.id + '" ' + (window.App.filter.s==s.id?'selected':'') + '>' + window.esc(s.name) + '</option>').join('');
+
+        let fs = window.App.subs;
+        let tUidHub = window.App.adminLvl === 2 ? window.App.loggedInUstadzId : (window.App.filter.u !== 'all' ? Number(window.App.filter.u) : null);
+        
+        if (tUidHub !== null) {
+            let uHals = window.App.halaqohs.filter(h=>h.ustadzId === tUidHub).map(h=>h.id);
+            let uSws = window.App.siswas.filter(s=>uHals.includes(s.halaqohId)).map(s=>s.id);
+            fs = fs.filter(sb => sb.ustadzId === tUidHub || uSws.includes(sb.siswaId));
+        }
+        if (window.App.filter.h !== 'all') {
+            let tHid = Number(window.App.filter.h);
+            let hSws = window.App.siswas.filter(s=>s.halaqohId === tHid).map(s=>s.id);
+            fs = fs.filter(sb => sb.halaqohId === tHid || hSws.includes(sb.siswaId));
+        }
+        if (window.App.filter.s !== 'all') {
+            fs = fs.filter(sb => sb.siswaId === Number(window.App.filter.s));
+        }
+        if(window.App.search) {
+            let sq = window.App.search.toLowerCase();
+            fs = fs.filter(x=>{
+                let su=window.App.surahs.find(y=>y.id===x.surahId); 
+                return (su&&su.title.toLowerCase().includes(sq)) || window.getSName(x.siswaId).toLowerCase().includes(sq);
+            });
+        }
+
+        html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-10 min-h-0 relative"><div class="max-w-6xl mx-auto w-full">';
+        html += mobileSearchBar;
+        html += '<div class="mb-8 md:mb-12"><div class="flex flex-col md:flex-row justify-between md:items-end border-b border-slate-200 dark:border-[#1a2e26] pb-4 mb-6 gap-4 md:gap-0"><div><h1 class="text-2xl md:text-3xl font-serif dark:text-white mb-1 flex items-center gap-2"><i class="ph-fill ph-clipboard-text text-emerald-500"></i> Papan Riwayat</h1><p class="text-xs md:text-sm text-slate-500">Pantau status hafalan dan progres santri secara real-time.</p></div></div>';
+        
+        html += '<div class="bg-white dark:bg-[#15241e] border border-slate-100 dark:border-[#1a2e26] p-2 md:p-3 rounded-[2rem] shadow-soft flex flex-col md:flex-row gap-2">';
+        html += '<div class="flex-1 relative"><i class="ph-fill ph-chalkboard-teacher absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select id="hub-filter-ustadz" onchange="window.App.filter.u=this.value;window.App.filter.h=\'all\';window.App.filter.s=\'all\';window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none" ' + (window.App.adminLvl===2?'disabled':'') + '>' + oU + '</select></div>';
+        html += '<div class="flex-1 relative"><i class="ph-fill ph-users-three absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select id="hub-filter-halaqoh" onchange="window.App.filter.h=this.value;window.App.filter.s=\'all\';window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oH + '</select></div>';
+        html += '<div class="flex-1 relative"><i class="ph-fill ph-user-circle absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select id="hub-filter-siswa" onchange="window.App.filter.s=this.value;window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oS + '</select></div>';
+        html += '</div></div>';
+        
+        if(!fs.length) {
+            html += '<div class="flex flex-col items-center justify-center py-20 text-center bg-white dark:bg-[#15241e] rounded-[2rem] border border-dashed border-slate-200 dark:border-[#1a2e26]"><div class="w-20 h-20 bg-slate-50 dark:bg-[#0a120f] rounded-full flex items-center justify-center text-slate-300 mb-4"><i class="ph-fill ph-clipboard-text text-4xl"></i></div><p class="text-slate-500 font-medium">' + (window.App.search?'Pencarian tidak ditemukan.':'Belum ada riwayat setoran di sini.') + '</p></div>';
+        } else {
+            let strList = "";
+            fs.sort((a,b)=>b.id-a.id).forEach(sb=>{
+                let su=window.App.surahs.find(x=>x.id===sb.surahId); let sg=window.App.segs.find(x=>x.id===sb.segmentId); let lv=sg?window.App.levels.find(l=>l.id===sg.levelId):null;
+                
+                let sColor = sb.status==='graded'?'text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-900/30 dark:border-emerald-800':sb.status==='need-repeat'?'text-red-600 bg-red-50 border-red-200 dark:bg-red-900/30 dark:border-red-800':'text-orange-600 bg-orange-50 border-orange-200 dark:bg-orange-900/30 dark:border-orange-800'; 
+                let sIcon = sb.status==='graded'?'ph-check-circle':sb.status==='need-repeat'?'ph-arrow-counter-clockwise':'ph-hourglass';
+                let sText = sb.status==='graded'?'LULUS ('+sb.grade+')':sb.status==='need-repeat'?'DIULANG':'MENUNGGU NILAI'; 
+
+                let ustNoteHtml = '';
+                if(sb.note || sb.voiceNote) {
+                    ustNoteHtml = '<div class="mt-4 bg-orange-50 dark:bg-orange-900/10 rounded-2xl p-4 border border-orange-100 dark:border-orange-900/30"><div class="flex items-center gap-1.5 mb-2"><i class="ph-fill ph-chalkboard-teacher text-orange-500"></i><span class="text-[10px] font-bold text-orange-600 uppercase tracking-widest">Catatan Penguji</span></div>';
+                    if(sb.note) ustNoteHtml += '<p class="text-xs text-slate-600 dark:text-gray-300 leading-relaxed mb-3">' + window.esc(sb.note) + '</p>';
+                    if(sb.voiceNote) ustNoteHtml += window.renderCustomAudio('hub_ust_' + sb.id, sb.voiceNote, 0, true);
+                    ustNoteHtml += '</div>';
+                }
+
+                let cStu = window.App.siswas.find(x=>x.id===sb.siswaId);
+                let cHalaqohId = cStu ? cStu.halaqohId : sb.halaqohId;
+                let cHalaqoh = window.App.halaqohs.find(x=>x.id===cHalaqohId);
+                let cUstadzId = cHalaqoh ? cHalaqoh.ustadzId : sb.ustadzId;
+
+                let actionBtn = '';
+                if (sb.status==='need-repeat' && !isAdmin) {
+                    actionBtn = '<button onclick="window.App.actSurahId=' + sb.surahId + ';window.App.actSegId=' + sb.segmentId + ';window.App.resubmitId=' + sb.id + ';window.App.hierSel={u:' + cUstadzId + ',h:' + cHalaqohId + ',s:' + sb.siswaId + '};window.App.rec.src=\'hub\';window.App.rec.secs=0;window.switchView(\'setoran\');" class="bg-red-500 hover:bg-red-600 text-white shadow-md shadow-red-500/30 px-4 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center gap-1.5 transition-all active:scale-95"><i class="ph-bold ph-microphone text-sm"></i> Setor Ulang</button>';
+                }
+
+                let shareBtn = '';
+                if (sb.status === 'graded') {
+                    shareBtn = `<button onclick="window.App.modal='share_card';window.App.modalData=${sb.id};window.render(true)" class="px-4 py-2.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl font-bold text-[10px] uppercase tracking-widest flex items-center gap-1.5 hover:bg-emerald-500 hover:text-white transition-all dark:bg-[#15241e] dark:border-[#1a2e26] dark:text-emerald-400"><i class="ph-bold ph-certificate text-sm"></i> Kartu</button>`;
+                }
+
+                let studentAudioPlayer = window.renderCustomAudio('hub_stu_' + sb.id, sb.audioUrl, sb.duration || 0, false);
+
+                strList += `
+                <div class="bg-white border border-slate-100 rounded-[2rem] p-5 md:p-6 shadow-soft flex flex-col gap-4 dark:bg-[#0f1915] dark:border-[#1a2e26] hover:shadow-xl transition-all relative overflow-hidden">
+                    ${sb.status==='pending'?'<div class="absolute -top-6 -right-6 w-20 h-20 bg-orange-100 dark:bg-orange-500/10 rounded-full blur-2xl pointer-events-none"></div>':sb.status==='need-repeat'?'<div class="absolute -top-6 -right-6 w-20 h-20 bg-red-100 dark:bg-red-500/10 rounded-full blur-2xl pointer-events-none"></div>':'<div class="absolute -top-6 -right-6 w-20 h-20 bg-emerald-100 dark:bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>'}
+                    <div class="flex justify-between items-start relative z-10">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 rounded-full flex items-center justify-center text-slate-500 shrink-0">
+                                <i class="ph-fill ph-user text-2xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-800 dark:text-white text-sm md:text-base leading-tight">${window.getSName(sb.siswaId)}</h3>
+                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">${window.getHName(sb.halaqohId)} &bull; ${window.getUName(sb.ustadzId)}</p>
+                            </div>
+                        </div>
+                        <div class="text-[9px] font-mono text-slate-400 bg-slate-50 dark:bg-[#15241e] px-2.5 py-1.5 rounded-lg border border-slate-100 dark:border-[#1a2e26] shrink-0">${sb.date}</div>
+                    </div>
+
+                    <div class="bg-slate-50 dark:bg-[#15241e] rounded-2xl p-4 border border-slate-100 dark:border-[#1a2e26] relative z-10">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <i class="ph-fill ph-book-open text-emerald-500 text-lg shrink-0"></i>
+                                <span class="text-sm font-bold text-slate-700 dark:text-gray-200 break-words whitespace-normal leading-tight">${window.esc(su?su.title:'-')}</span>
+                            </div>
+                            <span class="text-[9px] font-bold bg-white dark:bg-[#0a120f] px-2 py-1 rounded-md text-emerald-600 border border-slate-100 dark:border-[#1a2e26] uppercase tracking-widest shadow-sm shrink-0 ml-2">${window.esc(lv?lv.name:'-')}</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 font-medium pl-6">${window.esc(sg?sg.title:'-')}</p>
+                    </div>
+
+                    <div class="w-full relative z-20">
+                        ${studentAudioPlayer}
+                    </div>
+
+                    ${ustNoteHtml}
+
+                    <div class="pt-4 mt-auto border-t border-slate-100 dark:border-[#1a2e26] flex items-center justify-between gap-3 relative z-20">
+                        <div class="flex items-center gap-1.5 text-[10px] md:text-xs font-bold px-3 py-2.5 rounded-xl border ${sColor} shrink-0">
+                            <i class="ph-fill ${sIcon} text-sm md:text-base"></i> <span class="hidden sm:inline md:hidden xl:inline">${sText}</span>
+                        </div>
+                        <div class="flex items-center gap-2 flex-1 justify-end">
+                            ${actionBtn}
+                            ${shareBtn}
+                        </div>
+                    </div>
+                </div>`;
+            });
+            html += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">' + strList + '</div>';
+        }
+        html += '</div></div></div>';
+      }
+      else if(window.App.view === 'admin') {
+        if (window.App.adminLvl === 2) window.App.filter.u = window.App.loggedInUstadzId;
+        const uListHub = window.App.adminLvl === 2 ? window.App.ustadz.filter(x=>x.id == window.App.loggedInUstadzId) : window.App.ustadz;
+        const oU = (window.App.adminLvl !== 2 ? '<option value="all">Semua Ustadz/ah</option>' : '') + uListHub.map(u=>'<option value="' + u.id + '" ' + (window.App.filter.u==u.id?'selected':'') + '>' + window.esc(u.name) + '</option>').join('');
+        const hl = window.App.filter.u!=='all'?window.App.halaqohs.filter(h=>h.ustadzId==window.App.filter.u):window.App.halaqohs;
+        const oH = '<option value="all">Semua Halaqoh</option>'+hl.map(h=>'<option value="' + h.id + '" ' + (window.App.filter.h==h.id?'selected':'') + '>' + window.esc(h.name) + '</option>').join('');
+        let sl = window.App.siswas; if(window.App.filter.h!=='all')sl=sl.filter(s=>s.halaqohId==window.App.filter.h);else if(window.App.filter.u!=='all'){let ids=hl.map(x=>x.id);sl=sl.filter(s=>ids.includes(s.halaqohId))}
+        const oS = '<option value="all">Semua Siswa</option>'+window.App.siswas.map(s=>'<option value="' + s.id + '" ' + (window.App.filter.s==s.id?'selected':'') + '>' + window.esc(s.name) + '</option>').join('');
+
+        let fs = window.App.subs;
+        let tUidAdmin = window.App.adminLvl === 2 ? window.App.loggedInUstadzId : (window.App.filter.u !== 'all' ? Number(window.App.filter.u) : null);
+        
+        if (tUidAdmin !== null) {
+            let uHals = window.App.halaqohs.filter(h=>h.ustadzId === tUidAdmin).map(h=>h.id);
+            let uSws = window.App.siswas.filter(s=>uHals.includes(s.halaqohId)).map(s=>s.id);
+            fs = fs.filter(sb => sb.ustadzId === tUidAdmin || uSws.includes(sb.siswaId));
+        }
+        if (window.App.filter.h !== 'all') {
+            let tHid = Number(window.App.filter.h);
+            let hSws = window.App.siswas.filter(s=>s.halaqohId === tHid).map(s=>s.id);
+            fs = fs.filter(sb => sb.halaqohId === tHid || hSws.includes(sb.siswaId));
+        }
+        if (window.App.filter.s !== 'all') {
+            fs = fs.filter(sb => sb.siswaId === Number(window.App.filter.s));
+        }
+        if(window.App.search) {
+            let sq = window.App.search.toLowerCase();
+            fs = fs.filter(x=>{
+                let su=window.App.surahs.find(y=>y.id===x.surahId); 
+                return (su&&su.title.toLowerCase().includes(sq)) || window.getSName(x.siswaId).toLowerCase().includes(sq);
+            });
+        }
+
+        html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10 min-h-0 relative"><div class="max-w-6xl mx-auto w-full">';
+        html += mobileSearchBar;
+        html += '<div class="mb-8 md:mb-12"><div class="flex flex-col md:flex-row justify-between md:items-end border-b border-slate-200 dark:border-[#1a2e26] pb-4 mb-6 gap-4 md:gap-0"><div><h1 class="text-3xl md:text-4xl font-serif text-orange-500 dark:text-orange-400 mb-2 flex items-center gap-3 tracking-tight"><i class="ph-fill ph-tray"></i> Antrean Setoran</h1><p class="text-xs md:text-sm text-slate-500">Daftar rekaman hafalan yang menunggu penilaian.</p></div></div>';
+        
+        html += '<div class="bg-white dark:bg-[#15241e] border border-slate-100 dark:border-[#1a2e26] p-2 md:p-3 rounded-[2rem] shadow-soft flex flex-col md:flex-row gap-2 mb-6 md:mb-8">';
+        html += '<div class="flex-1 relative"><i class="ph-fill ph-chalkboard-teacher absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select id="adm-filter-ustadz" onchange="window.App.filter.u=this.value;window.App.filter.h=\'all\';window.App.filter.s=\'all\';window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none" ' + (window.App.adminLvl===2?'disabled':'') + '>' + oU + '</select></div>';
+        html += '<div class="flex-1 relative"><i class="ph-fill ph-users-three absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select id="adm-filter-halaqoh" onchange="window.App.filter.h=this.value;window.App.filter.s=\'all\';window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oH + '</select></div>';
+        html += '<div class="flex-1 relative"><i class="ph-fill ph-user-circle absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select id="adm-filter-siswa" onchange="window.App.filter.s=this.value;window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oS + '</select></div>';
+        html += '</div>';
+
+        if(!fs.length) {
+            html += '<div class="flex flex-col items-center justify-center py-20 text-center bg-white dark:bg-[#15241e] rounded-[2rem] border border-dashed border-slate-200 dark:border-[#1a2e26]"><div class="w-20 h-20 bg-slate-50 dark:bg-[#0a120f] rounded-full flex items-center justify-center text-slate-300 mb-4"><i class="ph-fill ph-check-circle text-4xl"></i></div><p class="text-slate-500 font-medium">' + (window.App.search?'Pencarian tidak ditemukan.':'Luar biasa! Tidak ada antrean saat ini.') + '</p></div>';
+        } else {
+            let mStr = "";
+            fs.sort((a,b)=>{if(a.status==='pending'&&b.status!=='pending')return -1;if(a.status!=='pending'&&b.status==='pending')return 1;return b.id-a.id;}).forEach(sb=>{
+                let su=window.App.surahs.find(x=>x.id===sb.surahId); let sg=window.App.segs.find(x=>x.id===sb.segmentId); let lv=sg?window.App.levels.find(l=>l.id===sg.levelId):null;
+                
+                let sColor = sb.status==='pending'?'text-orange-600 bg-orange-50 border-orange-200 dark:bg-orange-900/30 dark:border-orange-800':sb.status==='need-repeat'?'text-red-600 bg-red-50 border-red-200 dark:bg-red-900/30 dark:border-red-800':'text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-900/30 dark:border-emerald-800'; 
+                let sIcon = sb.status==='pending'?'ph-hourglass':sb.status==='need-repeat'?'ph-arrow-counter-clockwise':'ph-check-circle';
+                let sText = sb.status==='pending'?'MENUNGGU':sb.status==='need-repeat'?'DIULANG':'LULUS ('+sb.grade+')'; 
+                
+                let aB = sb.status==='pending' 
+                    ? '<button onclick="window.App.modal=\'grade\';window.App.modalData=' + sb.id + ';window.render(true)" class="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/30 py-2.5 px-3 rounded-xl font-bold text-[10px] md:text-xs uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all hover:scale-105 active:scale-95"><i class="ph-fill ph-star text-sm md:text-base"></i> Nilai</button>' 
+                    : '<button onclick="window.App.modal=\'grade\';window.App.modalData=' + sb.id + ';window.render(true)" class="flex-1 bg-slate-50 hover:bg-blue-50 text-blue-600 border border-slate-200 py-2.5 px-3 rounded-xl font-bold text-[10px] md:text-xs uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all dark:bg-[#0a120f] dark:border-[#1a2e26] dark:hover:border-blue-500/50"><i class="ph-bold ph-pencil-simple text-sm md:text-base"></i> Edit</button>';
+                
+                let delB = isSuper ? '<button onclick="window.deleteSubmission(' + sb.id + ')" class="bg-red-50 text-red-500 border border-red-100 hover:bg-red-500 hover:text-white w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center transition-colors dark:bg-[#15241e] dark:border-[#1a2e26] shrink-0" title="Hapus"><i class="ph-bold ph-trash text-lg"></i></button>' : '';
+                
+                let shareBtn = sb.status === 'graded' ? `<button onclick="window.App.modal='share_card';window.App.modalData=${sb.id};window.render(true)" class="bg-slate-50 hover:bg-emerald-50 text-emerald-600 border border-slate-200 w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center transition-all dark:bg-[#0a120f] dark:border-[#1a2e26] dark:hover:border-emerald-500/50 shrink-0" title="Kartu Prestasi"><i class="ph-bold ph-certificate text-lg"></i></button>` : '';
+
+                let nI=(sb.note||sb.voiceNote)?'<div class="text-[10px] text-slate-400 mt-3 italic flex flex-wrap gap-3 relative z-10">' + (sb.note?'<span class="flex items-center gap-1"><i class="ph-fill ph-note text-emerald-500"></i> Teks</span>':'') + (sb.voiceNote?('<div class="mt-1 w-full">' + window.renderCustomAudio('adm_ust_' + sb.id, sb.voiceNote, 0, true) + '</div>'):'') + '</div>':'';
+                
+                let studentAudioPlayer = window.renderCustomAudio('adm_stu_' + sb.id, sb.audioUrl, sb.duration || 0, false);
+
+                mStr += '<div class="bg-white border border-slate-100 rounded-[2rem] p-5 md:p-6 shadow-soft flex flex-col gap-4 dark:bg-[#0f1915] dark:border-[#1a2e26] hover:shadow-xl transition-all relative overflow-hidden">';
+                mStr += (sb.status==='pending'?'<div class="absolute -top-6 -right-6 w-20 h-20 bg-orange-100 dark:bg-orange-500/10 rounded-full blur-2xl pointer-events-none"></div>':'');
+                
+                mStr += '<div class="flex justify-between items-start relative z-10"><div class="flex items-center gap-3"><div class="w-12 h-12 bg-slate-50 dark:bg-[#15241e] rounded-full flex items-center justify-center text-slate-400 shrink-0"><i class="ph-fill ph-user text-2xl"></i></div><div><h3 class="font-bold text-slate-800 dark:text-white text-sm md:text-base leading-tight">' + window.getSName(sb.siswaId) + '</h3><p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">' + window.getHName(sb.halaqohId) + ' &bull; Kelas ' + window.getSKelas(sb.siswaId) + '</p></div></div><div class="text-[9px] font-mono text-slate-400 bg-slate-50 dark:bg-[#15241e] px-2.5 py-1.5 rounded-lg border border-slate-100 dark:border-[#1a2e26] shrink-0">' + sb.date + '</div></div>';
+
+                mStr += '<div class="bg-slate-50 dark:bg-[#15241e] rounded-2xl p-4 border border-slate-100 dark:border-[#1a2e26] relative z-10"><div class="flex items-center justify-between mb-1.5"><div class="flex items-center gap-2 min-w-0"><i class="ph-fill ph-book-open text-emerald-500 text-lg shrink-0"></i><span class="text-sm font-bold text-slate-700 dark:text-gray-200 break-words whitespace-normal leading-tight">' + window.esc(su?su.title:'-') + '</span></div><span class="text-[9px] font-bold bg-white dark:bg-[#0a120f] px-2 py-1 rounded-md text-emerald-600 border border-slate-100 dark:border-[#1a2e26] uppercase tracking-widest shadow-sm shrink-0 ml-2">' + window.esc(lv?lv.name:'-') + '</span></div><p class="text-[11px] text-slate-500 font-medium pl-6">' + window.esc(sg?sg.title:'-') + '</p>' + nI + '</div>';
+
+                mStr += '<div class="w-full relative z-20">' + studentAudioPlayer + '</div>';
+
+                mStr += '<div class="pt-4 mt-auto border-t border-slate-100 dark:border-[#1a2e26] flex items-center justify-between gap-3 relative z-20"><div class="flex items-center gap-1.5 text-[10px] md:text-xs font-bold px-3 py-2.5 rounded-xl border ' + sColor + ' shrink-0"><i class="ph-fill ' + sIcon + ' text-sm md:text-base"></i> <span class="hidden sm:inline md:hidden xl:inline">' + sText + '</span></div><div class="flex items-center gap-2 flex-1 justify-end">' + delB + shareBtn + aB + '</div></div>';
+                
+                mStr += '</div>';
+            });
+            html += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">' + mStr + '</div>';
+        }
+        html += '</div></div></div>';
+      }
+      else if(window.App.view === 'master') {
+        if (window.App.adminLvl === 2 && !window.App.hierSel.u) window.App.hierSel.u = window.App.loggedInUstadzId;
+        
+        let sQ = window.App.search.toLowerCase();
+        let sQSiswa = (window.App.searchSiswa || '').toLowerCase();
+
+        let ul = window.App.adminLvl === 2 ? window.App.ustadz.filter(x=>x.id == window.App.loggedInUstadzId) : window.App.ustadz;
+        if(sQ) ul = ul.filter(u => u.name.toLowerCase().includes(sQ) || u.username.toLowerCase().includes(sQ));
+        
+        let hl = sQ ? window.App.halaqohs.filter(h => h.name.toLowerCase().includes(sQ)) : (window.App.hierSel.u ? window.App.halaqohs.filter(h=>h.ustadzId==window.App.hierSel.u) : []);
+        
+        let sl = (sQ || sQSiswa) ? window.App.siswas.filter(s => s.name.toLowerCase().includes(sQ || sQSiswa) || s.kelas.toLowerCase().includes(sQ || sQSiswa)) : (window.App.hierSel.h ? window.App.siswas.filter(s=>s.halaqohId==window.App.hierSel.h) : []);
+        
+        html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 min-h-0"><div class="max-w-7xl mx-auto w-full">' + mobileSearchBar + '<div class="mb-6 lg:mb-8 shrink-0"><div><h1 class="text-2xl md:text-3xl lg:text-4xl font-serif text-purple-600 dark:text-purple-500 mb-1 md:mb-2 flex items-center gap-2"><i class="ph-fill ph-database text-3xl"></i> Data Master</h1><p class="text-xs md:text-sm text-slate-500 dark:text-gray-400">Atur hierarki aplikasi dan kelola pengguna.</p></div></div>';
+        
+        if(isSuper) {
+            let logoC = window.App.schLogo ? '<img src="' + window.App.schLogo + '" class="h-12 w-12 rounded-xl object-contain bg-white dark:bg-[#0a120f] p-1 shadow-sm">' : '<div class="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-500 dark:bg-emerald-500/10 flex items-center justify-center shrink-0"><i class="ph-fill ph-image text-2xl"></i></div>';
+            html += '<div class="flex flex-col md:flex-row gap-4 lg:gap-6 mb-8 shrink-0"><div class="card-std !h-auto !p-4 flex flex-row items-center gap-4 w-full md:w-auto shadow-sm">' + logoC + '<div class="flex-1 overflow-hidden"><p class="text-[10px] font-bold text-emerald-600 mb-1.5 uppercase tracking-widest">Logo Sekolah</p><input type="file" id="aup" accept="image/*" class="hidden" onchange="window.handleLogoUpload(event)"><div class="flex gap-2"><button type="button" onclick="document.getElementById(\'aup\').click()" class="flex-1 md:flex-none text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-4 py-2.5 rounded-xl dark:bg-[#15241e] dark:border-[#1a2e26] dark:text-gray-300 transition shadow-sm truncate">Upload</button><button type="button" onclick="window.removeLogo()" class="text-xs font-bold bg-red-50 text-red-500 hover:bg-red-100 px-4 py-2.5 rounded-xl dark:bg-red-900/20 transition truncate">Hapus</button></div></div></div><div class="card-std !h-auto !p-4 flex flex-row items-center gap-4 flex-1 shadow-sm"><div class="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 flex items-center justify-center shrink-0"><i class="ph-bold ph-text-t text-2xl"></i></div><div class="flex-1 w-full overflow-hidden"><p class="text-[10px] font-bold text-blue-600 mb-1.5 uppercase tracking-widest">Nama Sekolah</p><div class="flex gap-2 w-full"><input type="text" id="i-sub" value="' + window.App.schSub + '" class="input-std !bg-slate-50 dark:!bg-[#0a120f] !border-transparent !py-2.5 !px-4 !rounded-xl text-sm font-medium flex-1 min-w-0"><button type="button" onclick="window.saveSchoolSubtitle()" class="btn-std !w-auto !py-2.5 !px-6 !text-xs !rounded-xl uppercase tracking-widest shadow-md shrink-0">Simpan</button></div></div></div></div>';
+        }
+        
+        html += '<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 flex-1 pb-10">';
+        
+        // --- COL 1: USTADZ ---
+        html += '<div class="bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-[2rem] flex flex-col h-[500px] lg:h-[700px] shadow-soft overflow-hidden">';
+        html += '<div class="p-5 border-b border-slate-100 dark:border-[#1a2e26] flex justify-between items-center bg-slate-50 dark:bg-[#0a120f] shrink-0"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-2xl bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 flex items-center justify-center"><i class="ph-fill ph-chalkboard-teacher text-2xl"></i></div><div><h3 class="font-bold text-slate-800 dark:text-white leading-tight">Ustadz/ah</h3><p class="text-[11px] text-slate-500 font-medium">' + ul.length + ' Data</p></div></div>' + (isSuper ? '<div class="flex gap-1.5"><button onclick="window.App.modal=\'import_ustadz\';window.render(true)" class="w-10 h-10 rounded-xl bg-slate-100 text-purple-600 flex items-center justify-center hover:bg-purple-100 transition shadow-sm active:scale-95 text-lg dark:bg-[#15241e] dark:hover:bg-purple-900/30" title="Import Spreadsheet"><i class="ph-bold ph-upload-simple"></i></button><button onclick="window.App.modal=\'ustadz\';window.App.modalData=null;window.render(true)" class="w-10 h-10 rounded-xl bg-purple-500 text-white flex items-center justify-center hover:bg-purple-600 transition shadow-md shadow-purple-500/30 active:scale-95"><i class="ph-bold ph-plus text-lg"></i></button></div>' : '') + '</div>';
+        html += '<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">';
+        if(!ul.length) html += '<div class="text-xs text-slate-500 italic p-6 text-center border border-dashed border-slate-200 dark:border-[#1a2e26] rounded-2xl">' + (sQ?'Tidak ditemukan.':'Belum ada data.') + '</div>';
+        else {
+            html += ul.map(u=>{
+                let isAct = window.App.hierSel.u === u.id;
+                let actCls = isAct ? 'bg-purple-500 border-purple-500 shadow-lg shadow-purple-500/30 scale-[1.02]' : 'bg-white hover:bg-slate-50 dark:bg-[#0a120f] border-slate-100 dark:border-[#1a2e26] hover:border-purple-300';
+                let iconBg = isAct ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 dark:bg-[#15241e]';
+                let textCls = isAct ? 'text-white' : 'text-slate-800 dark:text-white';
+                let subCls = isAct ? 'text-purple-100' : 'text-slate-400';
+                let btnCls = isAct ? 'text-white hover:bg-white/20' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-[#15241e]';
+                return '<div onclick="window.App.hierSel.u=' + u.id + ';window.App.hierSel.h=null;window.App.search=\'\';window.App.searchSiswa=\'\';window.render(true)" class="group flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ' + actCls + '"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ' + iconBg + '"><i class="ph-fill ph-user text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate transition-colors ' + textCls + '">' + window.esc(u.name) + '</span><span class="text-[10px] font-mono mt-0.5 flex items-center gap-1.5 transition-colors ' + subCls + '"><i class="ph-fill ph-identification-card"></i> ' + window.esc(u.username) + (u.phone ? ' &bull; <i class="ph-fill ph-whatsapp-logo text-emerald-400"></i> ' + window.esc(u.phone) : '') + '</span></div></div>' + (isSuper ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ' + (isAct?'opacity-100':'') + '"><button onclick="event.stopPropagation();window.App.modal=\'ustadz\';window.App.modalData=' + u.id + ';window.render(true)" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-blue-500"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="event.stopPropagation();window.confirmDelete(\'ustadz\', ' + u.id + ')" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-red-500"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
+            }).join('');
+        }
+        html += '</div></div>';
+
+        // --- COL 2: HALAQOH ---
+        html += '<div class="bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-[2rem] flex flex-col h-[500px] lg:h-[700px] shadow-soft overflow-hidden">';
+        html += '<div class="p-5 border-b border-slate-100 dark:border-[#1a2e26] flex justify-between items-center bg-slate-50 dark:bg-[#0a120f] shrink-0"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 flex items-center justify-center"><i class="ph-fill ph-users-three text-2xl"></i></div><div><h3 class="font-bold text-slate-800 dark:text-white leading-tight">Halaqoh</h3><p class="text-[11px] text-slate-500 font-medium">' + hl.length + ' Data</p></div></div>' + (isAdmin && window.App.hierSel.u && !sQ ? '<div class="flex gap-1.5"><button onclick="window.App.modal=\'import_halaqoh\';window.render(true)" class="w-10 h-10 rounded-xl bg-slate-100 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition shadow-sm active:scale-95 text-lg dark:bg-[#15241e] dark:hover:bg-blue-900/30" title="Import CSV"><i class="ph-bold ph-upload-simple"></i></button><button onclick="window.App.modal=\'halaqoh\';window.App.modalData=null;window.render(true)" class="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600 transition shadow-md shadow-blue-500/30 active:scale-95"><i class="ph-bold ph-plus text-lg"></i></button></div>' : '') + '</div>';
+        html += '<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">';
+        if(!window.App.hierSel.u && !sQ) html += '<div class="flex flex-col items-center justify-center h-full opacity-50"><i class="ph-fill ph-chalkboard-teacher text-5xl mb-4 text-slate-400"></i><p class="text-xs font-bold text-slate-500 uppercase tracking-widest text-center">Pilih Ustadz/ah<br>terlebih dahulu</p></div>';
+        else if(!hl.length) html += '<div class="text-xs text-slate-500 italic p-6 text-center border border-dashed border-slate-200 dark:border-[#1a2e26] rounded-2xl">' + (sQ?'Tidak ditemukan.':'Belum ada data.') + '</div>';
+        else {
+            html += hl.map(h=>{
+                let isAct = window.App.hierSel.h === h.id;
+                let actCls = isAct ? 'bg-blue-500 border-blue-500 shadow-lg shadow-blue-500/30 scale-[1.02]' : 'bg-white hover:bg-slate-50 dark:bg-[#0a120f] border-slate-100 dark:border-[#1a2e26] hover:border-blue-300';
+                let iconBg = isAct ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 dark:bg-[#15241e]';
+                let textCls = isAct ? 'text-white' : 'text-slate-800 dark:text-white';
+                let btnCls = isAct ? 'text-white hover:bg-white/20' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-[#15241e]';
+                return '<div onclick="window.App.hierSel.h=' + h.id + ';window.App.search=\'\';window.App.searchSiswa=\'\';window.render(true)" class="group flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ' + actCls + '"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ' + iconBg + '"><i class="ph-fill ph-users-three text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate transition-colors ' + textCls + '">' + window.esc(h.name) + '</span></div></div>' + (isAdmin ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ' + (isAct?'opacity-100':'') + '"><button onclick="event.stopPropagation();window.App.modal=\'halaqoh\';window.App.modalData=' + h.id + ';window.render(true)" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-purple-500"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="event.stopPropagation();window.confirmDelete(\'halaqoh\', ' + h.id + ')" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-red-500"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
+            }).join('');
+        }
+        html += '</div></div>';
+
+        // --- COL 3: SANTRI ---
+        html += '<div class="bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-[2rem] flex flex-col h-[500px] lg:h-[700px] shadow-soft overflow-hidden">';
+        
+        html += '<div class="p-5 border-b border-slate-100 dark:border-[#1a2e26] flex flex-col gap-4 bg-slate-50 dark:bg-[#0a120f] shrink-0">';
+        html += '<div class="flex justify-between items-center"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 flex items-center justify-center"><i class="ph-fill ph-user-circle text-2xl"></i></div><div><h3 class="font-bold text-slate-800 dark:text-white leading-tight">Santri</h3><p class="text-[11px] text-slate-500 font-medium">' + sl.length + ' Data</p></div></div>' + (isAdmin && window.App.hierSel.h && !sQ && !sQSiswa ? '<div class="flex gap-1.5"><button onclick="window.App.modal=\'import_siswa\';window.render(true)" class="w-10 h-10 rounded-xl bg-slate-100 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition shadow-sm active:scale-95 text-lg dark:bg-[#15241e] dark:hover:bg-emerald-900/30" title="Import CSV"><i class="ph-bold ph-upload-simple"></i></button><button onclick="window.App.modal=\'siswa\';window.App.modalData=null;window.render(true)" class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition shadow-md shadow-emerald-500/30 active:scale-95"><i class="ph-bold ph-plus text-lg"></i></button></div>' : '') + '</div>';
+        html += '<div class="relative"><i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i><input id="search-siswa-local" type="text" placeholder="Cari nama atau kelas..." value="' + window.esc(window.App.searchSiswa||'') + '" oninput="window.App.searchSiswa=this.value;window.render(true)" class="w-full bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-xl py-2.5 pl-9 pr-3 text-xs focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-colors shadow-sm text-slate-700 dark:text-gray-200"></div>';
+        html += '</div>';
+        
+        html += '<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">';
+        if(!window.App.hierSel.h && !sQ && !sQSiswa) html += '<div class="flex flex-col items-center justify-center h-full opacity-50"><i class="ph-fill ph-users-three text-5xl mb-4 text-slate-400"></i><p class="text-xs font-bold text-slate-500 uppercase tracking-widest text-center">Pilih Halaqoh<br>terlebih dahulu</p></div>';
+        else if(!sl.length) html += '<div class="text-xs text-slate-500 italic p-6 text-center border border-dashed border-slate-200 dark:border-[#1a2e26] rounded-2xl">' + ((sQ||sQSiswa)?'Tidak ditemukan.':'Belum ada data.') + '</div>';
+        else {
+            html += sl.map(es=>{
+                return '<div class="group flex items-center justify-between p-3.5 rounded-2xl border bg-white dark:bg-[#0a120f] border-slate-100 dark:border-[#1a2e26] hover:border-emerald-300 hover:shadow-md transition-all"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 dark:bg-[#15241e] dark:text-emerald-400 flex items-center justify-center shrink-0"><i class="ph-fill ph-user text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate text-slate-800 dark:text-white">' + window.esc(es.name) + '</span><span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 block">Kelas ' + window.esc(es.kelas) + '</span></div></div>' + (isAdmin ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"><button onclick="window.App.modal=\'siswa\';window.App.modalData=' + es.id + ';window.render(true)" class="p-2 rounded-xl text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-[#15241e] transition-colors"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="window.confirmDelete(\'siswa\', ' + es.id + ')" class="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-[#15241e] transition-colors"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
+            }).join('');
+        }
+        html += '</div></div>';
+
+        html += '</div></div></div></div>';
+      }
+      
+      return html + '</div><footer class="shrink-0 pt-4 pb-8 md:pb-4 text-center text-[10px] md:text-xs font-medium text-slate-400 dark:text-slate-500 bg-white dark:bg-[#0a120f] border-t border-slate-200 dark:border-[#1a2e26] transition-colors z-40 relative">Copyright &copy; 2026 Juman Jayyidin</footer>';
+    };
+
+    window.updatePlayerDOM = function() {
+        const isAdmin = window.App.adminLvl > 0;
+        const isSuper = window.App.adminLvl === 1;
+        const sur = window.App.surahs.find(s=>s.id===window.App.actSurahId);
+        const ml = window.App.levels.filter(l=>l.surahId == window.App.actSurahId);
+        
+        let sgsOrig = window.getSgs();
+        let allSgs = window.getOrderedSgs(); 
+        
+        const sgs = window.App.search ? allSgs.filter(s => s.title.toLowerCase().includes(window.App.search.toLowerCase()) || (s.translation && s.translation.toLowerCase().includes(window.App.search.toLowerCase()))) : allSgs;
+        
+        const cSg = window.getActSeg();
+        const td = sgsOrig.length ? sgsOrig[sgsOrig.length-1].end : 1;
+        
+        let levelsHtml = ml.map((l,i)=>{
+            let isActLvl = window.getLvl() === l.id;
+            let activeClass = isActLvl ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/30 lg:translate-x-2' : 'bg-white dark:bg-[#0a120f] border-slate-200 dark:border-[#1a2e26] text-slate-600 dark:text-gray-300 hover:border-emerald-400';
+            let numClass = isActLvl ? 'bg-white/20' : 'bg-slate-100 dark:bg-[#15241e]';
+            
+            let adminBtns = isSuper ? '<div class="flex items-center ml-auto gap-0.5 lg:gap-1 pl-2 border-l ' + (isActLvl?'border-emerald-400':'border-slate-100 dark:border-[#1a2e26]') + '"><button onclick="event.stopPropagation(); window.App.modal=\'level\'; window.App.modalData=' + l.id + '; window.render(true);" class="p-1.5 hover:text-blue-400 transition-colors ' + (isActLvl?'text-emerald-100':'text-slate-400') + '"><i class="ph-bold ph-pencil-simple text-sm lg:text-base"></i></button><button onclick="event.stopPropagation(); window.confirmDelete(\'level\', ' + l.id + ')" class="p-1.5 hover:text-red-400 transition-colors ' + (isActLvl?'text-emerald-100':'text-slate-400') + '"><i class="ph-bold ph-trash text-sm lg:text-base"></i></button></div>' : '';
+
+            return '<div onclick="window.App.actLevelId=' + l.id + ';window.App.actSegId=null;window.render(true)" class="flex items-center gap-2 lg:gap-3 p-2.5 lg:p-3.5 rounded-xl lg:rounded-2xl shrink-0 transition-all cursor-pointer border w-[160px] lg:w-full ' + activeClass + '"><div class="w-6 h-6 lg:w-8 lg:h-8 rounded-lg flex items-center justify-center text-[10px] lg:text-sm font-bold shrink-0 ' + numClass + '">' + (i+1) + '</div><span class="text-xs lg:text-sm font-bold truncate flex-1 text-left">' + window.esc(l.name) + '</span>' + adminBtns + '</div>';
+        }).join('');
+
+        if (isSuper) {
+            levelsHtml += '<button onclick="window.App.modal=\'level\';window.App.modalData=null;window.render(true)" class="py-3 lg:py-4 border-2 border-dashed border-slate-200 dark:border-[#1a2e26] rounded-xl lg:rounded-2xl text-emerald-600 font-bold text-[10px] lg:text-xs shrink-0 flex items-center justify-center gap-1.5 hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-[#15241e] transition-colors uppercase tracking-widest w-[140px] lg:w-full"><i class="ph-bold ph-plus text-sm lg:text-lg"></i> Tambah</button>';
+        }
+
+        let lbMob = document.getElementById('levels-box-mobile');
+        if (lbMob) lbMob.innerHTML = levelsHtml;
+        
+        let lbDesk = document.getElementById('levels-box-desktop');
+        if (lbDesk) lbDesk.innerHTML = levelsHtml;
+        
+        let segsHtml = '<div class="space-y-2 lg:space-y-3">' + (sgs.length ? sgs.map((s)=>{
+            let isAct = s.id===(cSg?.id);
+            let absoluteIdx = allSgs.findIndex(x => x.id === s.id);
+            
+            let upB = absoluteIdx <= 0 ? '<button disabled class="p-1.5 lg:p-2 text-slate-300 bg-slate-50 dark:bg-[#111c18] dark:text-slate-600 rounded-lg shadow-sm border border-slate-200 dark:border-[#1a2e26] cursor-not-allowed"><i class="ph-bold ph-caret-up text-sm lg:text-base"></i></button>' : '<button onclick="event.stopPropagation(); window.moveSeg(' + s.id + ', -1)" class="p-1.5 lg:p-2 text-slate-400 hover:text-emerald-500 bg-white dark:bg-[#0a120f] rounded-lg shadow-sm border border-slate-200 dark:border-[#1a2e26] transition-colors" title="Naikkan Urutan"><i class="ph-bold ph-caret-up text-sm lg:text-base"></i></button>';
+            let downB = absoluteIdx >= allSgs.length - 1 ? '<button disabled class="p-1.5 lg:p-2 text-slate-300 bg-slate-50 dark:bg-[#111c18] dark:text-slate-600 rounded-lg shadow-sm border border-slate-200 dark:border-[#1a2e26] cursor-not-allowed"><i class="ph-bold ph-caret-down text-sm lg:text-base"></i></button>' : '<button onclick="event.stopPropagation(); window.moveSeg(' + s.id + ', 1)" class="p-1.5 lg:p-2 text-slate-400 hover:text-emerald-500 bg-white dark:bg-[#0a120f] rounded-lg shadow-sm border border-slate-200 dark:border-[#1a2e26] transition-colors" title="Turunkan Urutan"><i class="ph-bold ph-caret-down text-sm lg:text-base"></i></button>';
+            
+            let editB = '<button onclick="event.stopPropagation();window.App.modal=\'segment\';window.App.modalData=' + s.id + ';window.render(true);setTimeout(window.setupSegmentModal, 10);" class="p-1.5 lg:p-2 text-slate-400 hover:text-blue-500 bg-white dark:bg-[#0a120f] rounded-lg shadow-sm border border-slate-200 dark:border-[#1a2e26] transition-colors"><i class="ph-bold ph-pencil-simple text-sm lg:text-base"></i></button>';
+            let delB = '<button onclick="event.stopPropagation(); window.confirmDelete(\'segment\', ' + s.id + ')" class="p-1.5 lg:p-2 text-slate-400 hover:text-red-500 bg-white dark:bg-[#0a120f] rounded-lg shadow-sm border border-slate-200 dark:border-[#1a2e26] transition-colors"><i class="ph-bold ph-trash text-sm lg:text-base"></i></button>';
+            
+            let adm = isSuper ? '<div class="flex gap-1 lg:gap-1.5 mr-1 lg:mr-2">' + upB + downB + editB + delB + '</div>' : '';
+            
+            return '<div data-id="' + s.id + '" onclick="window.selectSeg(' + s.id + ')" class="p-3.5 lg:p-5 rounded-2xl border cursor-pointer transition-all ' + (isAct?'bg-emerald-50 border-emerald-300 dark:bg-[#152b22] dark:border-emerald-500/50 shadow-md':'bg-white dark:bg-[#15241e] border-slate-100 dark:border-[#1a2e26] shadow-sm hover:border-emerald-300') + '"><div class="flex justify-between items-center"><div><h4 class="font-bold text-xs lg:text-sm ' + (isAct?'text-emerald-700 dark:text-emerald-400':'text-slate-700 dark:text-gray-200') + '">' + window.esc(s.title) + '</h4><p class="text-[9px] lg:text-[10px] text-slate-400 font-mono mt-1 flex items-center gap-1"><i class="ph ph-clock"></i> ' + window.fmtT(s.start) + ' - ' + window.fmtT(s.end) + '</p></div><div class="flex gap-1 lg:gap-1.5 items-center">' + adm + '<button class="w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center transition-colors ' + (isAct?'bg-emerald-500 text-white shadow-md shadow-emerald-500/40':'bg-slate-50 border border-slate-200 text-slate-400 hover:text-emerald-500 dark:bg-[#0a120f] dark:border-[#1a2e26]') + '"><i class="' + (isAct?'ph-fill':'ph-bold') + ' ph-play text-sm lg:text-base ml-0.5"></i></button></div></div></div>';
+        }).join('') : '<div class="text-center p-4 lg:p-6 border border-dashed rounded-xl lg:rounded-2xl dark:border-[#1a2e26] text-slate-400 text-[10px] lg:text-xs italic">Pencarian tidak ditemukan.</div>') + '</div>';
+        
+        let sbMob = document.getElementById('segs-box-mobile');
+        if (sbMob) sbMob.innerHTML = segsHtml;
+        
+        let sbDesk = document.getElementById('segs-box-desktop');
+        if (sbDesk) sbDesk.innerHTML = segsHtml;
+
+        let pb = document.getElementById('progress-box');
+        if (pb) pb.innerHTML = allSgs.map(s=>'<div class="absolute h-full border-r border-black/20 ' + (s.id===(cSg?.id)?'bg-emerald-500':'bg-gray-400 opacity-30') + '" style="left:' + ((s.start/td)*100) + '%; width:' + (((s.end-s.start)/td)*100) + '%"></div>').join('');
+        
+        let qbox = document.getElementById('quran-box');
+        if (cSg) { 
+            if(qbox) qbox.classList.remove('hidden'); 
+            window.text('quran-title', cSg.title); 
+            
+            let displayArabic = cSg.arabic || '';
+            let isFatihah = sur && sur.title.toLowerCase().includes('al-fatihah');
+            if (!isFatihah) {
+                displayArabic = displayArabic.replace(/^[\u200B-\u200D\uFEFF\u200E\u200F]*بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\s*/, '').trim();
+                displayArabic = displayArabic.replace(/^[\u200B-\u200D\uFEFF\u200E\u200F]*بِسْمِ[\s\S]+?ٱلرَّحِيمِ\s*/, '').trim();
+            }
+            
+            if(document.getElementById('quran-arabic')) document.getElementById('quran-arabic').innerText = displayArabic; 
+            window.text('quran-trans', cSg.translation); 
+        } 
+        else if(qbox) { qbox.classList.add('hidden'); }
+    };
+
+    window.renderModal = function() {
+        let root = document.getElementById('modal-root');
+        let mHtml = '';
+        
+        if(!window.App.modal && !(window.App.customDialog && window.App.customDialog.show)) { 
+            root.innerHTML = ''; 
+            root.classList.add('hidden');
+            return; 
+        }
+        root.classList.remove('hidden');
+        
+        if(window.App.modal==='login') {
+            mHtml += '<div class="modal-overlay !flex"><div class="modal-box text-center"><div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 dark:bg-emerald-900/30"><i class="ph-fill ph-lock-key text-3xl"></i></div><h2 class="text-xl font-bold mb-4 dark:text-white">Akses Admin</h2>' + (window.App.loginError ? '<div class="mb-4 text-[11px] font-bold text-red-500 bg-red-50 p-3 rounded-lg border border-red-200 dark:bg-red-900/20 dark:border-transparent animate-pulse">' + window.App.loginError + '</div>' : '') + '<input type="text" id="m_u" onkeydown="if(event.key===\'Enter\')window.getEl(\'m_btn\').click()" class="input-std mb-3 text-center" placeholder="Username"><input type="password" id="m_p" onkeydown="if(event.key===\'Enter\')window.getEl(\'m_btn\').click()" class="input-std mb-4 text-center tracking-widest" placeholder="Password"><button id="m_btn" onclick="window.handleAdminLogin()" class="btn-std mb-2">Login</button><button onclick="window.App.modal=null;window.App.loginError=\'\';window.render(true)" class="w-full py-3 text-slate-500 font-bold hover:text-slate-800 dark:text-gray-400 dark:hover:text-white transition">Batal</button></div></div>';
+        } else if (window.App.modal === 'juz') {
+            let j = window.App.modalData ? window.App.juzs.find(x=>x.id===window.App.modalData) : null;
+            mHtml += '<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">' + (j ? 'Edit' : 'Tambah') + ' Juz</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let id=' + (window.App.modalData||'null') + ';let v=window.val(\'m_v\');let nD={id:(id||Date.now()),name:v};if(!id)window.App.juzs.push(nD);window.dbSave(\'juzs\',nD.id,nD);if(!id)window.App.actJuzId=nD.id;window.App.modal=null;window.render(true)"><input type="text" id="m_v" required value="' + (j ? window.esc(j.name) : '') + '" class="input-std mb-6" placeholder="Nama Juz"><button type="submit" class="btn-std">Simpan</button></form></div></div>';
+        } else if (window.App.modal === 'surah') {
+            let s = window.App.modalData ? window.App.surahs.find(x=>x.id===window.App.modalData) : null;
+            let options = '<option value="" disabled selected>-- Pilih Surah --</option>' + Q_SURAHS.map(q=>'<option value="Surah ' + q.name + '">Surah ' + q.name + '</option>').join('');
+            if(s) options = '<option value="' + window.esc(s.title) + '" selected>' + window.esc(s.title) + '</option>' + options;
+            mHtml += '<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">' + (s ? 'Edit' : 'Tambah') + ' Surah</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let id=' + (window.App.modalData||'null') + ';let t=window.val(\'m_t\'),v=window.val(\'m_v\');v=window.extractVideoId(v)||v||\'\';let nD={id:(id||Date.now()),juzId:' + (s ? s.juzId : window.App.actJuzId) + ',title:t,videoId:v};if(!id){window.App.surahs.push(nD);let lid=Date.now()+1;let nL={id:lid,surahId:nD.id,name:\'Level 1\'};window.App.levels.push(nL);window.dbSave(\'levels\',lid,nL);}else{let o=window.App.surahs.find(x=>x.id===id);if(o){o.title=t;o.videoId=v;}}window.dbSave(\'surahs\',nD.id,nD);window.App.modal=null;window.render(true)"><select id="m_t" required class="input-std cursor-pointer mb-4">' + options + '</select><input type="text" id="m_v" value="' + (s&&s.videoId ? 'https://youtu.be/'+s.videoId : '') + '" placeholder="Link YouTube (Opsional)" class="input-std mb-6"><button type="submit" class="btn-std">Simpan</button></form></div></div>';
+        } else if (window.App.modal === 'video') {
+            let s = window.App.surahs.find(x=>x.id===window.App.actSurahId);
+            mHtml += '<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">Ganti Video</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let sid=' + (window.App.actSurahId||'null') + ';let v=window.val(\'m_v\');let id=window.extractVideoId(v)||v;if(id&&id.length>=10){let o=window.App.surahs.find(x=>x.id===sid);if(o){o.videoId=id;window.dbSave(\'surahs\',sid,o);}if(window.App.yt&&typeof window.App.yt.loadVideoById===\'function\'){window.App.yt.loadVideoById(id);window.App.isPlay=false;}else{setTimeout(()=>window.initYTPlayer(),100);}window.App.modal=null;window.render(true)}else window.showAlert(\'Tautan URL YouTube tidak valid!\')"><input type="text" id="m_v" required value="' + (s?.videoId ? 'https://youtu.be/'+s.videoId : '') + '" class="input-std mb-6" placeholder="Paste link YouTube di sini..."><button type="submit" class="btn-std">Simpan</button></form></div></div>';
+        } else if (window.App.modal==='level') {
+            let l = window.App.modalData ? window.App.levels.find(x=>x.id===window.App.modalData) : null;
+            mHtml += '<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">' + (l ? 'Edit' : 'Tambah') + ' Level</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let id=' + (window.App.modalData||'null') + ';let n=window.val(\'m_v\');if(id){let o=window.App.levels.find(x=>x.id===id);if(o){o.name=n;window.dbSave(\'levels\',id,o);}}else{let nid=Date.now();let nD={id:nid,surahId:' + window.App.actSurahId + ',name:n};window.App.levels.push(nD);window.dbSave(\'levels\',nid,nD);}window.App.modal=null;window.render(true)"><input type="text" id="m_v" required class="input-std mb-6" value="' + (l ? window.esc(l.name) : '') + '" placeholder="Contoh: Level 2..."><button type="submit" class="btn-std">Simpan</button></form></div></div>';
+        } else if (window.App.modal==='segment') {
+            let sg = window.App.modalData ? window.App.segs.find(x=>x.id===window.App.modalData) : null;
+            let actSurah = window.App.surahs.find(s=>s.id===window.App.actSurahId);
+            let vidId = actSurah ? actSurah.videoId : null;
+            let vidHtml = vidId ? '<div class="mb-4 w-full aspect-video bg-black rounded-xl overflow-hidden shadow-inner"><iframe width="100%" height="100%" src="https://www.youtube-nocookie.com/embed/' + vidId + '?rel=0&controls=1" frameborder="0" allowfullscreen></iframe></div>' : '<div class="mb-4 w-full p-4 bg-slate-50 dark:bg-[#0a120f] rounded-xl text-center text-xs text-slate-400 border border-dashed border-slate-200 dark:border-[#1a2e26]">Video belum ditambahkan di Surah ini.</div>';
+            
+            let curSgsForModal = window.getSgs();
+            let currentOrderVal = sg ? (curSgsForModal.findIndex(x=>x.id===sg.id) + 1) : (curSgsForModal.length + 1);
+
+            mHtml += '<div class="modal-overlay !flex"><div class="modal-box !max-w-xl"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold dark:text-white">' + (sg ? 'Edit' : 'Tambah') + ' Ayat</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600 dark:hover:text-white"><i class="ph ph-x text-xl"></i></button></div>' + vidHtml + '<div id="segment-loading" class="hidden text-center py-10 text-emerald-500 font-bold animate-pulse">Memuat data ayat Al-Qur\'an...</div><form id="sf" onsubmit="window.saveSegment(event, ' + (window.App.modalData||'null') + ')"><div class="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mb-4"><div><label class="block text-[10px] text-emerald-600 font-bold mb-1">AWAL AYAT</label><select id="seg-start-ayat" onchange="window.autoFillAyat()" class="input-std cursor-pointer"></select></div><div><label class="block text-[10px] text-emerald-600 font-bold mb-1">AKHIR AYAT</label><select id="seg-end-ayat" onchange="window.autoFillAyat()" class="input-std cursor-pointer"></select></div></div><div class="grid grid-cols-12 gap-3 mb-4"><div class="col-span-3 md:col-span-2"><label class="block text-[10px] text-emerald-600 font-bold mb-1" title="Ubah angka ini untuk memindahkan urutan ayat">URUTAN</label><input type="number" id="so" min="1" required value="' + currentOrderVal + '" class="input-std text-center font-bold text-emerald-600 shadow-sm" style="background-color: #f8fafc;"></div><div class="col-span-9 md:col-span-10"><label class="block text-[10px] text-emerald-600 font-bold mb-1">JUDUL AYAT</label><input type="text" id="st" required value="' + (sg?window.esc(sg.title):'') + '" class="input-std bg-slate-100 dark:bg-[#1a2e26] pointer-events-none text-slate-500" readonly></div></div><div class="mb-4"><label class="block text-[10px] text-slate-500 font-bold mb-1">TEKS ARAB</label><textarea id="sa" rows="3" dir="rtl" class="input-std font-arabic text-xl">' + (sg?window.esc(sg.arabic):'') + '</textarea></div><div class="mb-4"><label class="block text-[10px] text-slate-500 font-bold mb-1">TERJEMAH</label><textarea id="str" rows="2" class="input-std text-xs md:text-sm">' + (sg?window.esc(sg.translation):'') + '</textarea></div><div class="grid grid-cols-2 gap-3 md:gap-4 mb-6"><div><label class="block text-[10px] text-slate-500 font-bold text-center mb-2">MULAI (M:D)</label><div class="flex justify-center items-center gap-1"><input type="number" id="sm" value="' + (sg?Math.floor(sg.start/60):'0') + '" class="input-std !w-14 !p-1.5 text-center"><span class="font-bold">:</span><input type="number" id="ss" value="' + (sg?sg.start%60:'0') + '" class="input-std !w-14 !p-1.5 text-center"></div></div><div><label class="block text-[10px] text-slate-500 font-bold text-center mb-2">SELESAI (M:D)</label><div class="flex justify-center items-center gap-1"><input type="number" id="em" value="' + (sg?Math.floor(sg.end/60):'0') + '" class="input-std !w-14 !p-1.5 text-center"><span class="font-bold">:</span><input type="number" id="es" value="' + (sg?sg.end%60:'0') + '" class="input-std !w-14 !p-1.5 text-center"></div></div></div><button type="submit" class="btn-std w-full">Simpan Segmen</button></form></div></div>';
+        } else if (window.App.modal === 'ustadz') {
+            let u = window.App.modalData ? window.App.ustadz.find(x=>x.id===window.App.modalData) : null;
+            mHtml += '<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">' + (u ? 'Edit' : 'Tambah') + ' Ustadz/ah</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let id=' + (window.App.modalData||'null') + ';let n=window.val(\'m_n\'),p=window.val(\'m_p\'),us=window.val(\'m_us\'),pw=window.val(\'m_pw\');let nD={id:(id||Date.now()),name:n,phone:p,username:us,password:pw};if(!id)window.App.ustadz.push(nD);else{let o=window.App.ustadz.find(x=>x.id===id);if(o){Object.assign(o,nD);}}window.dbSave(\'ustadz\',nD.id,nD);window.App.modal=null;window.render(true)"><input type="text" id="m_n" required value="' + (u?window.esc(u.name):'') + '" class="input-std mb-3" placeholder="Nama Lengkap"><input type="text" id="m_p" value="' + (u?window.esc(u.phone):'') + '" class="input-std mb-3" placeholder="No. WhatsApp (628...)"><input type="text" id="m_us" required value="' + (u?window.esc(u.username):'') + '" class="input-std mb-3" placeholder="Username Login"><input type="text" id="m_pw" required value="' + (u?window.esc(u.password):'') + '" class="input-std mb-6" placeholder="Password Login"><button type="submit" class="btn-std">Simpan</button></form></div></div>';
+        } else if (window.App.modal === 'halaqoh') {
+            let h = window.App.modalData ? window.App.halaqohs.find(x=>x.id===window.App.modalData) : null;
+            mHtml += '<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">' + (h ? 'Edit' : 'Tambah') + ' Halaqoh</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let id=' + (window.App.modalData||'null') + ';let n=window.val(\'m_n\');let nD={id:(id||Date.now()),ustadzId:' + window.App.hierSel.u + ',name:n};if(!id)window.App.halaqohs.push(nD);else{let o=window.App.halaqohs.find(x=>x.id===id);if(o){o.name=n;}}window.dbSave(\'halaqohs\',nD.id,nD);window.App.modal=null;window.render(true)"><input type="text" id="m_n" required value="' + (h?window.esc(h.name):'') + '" class="input-std mb-6" placeholder="Nama Halaqoh"><button type="submit" class="btn-std">Simpan</button></form></div></div>';
+        } else if (window.App.modal === 'siswa') {
+            let s = window.App.modalData ? window.App.siswas.find(x=>x.id===window.App.modalData) : null;
+            mHtml += '<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">' + (s ? 'Edit' : 'Tambah') + ' Santri</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let id=' + (window.App.modalData||'null') + ';let n=window.val(\'m_n\'),k=window.val(\'m_k\');let nD={id:(id||Date.now()),halaqohId:' + window.App.hierSel.h + ',name:n,kelas:k};if(!id)window.App.siswas.push(nD);else{let o=window.App.siswas.find(x=>x.id===id);if(o){o.name=n;o.kelas=k;}}window.dbSave(\'siswas\',nD.id,nD);window.App.modal=null;window.render(true)"><input type="text" id="m_n" required value="' + (s?window.esc(s.name):'') + '" class="input-std mb-3" placeholder="Nama Lengkap Santri"><input type="text" id="m_k" required value="' + (s?window.esc(s.kelas):'') + '" class="input-std mb-6" placeholder="Kelas (Contoh: 1-A / 7-B)"><button type="submit" class="btn-std">Simpan</button></form></div></div>';
+        } else if (window.App.modal && window.App.modal.startsWith('import_')) {
+            let type = window.App.modal.replace('import_', '');
+            let title = type === 'ustadz' ? 'Ustadz' : (type === 'halaqoh' ? 'Halaqoh' : 'Santri');
+            let placeholder = type === 'ustadz' ? 'Nama\\tPhone\\tUsername\\tPassword' : (type === 'halaqoh' ? 'Nama Halaqoh' : 'Nama Santri\\tKelas');
+            mHtml += '<div class="modal-overlay !flex"><div class="modal-box !max-w-xl"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold dark:text-white">Import Data ' + title + '</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><p class="text-xs text-slate-500 mb-4 leading-relaxed">Copy data dari Excel/Spreadsheet dan paste di bawah ini. Gunakan Tab atau Pipe (|) sebagai pemisah kolom.<br>Format: <b>' + placeholder + '</b></p><textarea id="import_text" class="input-std mb-4 !font-mono !text-xs" rows="10" placeholder="Paste di sini..."></textarea><button onclick="window.processImport(\'' + type + '\')" class="btn-std">Proses Import</button></div></div>';
+        } else if (window.App.modal === 'grade') {
+            let sb = window.App.subs.find(x=>x.id===window.App.modalData);
+            let btns = '';
+            ['A','B+','B','B-'].forEach(g=>{
+                btns += '<button type="button" onclick="window.submitGrade(' + sb.id + ', \'' + g + '\')" class="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 font-bold text-lg hover:bg-emerald-50 hover:border-emerald-500 hover:text-white hover:shadow-lg hover:shadow-emerald-500/30 hover:-translate-y-1 dark:bg-[#0a120f] dark:border-[#1a2e26] dark:text-white transition-all shadow-sm">' + g + '</button>';
+            });
+            let audioHTML = window.App.currentGradingAudioUrl ? window.renderCustomAudio('grade_modal', window.App.currentGradingAudioUrl, 0, true) : '<span class="text-[10px] md:text-xs text-slate-500 dark:text-gray-400 truncate">' + (window.App.isGradingRecording ? 'Merekam...' : 'Ketuk Mic untuk merekam suara') + '</span>';
+            let deleteBtn = window.App.currentGradingAudioUrl ? '<button type="button" onclick="window.deleteGradingAudio()" class="w-8 h-8 rounded-full bg-red-100 text-red-600 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all shadow-sm shrink-0"><i class="ph-bold ph-trash"></i></button>' : '';
+            
+            mHtml += '<div class="modal-overlay !flex"><div class="modal-box text-center"><div class="w-12 h-12 md:w-14 md:h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4"><i class="ph-fill ph-star text-3xl"></i></div><h2 class="text-lg md:text-xl font-bold mb-1 dark:text-white">Beri Nilai</h2><p class="text-xs md:text-sm text-emerald-600 font-bold mb-6">' + window.getSName(sb.siswaId) + '</p><div class="text-left mb-4"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Teks:</label><textarea id="gn" class="input-std" rows="2">' + window.esc(sb.note||'') + '</textarea></div><div class="text-left mb-6"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Suara (Opsional):</label><div class="flex items-center gap-3 bg-slate-50 dark:bg-[#0a120f] border border-slate-200 dark:border-[#1a2e26] p-2 md:p-3 rounded-xl"><button type="button" onclick="window.toggleGradingRecord()" class="w-8 h-8 md:w-10 md:h-10 rounded-full ' + (window.App.isGradingRecording ? 'bg-red-500 text-white animate-pulse shadow-lg' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400') + ' flex items-center justify-center transition-all shrink-0"><i class="ph-fill ' + (window.App.isGradingRecording ? 'ph-stop' : 'ph-microphone') + ' text-lg md:text-xl"></i></button><div class="flex-1">' + audioHTML + '</div>' + deleteBtn + '</div></div><div class="flex justify-center gap-1.5 md:gap-2 mb-4 md:mb-5">' + btns + '</div><button type="button" onclick="window.submitGrade(' + sb.id + ', \'repeat\')" class="w-full py-2.5 md:py-3 bg-red-50 text-red-600 border border-red-100 rounded-xl font-bold text-xs md:text-sm mb-3 md:mb-4 hover:bg-red-500 hover:text-white transition dark:bg-red-900/20 dark:border-transparent">Minta Ulangi</button><button type="button" onclick="window.App.currentGradingAudioUrl=null;window.App.modal=null;window.render(true)" class="w-full py-2 text-slate-500 font-bold text-xs md:text-sm hover:text-slate-800 transition">Batal</button></div></div>';
+        } else if (window.App.modal === 'share_card') {
+            let sb = window.App.subs.find(x=>x.id===window.App.modalData);
+            let stu = window.App.siswas.find(x=>x.id===sb.siswaId);
+            let sur = window.App.surahs.find(x=>x.id===sb.surahId);
+            let sg = window.App.segs.find(x=>x.id===sb.segmentId);
+            let lv = sg ? window.App.levels.find(l=>l.id===sg.levelId) : null;
+            let schName = window.App.schSub || 'Madrasah Tahfidz Quran';
+            
+            let getPredikat = (g) => {
+                if(g==='A') return 'Mumtaz';
+                if(g==='B+') return 'Jayyid Jiddan';
+                if(g==='B') return 'Jayyid';
+                if(g==='B-') return 'Maqbul';
+                return 'Lulus';
+            };
+
+            let stuName = stu ? window.esc(stu.name) : '-';
+            let stuKelas = stu ? window.esc(stu.kelas) : '-';
+            let lvName = lv ? window.esc(lv.name) : 'Level';
+
+            let nameFontSize = '24px';
+            if (stuName.length > 22) nameFontSize = '16px';
+            else if (stuName.length > 14) nameFontSize = '20px';
+
+            mHtml += `
+            <div class="modal-overlay !flex !items-center !justify-center !p-4 z-[500]">
+              <div class="w-full max-w-[380px] mx-auto flex flex-col gap-4 max-h-[95vh] overflow-y-auto overflow-x-auto hide-scrollbar pb-10 sm:pb-0 items-center">
+                
+                <div id="achievement-card-node" style="width: 360px; min-width: 360px; height: 520px; min-height: 520px; position: relative; background-color: #ffffff; border-radius: 0px; display: flex; flex-direction: column; align-items: center; padding: 32px 24px; box-sizing: border-box; margin: 0 auto; overflow: hidden;">
+                    
+                    <style>
+                        @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600;700;800&family=Katibeh&family=Merriweather:wght@700;900&display=swap');
+                        @import url('https://fonts.googleapis.com/earlyaccess/thuluth.css');
+                    </style>
+
+                    <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: url('https://images.weserv.nl/?url=https://cdn.pixabay.com/photo/2019/05/04/17/36/quran-4178711_1280.jpg&w=800&output=jpg'); background-size: cover; background-position: center; opacity: 0.05; z-index: 0; pointer-events: none;"></div>
+
+                    <div style="position: relative; z-index: 10; width: 100%; text-align: center; margin-bottom: 24px;">
+                        ${window.App.schLogo ? `<img src="${window.App.schLogo}" style="height: 50px; max-width: 180px; object-fit: contain; margin: 0 auto; display: block;">` : `<svg width="46" height="46" fill="#059669" viewBox="0 0 256 256" style="margin: 0 auto;"><path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,160H40V56H216V200ZM160,128a8,8,0,0,1-4.06,6.91l-48,28A8,8,0,0,1,96,156V100a8,8,0,0,1,11.94-6.91l48,28A8,8,0,0,1,160,128Z"></path></svg>`}
+                        <div style="font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 800; color: #064e3b; text-transform: uppercase; letter-spacing: 0.15em; margin-top: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">
+                            ${window.esc(schName)}
+                        </div>
+                    </div>
+                    
+                    <div style="position: relative; z-index: 10; width: 100%; text-align: center; flex-grow: 1;">
+                        <div style="font-family: 'Katibeh', serif; font-size: 42px; color: #059669; margin-bottom: 8px; white-space: nowrap; line-height: 1;">بَارَكَ اللَّهُ فِيكَ</div>
+                        
+                        <p style="font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; color: #64748b; margin: 0 0 6px 0; white-space: nowrap;">Kepada:</p>
+                        <h1 style="font-family: 'Merriweather', serif; font-size: ${nameFontSize}; font-weight: 900; color: #0f172a; margin: 0 0 8px 0; line-height: 1.2; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${stuName}</h1>
+                        <p style="font-family: 'Inter', sans-serif; font-size: 10px; font-weight: 700; color: #059669; letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap; width: 100%; overflow: hidden; text-overflow: ellipsis;">Kelas ${stuKelas} &bull; ${window.getHName(sb.halaqohId)}</p>
+                    </div>
+
+                    <div style="position: relative; z-index: 10; background: #ffffff; border: 2px solid #10b981; border-radius: 20px; padding: 20px; width: 100%; text-align: center; flex-shrink: 0; box-sizing: border-box; margin-bottom: 24px;">
+                        <p style="font-family: 'Inter', sans-serif; font-size: 9px; font-weight: 800; color: #059669; text-transform: uppercase; letter-spacing: 0.2em; margin: 0 0 6px 0; white-space: nowrap;">Telah Menyetorkan</p>
+                        <h3 style="font-family: 'Merriweather', serif; font-size: 17px; font-weight: 800; color: #0f172a; margin: 0 0 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">${window.esc(sur?.title||'')}</h3>
+                        <p style="font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; color: #64748b; margin: 0 0 16px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">${window.esc(sg?.title||'')} &bull; ${lvName}</p>
+
+                        <div style="border-top: 1px dashed #cbd5e1; padding-top: 14px; display: flex; justify-content: space-between; align-items: flex-end; width: 100%;">
+                            <div style="text-align: left; max-width: 48%; overflow: hidden;">
+                                <span style="font-family: 'Inter', sans-serif; font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; display:block; margin-bottom:4px; white-space: nowrap;">Nilai Akhir</span>
+                                <div style="font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 800; color: #059669; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${window.esc(sb.grade)} / ${getPredikat(sb.grade)}</div>
+                            </div>
+                            <div style="text-align: right; max-width: 48%; overflow: hidden;">
+                                <span style="font-family: 'Inter', sans-serif; font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; display:block; margin-bottom:4px; white-space: nowrap;">Tanggal Lulus</span>
+                                <div style="font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 700; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${window.esc(sb.date)}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; flex-shrink: 0;">
+                        <span style="font-family: 'Inter', sans-serif; font-size: 18px; font-weight: 800; letter-spacing: -0.02em;">
+                            <span style="color: #1e293b;">Tahfidz</span><span style="color: #10b981;">Qu</span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-2.5 w-full max-w-[360px] shrink-0 mt-2">
+                    <div class="flex gap-2.5">
+                        <button onclick="window.shareCard()" id="btn-share-card" class="flex-1 py-3.5 bg-emerald-500 text-white rounded-xl font-bold text-xs flex justify-center items-center gap-2 hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-500/30 active:scale-95"><i class="ph-bold ph-share-network text-lg"></i> Share</button>
+                        <button onclick="window.downloadCard()" id="btn-download-card" class="flex-1 py-3.5 bg-white text-slate-700 border border-slate-200 rounded-xl font-bold text-xs flex justify-center items-center gap-2 hover:bg-slate-50 transition-colors active:scale-95 dark:bg-[#15241e] dark:border-[#1a2e26] dark:text-gray-200 dark:hover:bg-[#111c1d] shadow-sm"><i class="ph-bold ph-download-simple text-lg"></i> Download</button>
+                    </div>
+                    <button onclick="window.App.modal=null;window.render(true)" class="w-full py-3 text-slate-500 font-bold text-xs hover:text-slate-800 dark:text-gray-400 dark:hover:text-white transition-colors">Tutup</button>
+                </div>
+
+              </div>
+            </div>`;
+        }
+
+        if (window.App.customDialog && window.App.customDialog.show) {
+            let isConf = window.App.customDialog.type === 'confirm';
+            mHtml += '<div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[500] p-4 text-center animate-in fade-in duration-300"><div class="bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-3xl w-full max-w-sm p-6 shadow-2xl"><div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ' + (isConf ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400' : 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400') + '"><i class="ph-fill ' + (isConf ? 'ph-warning-circle' : 'ph-info') + ' text-3xl"></i></div><h3 class="text-lg font-bold text-slate-800 dark:text-white mb-2">' + (isConf ? 'Konfirmasi' : 'Informasi') + '</h3><p class="text-sm text-slate-500 dark:text-gray-300 mb-6">' + window.App.customDialog.message + '</p><div class="flex gap-3 justify-center">' + (isConf ? '<button type="button" onclick="window.closeDialog()" class="flex-1 py-3 rounded-xl font-bold text-sm bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-[#0a120f] dark:text-gray-400 dark:hover:bg-[#1a2e26] transition">Batal</button>' : '') + '<button type="button" onclick="if(window.App.customDialog.onConfirm) window.App.customDialog.onConfirm(); window.closeDialog();" class="flex-1 py-3 rounded-xl font-bold text-sm text-white transition ' + (isConf ? 'bg-red-500 hover:bg-red-600 shadow-md shadow-red-500/20' : 'bg-blue-500 hover:bg-blue-600 shadow-md shadow-blue-500/20') + '">' + (isConf ? 'Ya, Lanjutkan' : 'Mengerti') + '</button></div></div></div>';
+        }
+
+        root.innerHTML = mHtml;
+    };
+
+    window.setupSegmentModal = async function() {
+        var sur = window.App.surahs.find(s=>s.id===window.App.actSurahId); if(!sur)return;
+        var cT = sur.title.replace("Surah ","").trim(); var qD = Q_SURAHS.find(q=>q.name===cT);
+        if(qD){
+            window.show('segment-loading'); window.hide('sf');
+            try{
+                var r = await fetch(`https://api.alquran.cloud/v1/surah/${qD.no}/editions/quran-uthmani,id.indonesian`);
+                var js = await r.json(); window.App.currentSurahAyatData = js.data;
+                var tA = js.data[0].ayahs.length;
+                var sS = window.getEl('seg-start-ayat'); var eS = window.getEl('seg-end-ayat');
+                
+                if(sS && eS) {
+                    sS.innerHTML=''; eS.innerHTML='';
+                    for(var i=1;i<=tA;i++){sS.innerHTML+='<option value="' + i + '">Ayat ' + i + '</option>';eS.innerHTML+='<option value="' + i + '">Ayat ' + i + '</option>';}
+                    if (window.App.modalData) {
+                        let sg = window.App.segs.find(x=>x.id===window.App.modalData);
+                        if (sg && sg.title.startsWith('Ayat ')) {
+                            let nums = sg.title.replace('Ayat ', '').split('-');
+                            if (nums.length === 1) { sS.value = nums[0].trim(); eS.value = nums[0].trim(); } 
+                            else if (nums.length === 2) { sS.value = nums[0].trim(); eS.value = nums[1].trim(); }
+                        }
+                    } else {
+                        setTimeout(window.autoFillAyat, 50);
+                    }
+                }
+            }catch(e){window.App.currentSurahAyatData=null;}finally{window.hide('segment-loading'); window.show('sf');}
+        }
+    };
+    
+    window.autoFillAyat = function() {
+        if(!window.App.currentSurahAyatData)return;
+        var s=parseInt(window.val('seg-start-ayat')); var e=parseInt(window.val('seg-end-ayat'));
+        if(e<s){e=s;window.val('seg-end-ayat',e);}
+        
+        var sur = window.App.surahs.find(x=>x.id===window.App.actSurahId);
+        var isFatihah = sur && sur.title.toLowerCase().includes('al-fatihah');
+
+        var aT=[]; var iT=[];
+        for(var i=s;i<=e;i++){
+            var id=i-1;
+            let arabText = window.App.currentSurahAyatData[0].ayahs[id].text;
+            
+            if (i === 1 && !isFatihah) {
+                arabText = arabText.replace(/^[\u200B-\u200D\uFEFF\u200E\u200F]*بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\s*/, '').trim();
+                arabText = arabText.replace(/^[\u200B-\u200D\uFEFF\u200E\u200F]*بِسْمِ[\s\S]+?ٱلرَّحِيمِ\s*/, '').trim();
+            }
+
+            aT.push(arabText+' ۝'+window.toArabicNumeral(i));
+            iT.push('(' + i + ') '+window.App.currentSurahAyatData[1].ayahs[id].text);
+        }
+        var gt=s===e?'Ayat ' + s:'Ayat ' + s + '-' + e; 
+        window.val('st',gt); window.val('sa',aT.join(' ')); window.val('str',iT.join(' '));
+    };
+
+    window.addEventListener('DOMContentLoaded', () => {
+        if(window.App.yt && typeof window.App.yt.stopVideo === 'function') {
+            window.App.yt.stopVideo();
+        }
+        window.App.isPlay = false;
+        window.render(true);
+    });
+
+  </script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+
+    let fbConf = {
+        apiKey: "AIzaSyCdfYQeAiBMfAPsBGuzS7qWIoi_u3CaSvE", authDomain: "tahfidzqu-7c937.firebaseapp.com",
+        projectId: "tahfidzqu-7c937", storageBucket: "tahfidzqu-7c937.firebasestorage.app",
+        messagingSenderId: "596320735782", appId: "1:596320735782:web:340387094ff61f31fecce7",
+        databaseURL: "https://tahfidzqu-7c937-default-rtdb.asia-southeast1.firebasedatabase.app/" 
+    };
+
+    try {
+        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+            fbConf = typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config;
+        }
+    } catch(e) {
+        console.warn("Menggunakan Firebase fallback ustadz.");
+    }
+
+    const safeId = (typeof __app_id !== 'undefined' && __app_id ? __app_id : 'tahfidzqu-v2').replace(/[.#$\[\]]/g, '_');
+    const fApp = initializeApp(fbConf);
+    const auth = getAuth(fApp);
+    const db = getDatabase(fApp);
+    let fbUser = null;
+
+    window.dbSave = async (col, id, data) => { 
+        if(fbUser) {
+            try {
+                await set(ref(db, `artifacts/${safeId}/public/data/${col}/${id}`), data);
+            } catch(e) {
+                window.App.firebaseError = "Gagal menyimpan data: Aturan (Rules) Database Firebase menolak akses.";
+                window.render();
+            }
+        } else {
+            window.App.firebaseError = "Gagal terhubung ke Cloud: Autentikasi Firebase belum aktif.";
+            window.render();
+        }
+    };
+    
+    window.dbDelete = async (col, id) => { 
+        if(fbUser) {
+            try {
+                await remove(ref(db, `artifacts/${safeId}/public/data/${col}/${id}`));
+            } catch(e) {
+                window.App.firebaseError = "Gagal menghapus data: Aturan (Rules) Database Firebase menolak akses.";
+                window.render();
+            }
+        }
+    };
+
+    window.render(true);
+
+    const initAuth = async () => {
+        try {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+        } catch (e) { 
+            console.error("Auth Error", e);
+            window.App.firebaseError = "Gagal login ke Cloud: Pastikan 'Anonymous Sign-in' telah DIAKTIFKAN di menu Authentication Firebase.";
+            window.render();
+        }
+    };
+    initAuth();
+
+    onAuthStateChanged(auth, u => {
+       fbUser = u; if(!u) return;
+
+       onValue(ref(db, `artifacts/${safeId}/public/data/settings/app`), snap => {
+           const obj = snap.val();
+           if(obj) {
+               window.App.schLogo = obj.logo || '';
+               window.App.schSub = obj.subtitle || '';
+               try {
+                   localStorage.setItem('tahfidzqu_logo', window.App.schLogo);
+                   localStorage.setItem('tahfidzqu_subtitle', window.App.schSub);
+               } catch(e) {}
+               window.render();
+           }
+       });
+
+       ['juzs','surahs','levels','segs','ustadz','halaqohs','siswas','subs'].forEach(c => {
+          onValue(ref(db, `artifacts/${safeId}/public/data/${c}`), snap => {
+             const obj = snap.val();
+             window.App[c] = obj ? Object.keys(obj).map(k => ({id: isNaN(k) ? k : Number(k), ...obj[k]})) : [];
+             
+             if (c === 'juzs' && window.App.juzs.length > 0) {
+                 if (!window.App.juzs.some(j => j.id == window.App.actJuzId)) {
+                     let defaultJuz = window.App.juzs.find(j => j.id == 30 || String(j.name).includes("30"));
+                     window.App.actJuzId = defaultJuz ? defaultJuz.id : window.App.juzs[0].id;
+                 }
+             }
+
+             window.render();
+          }, error => {
+             console.error(error);
+             if (error.message.includes('permission_denied') || error.code === 'PERMISSION_DENIED') {
+                 window.App.firebaseError = "Akses Cloud Ditolak! Ubah Aturan (Rules) Realtime Database Anda menjadi '.read': true dan '.write': true";
+                 window.render();
+             }
+          });
+       });
+       
+       setInterval(() => {
+          if (window.App.view === 'player' && window.App.isPlay && window.App.yt && typeof window.App.yt.getCurrentTime === 'function' && window.App.actSurahId) {
+             var t = window.App.yt.getCurrentTime(); var sg = window.getActSeg(); if(!sg) return;
+             if(window.getEl('time-display')) window.getEl('time-display').innerText = `${window.fmtT(t)} / ${window.fmtT(sg.end)}`;
+             var td = window.getSgs().slice(-1)[0]?.end || 200;
+             if(window.getEl('current-time-indicator')) window.getEl('current-time-indicator').style.left = `${Math.min(100, (t/td)*100)}%`;
+             if (t >= sg.end) {
+                if (window.App.curRep + 1 < window.App.repTarget) { window.App.yt.seekTo(sg.start); window.App.curRep++; if(window.getEl('rep-text')) window.getEl('rep-text').innerText = `(Ke-${window.App.curRep+1})`; }
+                else { window.App.yt.pauseVideo(); window.App.isPlay = false; window.App.curRep = 0; if(window.getEl('rep-text')) window.getEl('rep-text').innerText = ''; }
+             }
+          }
+       }, 200);
+    });
+  </script>
+</body>
+</html>
