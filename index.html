@@ -230,7 +230,9 @@
       view: savedNavState.view || 'home', 
       schLogo: localStorage.getItem('tahfidzqu_logo') || '',
       schSub: localStorage.getItem('tahfidzqu_subtitle') || 'Madrasah Tahfidz Quran',
-      search: '', searchSiswa: '', loginAttempts: 0, lockoutTime: 0, loginError: '', inactivityTimer: null,
+      search: '', searchSiswa: '', loginAttempts: 0, lockoutTime: 0, loginError: '', registerError: '', inactivityTimer: null,
+      isLoading: false,
+      pullStart: null, pullDelta: 0,
       customDialog: { show: false, type: 'alert', message: '', onConfirm: null },
       juzs: [], surahs: [], levels: [], segs: [], ustadz: [], halaqohs: [], siswas: [], subs: [],
       actJuzId: savedNavState.actJuzId || 30, 
@@ -426,6 +428,25 @@
         window.render(true);
     };
 
+    window.moveLevel = function(id, dir) {
+        let lvls = window.App.levels.filter(l => l.surahId === window.App.actSurahId);
+        lvls.sort((a,b) => (a.order||0) - (b.order||0));
+        let idx = lvls.findIndex(x => x.id === id);
+        if (idx === -1 || idx + dir < 0 || idx + dir >= lvls.length) return;
+        
+        lvls.forEach((l, i) => { if (l.order === undefined) l.order = i; });
+        
+        let temp = lvls[idx].order;
+        lvls[idx].order = lvls[idx+dir].order;
+        lvls[idx+dir].order = temp;
+        
+        if(window.dbSave) {
+            window.dbSave('levels', lvls[idx].id, lvls[idx]);
+            window.dbSave('levels', lvls[idx+dir].id, lvls[idx+dir]);
+        }
+        window.render(true);
+    };
+
     // FITUR BARU: Fungsi untuk menyimpan & menyisipkan ulang urutan dari input manual form edit ayat
     window.saveSegment = function(e, id) {
         e.preventDefault();
@@ -484,26 +505,94 @@
     };
 
     window.switchView = function(viewTarget) {
-      if(window.App.view === 'player' && viewTarget !== 'player') {
-          if(window.App.yt && typeof window.App.yt.pauseVideo === 'function') {
-              window.App.yt.pauseVideo(); window.App.isPlay = false;
-          }
-      }
-      if(window.App.audioObj && !window.App.audioObj.paused) {
-          window.App.audioObj.pause();
-          window.App.activeAudioId = null;
-      }
-      
-      if (window.App.adminLvl === 2) {
-          window.App.hierSel.u = window.App.loggedInUstadzId;
-          window.App.filter.u = window.App.loggedInUstadzId;
-      }
-      
-      window.App.search = ''; 
-      window.App.searchSiswa = '';
-      window.App.view = viewTarget;
+      if (window.App.isLoading) return;
+      window.App.isLoading = true;
       window.render(true);
+
+      setTimeout(() => {
+        if(window.App.view === 'player' && viewTarget !== 'player') {
+            if(window.App.yt && typeof window.App.yt.pauseVideo === 'function') {
+                window.App.yt.pauseVideo(); window.App.isPlay = false;
+            }
+        }
+        if(window.App.audioObj && !window.App.audioObj.paused) {
+            window.App.audioObj.pause();
+            window.App.activeAudioId = null;
+        }
+        
+        if (window.App.adminLvl === 2) {
+            window.App.hierSel.u = window.App.loggedInUstadzId;
+            window.App.filter.u = window.App.loggedInUstadzId;
+        }
+        
+        window.App.search = ''; 
+        window.App.searchSiswa = '';
+        window.App.view = viewTarget;
+        window.App.isLoading = false;
+        window.render(true);
+      }, 400);
     };
+
+    window.getPullIndicatorHtml = () => `
+      <div id="pull-indicator" class="overflow-hidden h-0 opacity-0 flex items-center justify-center transition-all duration-300 bg-emerald-50/50 dark:bg-emerald-500/5 w-full shrink-0 border-b border-emerald-100/50 dark:border-emerald-500/10 md:hidden">
+        <div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] uppercase tracking-[0.2em]">
+          <i class="ph-bold ph-arrow-clockwise text-lg transition-transform"></i>
+          <span>Tarik untuk Refresh</span>
+        </div>
+      </div>`;
+
+    window.refreshApp = function() {
+    window.refreshApp = async function() {
+      if (window.App.isLoading) return;
+      window.App.isLoading = true;
+      window.render(true);
+      setTimeout(() => {
+          window.App.isLoading = false;
+          window.render(true);
+          window.showAlert('Data telah diperbarui');
+      }, 800);
+
+      try {
+          if (window.syncFirebaseData) {
+              await window.syncFirebaseData();
+          }
+          // Tambahkan sedikit delay untuk estetika animasi loading
+          await new Promise(resolve => setTimeout(resolve, 600));
+      } catch (e) { console.error("Sync Error:", e); }
+
+      window.App.isLoading = false;
+      window.render(true);
+      window.showAlert('Data telah diperbarui');
+    };
+
+    document.addEventListener('touchstart', (e) => {
+      const sc = window.getEl('main-scroll');
+      if (!sc || sc.scrollTop > 0) { window.App.pullStart = null; return; }
+      window.App.pullStart = e.touches[0].pageY;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', (e) => {
+      if (window.App.pullStart === null) return;
+      const delta = e.touches[0].pageY - window.App.pullStart;
+      if (delta > 0) {
+        window.App.pullDelta = Math.min(delta, 80);
+        const indicator = window.getEl('pull-indicator');
+        if (indicator) {
+          indicator.style.height = window.App.pullDelta + 'px';
+          indicator.style.opacity = Math.min(1, window.App.pullDelta / 60);
+          const icon = indicator.querySelector('i');
+          if(icon) icon.style.transform = `rotate(${window.App.pullDelta * 4}deg)`;
+        }
+      }
+    }, { passive: true });
+
+    document.addEventListener('touchend', () => {
+      if (window.App.pullStart === null) return;
+      if (window.App.pullDelta >= 70) window.refreshApp();
+      window.App.pullStart = null; window.App.pullDelta = 0;
+      const ind = window.getEl('pull-indicator');
+      if (ind) { ind.style.height = '0px'; ind.style.opacity = '0'; }
+    });
 
     window.resetTimer = function() {
         clearTimeout(window.App.inactivityTimer);
@@ -673,6 +762,12 @@
         else {
             let ust = window.App.ustadz.find(x => x.username === u && x.password === p);
             if(ust) { 
+                if (ust.status === 'pending') {
+                    window.App.loginError = 'Akun Anda sedang menunggu persetujuan Admin.';
+                    window.render();
+                    return;
+                }
+                
                 window.App.adminLvl = 2; 
                 window.App.modal = null; 
                 window.App.loginError = ''; 
@@ -689,6 +784,48 @@
                 else { window.App.loginError = `Username atau Password salah! (Sisa percobaan: ${3 - window.App.loginAttempts})`; }
                 window.render();
             }
+        }
+    };
+
+    window.handleUstadzRegister = function() {
+        const n = window.getEl('reg_n').value.trim();
+        const p = window.getEl('reg_p').value.trim();
+        const us = window.getEl('reg_us').value.trim();
+        const pw = window.getEl('reg_pw').value.trim();
+        const pwc = window.getEl('reg_pwc').value.trim();
+        
+        if(!n || !p || !us || !pw || !pwc) {
+            window.App.registerError = 'Mohon lengkapi semua data pendaftaran!';
+            window.render();
+            return;
+        }
+
+        if(pw !== pwc) {
+            window.App.registerError = 'Konfirmasi password tidak cocok!';
+            window.render();
+            return;
+        }
+
+        if(window.App.ustadz.some(u => u.username.toLowerCase() === us.toLowerCase())) {
+            window.App.registerError = 'Username sudah digunakan, silakan pilih yang lain!';
+            window.render();
+            return;
+        }
+
+        const nid = Date.now();
+        const nD = { id: nid, name: n, phone: p, username: us, password: pw, status: 'pending' };
+
+        window.dbSave('ustadz', nid, nD);
+        window.App.modal = null;
+        window.App.registerError = '';
+        window.showAlert('Pendaftaran berhasil! Mohon tunggu persetujuan Admin Utama.');
+    };
+
+    window.approveUstadz = function(id) {
+        let u = window.App.ustadz.find(x => x.id === id);
+        if(u) {
+            u.status = 'active';
+            window.dbSave('ustadz', id, u);
         }
     };
 
@@ -996,6 +1133,17 @@
     };
 
     window.generateMainHtml = function() {
+      if (window.App.isLoading) {
+          return `
+          <div class="flex-1 flex flex-col items-center justify-center bg-slate-50 dark:bg-[#0a120f]">
+            <div class="relative w-20 h-20 mb-6">
+              <div class="absolute inset-0 border-4 border-emerald-500/10 rounded-full"></div>
+              <div class="absolute inset-0 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+              <i class="ph-fill ph-monitor-play absolute inset-0 flex items-center justify-center text-emerald-500 text-3xl"></i>
+            </div>
+            <div class="text-emerald-600 font-bold text-[10px] uppercase tracking-[0.4em] animate-pulse">Menyiapkan Halaman...</div>
+          </div>`;
+      }
       const isAdmin = window.App.adminLvl > 0;
       const isSuper = window.App.adminLvl === 1;
       const pend = window.App.subs.filter(s=>s.status==='pending').length;
@@ -1028,7 +1176,7 @@
         const sList = window.App.search ? window.App.surahs.filter(s=>s.title.toLowerCase().includes(window.App.search.toLowerCase())) : window.App.surahs.filter(s=>s.juzId===window.App.actJuzId);
         sList.sort((a,b)=> (Q_SURAHS.find(q=>q.name===a.title.replace("Surah ",""))?.no||999) - (Q_SURAHS.find(q=>q.name===b.title.replace("Surah ",""))?.no||999));
         
-        html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-10 min-h-0 relative"><div class="max-w-7xl mx-auto w-full">' + mobileSearchBar + '<div class="mb-6 md:mb-10 shrink-0"><h1 class="text-2xl md:text-4xl font-serif dark:text-white mb-1.5 md:mb-2 flex items-center gap-2 md:gap-3 tracking-tight"><i class="ph-fill ph-books text-emerald-500"></i> Perpustakaan Surah</h1><p class="text-[11px] md:text-sm text-slate-500">Pilih materi hafalan dari daftar surah yang tersedia di sistem.</p></div>';
+        html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-10 min-h-0 relative">' + window.getPullIndicatorHtml() + '<div class="max-w-7xl mx-auto w-full">' + mobileSearchBar + '<div class="mb-6 md:mb-10 shrink-0"><h1 class="text-2xl md:text-4xl font-serif dark:text-white mb-1.5 md:mb-2 flex items-center gap-2 md:gap-3 tracking-tight"><i class="ph-fill ph-books text-emerald-500"></i> Perpustakaan Surah</h1><p class="text-[11px] md:text-sm text-slate-500">Pilih materi hafalan dari daftar surah yang tersedia di sistem.</p></div>';
         if (!window.App.search) {
             html += '<div class="flex items-center gap-2 md:gap-3 border-b border-slate-200/60 dark:border-[#1a2e26] pb-4 md:pb-6 mb-6 md:mb-8 overflow-x-auto hide-scrollbar shrink-0">' + window.App.juzs.map(j=>'<div class="flex shrink-0 mr-1"><button onclick="window.App.actJuzId=' + j.id + ';window.render(true)" class="' + (j.id===window.App.actJuzId?'tab-active':'tab-inactive') + '">' + window.esc(j.name) + '</button>' + (isSuper?'<div class="flex ml-1 md:ml-2 items-center"><button onclick="window.App.modal=\'juz\';window.App.modalData=' + j.id + ';window.render(true)" class="p-1.5 md:p-2 text-slate-400 hover:text-blue-500 transition-colors"><i class="ph-bold ph-pencil-simple text-base md:text-lg"></i></button><button onclick="window.confirmDelete(\'juz\', ' + j.id + ')" class="p-1.5 md:p-2 text-slate-400 hover:text-red-500 transition-colors"><i class="ph-bold ph-trash text-base md:text-lg"></i></button></div>':'') + '</div>').join('') + (isSuper?'<button onclick="window.App.modal=\'juz\';window.App.modalData=null;window.render(true)" class="tab-inactive !bg-transparent border-dashed border-2 hover:border-emerald-400 flex items-center gap-1.5"><i class="ph-bold ph-plus text-base md:text-lg"></i> Tambah</button>':'') + '</div>';
         }
@@ -1158,7 +1306,7 @@
             });
         }
 
-        html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-10 min-h-0 relative"><div class="max-w-6xl mx-auto w-full">';
+        html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-10 min-h-0 relative">' + window.getPullIndicatorHtml() + '<div class="max-w-6xl mx-auto w-full">';
         html += mobileSearchBar;
         html += '<div class="mb-8 md:mb-12"><div class="flex flex-col md:flex-row justify-between md:items-end border-b border-slate-200 dark:border-[#1a2e26] pb-4 mb-6 gap-4 md:gap-0"><div><h1 class="text-2xl md:text-3xl font-serif dark:text-white mb-1 flex items-center gap-2"><i class="ph-fill ph-clipboard-text text-emerald-500"></i> Papan Riwayat</h1><p class="text-xs md:text-sm text-slate-500">Pantau status hafalan dan progres santri secara real-time.</p></div></div>';
         
@@ -1285,7 +1433,7 @@
             });
         }
 
-        html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10 min-h-0 relative"><div class="max-w-6xl mx-auto w-full">';
+        html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10 min-h-0 relative">' + window.getPullIndicatorHtml() + '<div class="max-w-6xl mx-auto w-full">';
         html += mobileSearchBar;
         html += '<div class="mb-8 md:mb-12"><div class="flex flex-col md:flex-row justify-between md:items-end border-b border-slate-200 dark:border-[#1a2e26] pb-4 mb-6 gap-4 md:gap-0"><div><h1 class="text-3xl md:text-4xl font-serif text-orange-500 dark:text-orange-400 mb-2 flex items-center gap-3 tracking-tight"><i class="ph-fill ph-tray"></i> Antrean Setoran</h1><p class="text-xs md:text-sm text-slate-500">Daftar rekaman hafalan yang menunggu penilaian.</p></div></div>';
         
@@ -1348,7 +1496,7 @@
         
         let sl = (sQ || sQSiswa) ? window.App.siswas.filter(s => s.name.toLowerCase().includes(sQ || sQSiswa) || s.kelas.toLowerCase().includes(sQ || sQSiswa)) : (window.App.hierSel.h ? window.App.siswas.filter(s=>s.halaqohId==window.App.hierSel.h) : []);
         
-        html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 min-h-0"><div class="max-w-7xl mx-auto w-full">' + mobileSearchBar + '<div class="mb-6 lg:mb-8 shrink-0"><div><h1 class="text-2xl md:text-3xl lg:text-4xl font-serif text-purple-600 dark:text-purple-500 mb-1 md:mb-2 flex items-center gap-2"><i class="ph-fill ph-database text-3xl"></i> Data Master</h1><p class="text-xs md:text-sm text-slate-500 dark:text-gray-400">Atur hierarki aplikasi dan kelola pengguna.</p></div></div>';
+        html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 min-h-0">' + window.getPullIndicatorHtml() + '<div class="max-w-7xl mx-auto w-full">' + mobileSearchBar + '<div class="mb-6 lg:mb-8 shrink-0"><div><h1 class="text-2xl md:text-3xl lg:text-4xl font-serif text-purple-600 dark:text-purple-500 mb-1 md:mb-2 flex items-center gap-2"><i class="ph-fill ph-database text-3xl"></i> Data Master</h1><p class="text-xs md:text-sm text-slate-500 dark:text-gray-400">Atur hierarki aplikasi dan kelola pengguna.</p></div></div>';
         
         if(isSuper) {
             let logoC = window.App.schLogo ? '<img src="' + window.App.schLogo + '" class="h-12 w-12 rounded-xl object-contain bg-white dark:bg-[#0a120f] p-1 shadow-sm">' : '<div class="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-500 dark:bg-emerald-500/10 flex items-center justify-center shrink-0"><i class="ph-fill ph-image text-2xl"></i></div>';
@@ -1364,13 +1512,16 @@
         if(!ul.length) html += '<div class="text-xs text-slate-500 italic p-6 text-center border border-dashed border-slate-200 dark:border-[#1a2e26] rounded-2xl">' + (sQ?'Tidak ditemukan.':'Belum ada data.') + '</div>';
         else {
             html += ul.map(u=>{
+                let isPending = u.status === 'pending';
                 let isAct = window.App.hierSel.u === u.id;
-                let actCls = isAct ? 'bg-purple-500 border-purple-500 shadow-lg shadow-purple-500/30 scale-[1.02]' : 'bg-white hover:bg-slate-50 dark:bg-[#0a120f] border-slate-100 dark:border-[#1a2e26] hover:border-purple-300';
+                let actCls = isAct ? 'bg-purple-500 border-purple-500 shadow-lg shadow-purple-500/30 scale-[1.02]' : (isPending ? 'bg-orange-50/50 border-orange-200 dark:bg-orange-900/5 dark:border-orange-900/30' : 'bg-white hover:bg-slate-50 dark:bg-[#0a120f] border-slate-100 dark:border-[#1a2e26] hover:border-purple-300');
                 let iconBg = isAct ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 dark:bg-[#15241e]';
                 let textCls = isAct ? 'text-white' : 'text-slate-800 dark:text-white';
                 let subCls = isAct ? 'text-purple-100' : 'text-slate-400';
                 let btnCls = isAct ? 'text-white hover:bg-white/20' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-[#15241e]';
-                return '<div onclick="window.App.hierSel.u=' + u.id + ';window.App.hierSel.h=null;window.App.search=\'\';window.App.searchSiswa=\'\';window.render(true)" class="group flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ' + actCls + '"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ' + iconBg + '"><i class="ph-fill ph-user text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate transition-colors ' + textCls + '">' + window.esc(u.name) + '</span><span class="text-[10px] font-mono mt-0.5 flex items-center gap-1.5 transition-colors ' + subCls + '"><i class="ph-fill ph-identification-card"></i> ' + window.esc(u.username) + (u.phone ? ' &bull; <i class="ph-fill ph-whatsapp-logo text-emerald-400"></i> ' + window.esc(u.phone) : '') + '</span></div></div>' + (isSuper ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ' + (isAct?'opacity-100':'') + '"><button onclick="event.stopPropagation();window.App.modal=\'ustadz\';window.App.modalData=' + u.id + ';window.render(true)" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-blue-500"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="event.stopPropagation();window.confirmDelete(\'ustadz\', ' + u.id + ')" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-red-500"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
+                let pendingBadge = isPending ? '<span class="ml-2 px-1.5 py-0.5 bg-orange-100 text-orange-600 text-[8px] font-bold rounded uppercase">Menunggu</span>' : '';
+                let approveBtn = (isSuper && isPending) ? '<button onclick="event.stopPropagation(); window.approveUstadz(' + u.id + ')" class="p-2 rounded-xl text-emerald-500 hover:bg-emerald-50 transition-colors" title="Setujui Akun"><i class="ph-fill ph-check-circle text-lg"></i></button>' : '';
+                return '<div onclick="window.App.hierSel.u=' + u.id + ';window.App.hierSel.h=null;window.App.search=\'\';window.App.searchSiswa=\'\';window.render(true)" class="group flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ' + actCls + '"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ' + iconBg + '"><i class="ph-fill ph-user text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate transition-colors ' + textCls + '">' + window.esc(u.name) + pendingBadge + '</span><span class="text-[10px] font-mono mt-0.5 flex items-center gap-1.5 transition-colors ' + subCls + '"><i class="ph-fill ph-identification-card"></i> ' + window.esc(u.username) + (u.phone ? ' &bull; <i class="ph-fill ph-whatsapp-logo text-emerald-400"></i> ' + window.esc(u.phone) : '') + '</span></div></div>' + (isSuper ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ' + (isAct?'opacity-100':'') + '">' + approveBtn + '<button onclick="event.stopPropagation();window.App.modal=\'ustadz\';window.App.modalData=' + u.id + ';window.render(true)" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-blue-500"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="event.stopPropagation();window.confirmDelete(\'ustadz\', ' + u.id + ')" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-red-500"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
             }).join('');
         }
         html += '</div></div>';
@@ -1421,7 +1572,8 @@
         const isAdmin = window.App.adminLvl > 0;
         const isSuper = window.App.adminLvl === 1;
         const sur = window.App.surahs.find(s=>s.id===window.App.actSurahId);
-        const ml = window.App.levels.filter(l=>l.surahId == window.App.actSurahId);
+        let ml = window.App.levels.filter(l=>l.surahId == window.App.actSurahId);
+        ml.sort((a,b) => (a.order||0) - (b.order||0));
         
         let sgsOrig = window.getSgs();
         let allSgs = window.getOrderedSgs(); 
@@ -1436,12 +1588,14 @@
             let activeClass = isActLvl ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/30 lg:translate-x-2' : 'bg-white dark:bg-[#0a120f] border-slate-200 dark:border-[#1a2e26] text-slate-600 dark:text-gray-300 hover:border-emerald-400';
             let numClass = isActLvl ? 'bg-white/20' : 'bg-slate-100 dark:bg-[#15241e]';
             
-            let adminBtns = isSuper ? '<div class="flex items-center ml-auto gap-0.5 lg:gap-1 pl-2 border-l ' + (isActLvl?'border-emerald-400':'border-slate-100 dark:border-[#1a2e26]') + '"><button onclick="event.stopPropagation(); window.App.modal=\'level\'; window.App.modalData=' + l.id + '; window.render(true);" class="p-1.5 hover:text-blue-400 transition-colors ' + (isActLvl?'text-emerald-100':'text-slate-400') + '"><i class="ph-bold ph-pencil-simple text-sm lg:text-base"></i></button><button onclick="event.stopPropagation(); window.confirmDelete(\'level\', ' + l.id + ')" class="p-1.5 hover:text-red-400 transition-colors ' + (isActLvl?'text-emerald-100':'text-slate-400') + '"><i class="ph-bold ph-trash text-sm lg:text-base"></i></button></div>' : '';
+            let upL = i <= 0 ? '' : '<button onclick="event.stopPropagation(); window.moveLevel(' + l.id + ', -1)" class="p-1 hover:text-white transition-colors ' + (isActLvl?'text-emerald-100':'text-slate-400') + '"><i class="ph-bold ph-caret-up text-xs"></i></button>';
+            let downL = i >= ml.length - 1 ? '' : '<button onclick="event.stopPropagation(); window.moveLevel(' + l.id + ', 1)" class="p-1 hover:text-white transition-colors ' + (isActLvl?'text-emerald-100':'text-slate-400') + '"><i class="ph-bold ph-caret-down text-xs"></i></button>';
+            let adminBtns = isAdmin ? '<div class="flex items-center ml-auto gap-0.5 lg:gap-1 pl-2 border-l ' + (isActLvl?'border-emerald-400':'border-slate-100 dark:border-[#1a2e26]') + '">' + upL + downL + '<button onclick="event.stopPropagation(); window.App.modal=\'level\'; window.App.modalData=' + l.id + '; window.render(true);" class="p-1.5 hover:text-blue-400 transition-colors ' + (isActLvl?'text-emerald-100':'text-slate-400') + '"><i class="ph-bold ph-pencil-simple text-sm lg:text-base"></i></button><button onclick="event.stopPropagation(); window.confirmDelete(\'level\', ' + l.id + ')" class="p-1.5 hover:text-red-400 transition-colors ' + (isActLvl?'text-emerald-100':'text-slate-400') + '"><i class="ph-bold ph-trash text-sm lg:text-base"></i></button></div>' : '';
 
             return '<div onclick="window.App.actLevelId=' + l.id + ';window.App.actSegId=null;window.render(true)" class="flex items-center gap-2 lg:gap-3 p-2.5 lg:p-3.5 rounded-xl lg:rounded-2xl shrink-0 transition-all cursor-pointer border w-[160px] lg:w-full ' + activeClass + '"><div class="w-6 h-6 lg:w-8 lg:h-8 rounded-lg flex items-center justify-center text-[10px] lg:text-sm font-bold shrink-0 ' + numClass + '">' + (i+1) + '</div><span class="text-xs lg:text-sm font-bold truncate flex-1 text-left">' + window.esc(l.name) + '</span>' + adminBtns + '</div>';
         }).join('');
 
-        if (isSuper) {
+        if (isAdmin) {
             levelsHtml += '<button onclick="window.App.modal=\'level\';window.App.modalData=null;window.render(true)" class="py-3 lg:py-4 border-2 border-dashed border-slate-200 dark:border-[#1a2e26] rounded-xl lg:rounded-2xl text-emerald-600 font-bold text-[10px] lg:text-xs shrink-0 flex items-center justify-center gap-1.5 hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-[#15241e] transition-colors uppercase tracking-widest w-[140px] lg:w-full"><i class="ph-bold ph-plus text-sm lg:text-lg"></i> Tambah</button>';
         }
 
@@ -1461,7 +1615,7 @@
             let editB = '<button onclick="event.stopPropagation();window.App.modal=\'segment\';window.App.modalData=' + s.id + ';window.render(true);setTimeout(window.setupSegmentModal, 10);" class="p-1.5 lg:p-2 text-slate-400 hover:text-blue-500 bg-white dark:bg-[#0a120f] rounded-lg shadow-sm border border-slate-200 dark:border-[#1a2e26] transition-colors"><i class="ph-bold ph-pencil-simple text-sm lg:text-base"></i></button>';
             let delB = '<button onclick="event.stopPropagation(); window.confirmDelete(\'segment\', ' + s.id + ')" class="p-1.5 lg:p-2 text-slate-400 hover:text-red-500 bg-white dark:bg-[#0a120f] rounded-lg shadow-sm border border-slate-200 dark:border-[#1a2e26] transition-colors"><i class="ph-bold ph-trash text-sm lg:text-base"></i></button>';
             
-            let adm = isSuper ? '<div class="flex gap-1 lg:gap-1.5 mr-1 lg:mr-2">' + upB + downB + editB + delB + '</div>' : '';
+            let adm = isAdmin ? '<div class="flex gap-1 lg:gap-1.5 mr-1 lg:mr-2">' + upB + downB + editB + delB + '</div>' : '';
             
             return '<div data-id="' + s.id + '" onclick="window.selectSeg(' + s.id + ')" class="p-3.5 lg:p-5 rounded-2xl border cursor-pointer transition-all ' + (isAct?'bg-emerald-50 border-emerald-300 dark:bg-[#152b22] dark:border-emerald-500/50 shadow-md':'bg-white dark:bg-[#15241e] border-slate-100 dark:border-[#1a2e26] shadow-sm hover:border-emerald-300') + '"><div class="flex justify-between items-center"><div><h4 class="font-bold text-xs lg:text-sm ' + (isAct?'text-emerald-700 dark:text-emerald-400':'text-slate-700 dark:text-gray-200') + '">' + window.esc(s.title) + '</h4><p class="text-[9px] lg:text-[10px] text-slate-400 font-mono mt-1 flex items-center gap-1"><i class="ph ph-clock"></i> ' + window.fmtT(s.start) + ' - ' + window.fmtT(s.end) + '</p></div><div class="flex gap-1 lg:gap-1.5 items-center">' + adm + '<button class="w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center transition-colors ' + (isAct?'bg-emerald-500 text-white shadow-md shadow-emerald-500/40':'bg-slate-50 border border-slate-200 text-slate-400 hover:text-emerald-500 dark:bg-[#0a120f] dark:border-[#1a2e26]') + '"><i class="' + (isAct?'ph-fill':'ph-bold') + ' ph-play text-sm lg:text-base ml-0.5"></i></button></div></div></div>';
         }).join('') : '<div class="text-center p-4 lg:p-6 border border-dashed rounded-xl lg:rounded-2xl dark:border-[#1a2e26] text-slate-400 text-[10px] lg:text-xs italic">Pencarian tidak ditemukan.</div>') + '</div>';
@@ -1505,7 +1659,93 @@
         root.classList.remove('hidden');
         
         if(window.App.modal==='login') {
-            mHtml += '<div class="modal-overlay !flex"><div class="modal-box text-center"><div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 dark:bg-emerald-900/30"><i class="ph-fill ph-lock-key text-3xl"></i></div><h2 class="text-xl font-bold mb-4 dark:text-white">Akses Admin</h2>' + (window.App.loginError ? '<div class="mb-4 text-[11px] font-bold text-red-500 bg-red-50 p-3 rounded-lg border border-red-200 dark:bg-red-900/20 dark:border-transparent animate-pulse">' + window.App.loginError + '</div>' : '') + '<input type="text" id="m_u" onkeydown="if(event.key===\'Enter\')window.getEl(\'m_btn\').click()" class="input-std mb-3 text-center" placeholder="Username"><input type="password" id="m_p" onkeydown="if(event.key===\'Enter\')window.getEl(\'m_btn\').click()" class="input-std mb-4 text-center tracking-widest" placeholder="Password"><button id="m_btn" onclick="window.handleAdminLogin()" class="btn-std mb-2">Login</button><button onclick="window.App.modal=null;window.App.loginError=\'\';window.render(true)" class="w-full py-3 text-slate-500 font-bold hover:text-slate-800 dark:text-gray-400 dark:hover:text-white transition">Batal</button></div></div>';
+            mHtml += `
+            <div class="modal-overlay !flex">
+              <div class="modal-box !p-0 overflow-hidden">
+                <div class="p-8 text-center relative border-b border-slate-50 dark:border-[#1a2e26]">
+                  <button onclick="window.App.modal=null;window.App.loginError='';window.render(true)" class="absolute right-6 top-6 text-slate-400 hover:text-slate-600 transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
+                  <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-[1.5rem] flex items-center justify-center mx-auto mb-4 dark:bg-emerald-900/30 shadow-inner">
+                    <i class="ph-fill ph-lock-key text-4xl"></i>
+                  </div>
+                  <h2 class="text-2xl font-bold dark:text-white tracking-tight">Selamat Datang</h2>
+                  <p class="text-xs text-slate-500 mt-1">Silakan masuk untuk mengakses panel penguji.</p>
+                </div>
+                <div class="p-8">
+                  ${window.App.loginError ? `<div class="mb-6 text-[11px] font-bold text-red-500 bg-red-50 dark:bg-red-900/10 p-4 rounded-2xl border border-red-100 dark:border-red-900/20 flex items-center gap-2 animate-pulse"><i class="ph-bold ph-warning-circle text-lg"></i> ${window.App.loginError}</div>` : ''}
+                  <div class="space-y-4 mb-6">
+                    <div class="relative">
+                      <i class="ph-bold ph-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                      <input type="text" id="m_u" onkeydown="if(event.key==='Enter')window.handleAdminLogin()" class="input-std !pl-11" placeholder="Username">
+                    </div>
+                    <div class="relative">
+                      <i class="ph-bold ph-key absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                      <input type="password" id="m_p" onkeydown="if(event.key==='Enter')window.handleAdminLogin()" class="input-std !pl-11 tracking-widest" placeholder="Password">
+                    </div>
+                  </div>
+                  <button id="m_btn" onclick="window.handleAdminLogin()" class="btn-std flex items-center justify-center gap-2 shadow-xl">
+                    <span>Masuk Sekarang</span>
+                    <i class="ph-bold ph-arrow-right"></i>
+                  </button>
+                </div>
+                <div class="p-6 bg-slate-50 dark:bg-[#0a120f] text-center">
+                  <p class="text-[11px] text-slate-500 mb-2">Belum punya akun penguji?</p>
+                  <button onclick="window.App.modal='register_ustadz';window.App.registerError='';window.render(true)" class="text-xs font-bold text-emerald-600 hover:text-emerald-700 transition flex items-center justify-center gap-1.5 mx-auto">
+                    <i class="ph-bold ph-user-plus"></i>
+                    Daftar sebagai Ustadz/ah
+                  </button>
+                </div>
+              </div>
+            </div>`;
+        } else if (window.App.modal === 'register_ustadz') {
+            mHtml += `
+            <div class="modal-overlay !flex">
+              <div class="modal-box !p-0 overflow-hidden">
+                <div class="p-8 text-center relative border-b border-slate-50 dark:border-[#1a2e26]">
+                  <button onclick="window.App.modal='login';window.App.registerError='';window.render(true)" class="absolute left-6 top-6 text-slate-400 hover:text-slate-600 transition-colors"><i class="ph-bold ph-arrow-left text-xl"></i></button>
+                  <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-[1.5rem] flex items-center justify-center mx-auto mb-4 dark:bg-blue-900/30 shadow-inner">
+                    <i class="ph-fill ph-user-plus text-4xl"></i>
+                  </div>
+                  <h2 class="text-2xl font-bold dark:text-white tracking-tight">Daftar Penguji</h2>
+                  <p class="text-xs text-slate-500 mt-1">Lengkapi data Anda untuk mendaftar di sistem.</p>
+                </div>
+                <div class="p-8">
+                  ${window.App.registerError ? `<div class="mb-6 text-[11px] font-bold text-red-500 bg-red-50 dark:bg-red-900/10 p-4 rounded-2xl border border-red-100 dark:border-red-900/20 flex items-center gap-2 animate-pulse"><i class="ph-bold ph-warning-circle text-lg"></i> ${window.App.registerError}</div>` : ''}
+                  <div class="grid grid-cols-1 gap-4 mb-8">
+                    <div class="relative">
+                      <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Nama Lengkap</label>
+                      <input type="text" id="reg_n" class="input-std" placeholder="Contoh: Ahmad Fauzi">
+                    </div>
+                    <div class="relative">
+                      <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">No. WhatsApp</label>
+                      <input type="text" id="reg_p" class="input-std" placeholder="628123456789">
+                    </div>
+                    <div class="relative">
+                      <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Username</label>
+                      <input type="text" id="reg_us" class="input-std" placeholder="Username untuk Login">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                      <div class="relative">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Password</label>
+                        <input type="password" id="reg_pw" class="input-std" placeholder="******">
+                      </div>
+                      <div class="relative">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Konfirmasi</label>
+                        <input type="password" id="reg_pwc" class="input-std" placeholder="******">
+                      </div>
+                    </div>
+                  </div>
+                  <button onclick="window.handleUstadzRegister()" class="btn-std !bg-blue-600 hover:bg-blue-700 shadow-blue-500/30 flex items-center justify-center gap-2 shadow-xl">
+                    <span>Daftar Sekarang</span>
+                    <i class="ph-bold ph-check"></i>
+                  </button>
+                </div>
+                <div class="p-6 bg-slate-50 dark:bg-[#0a120f] text-center">
+                  <button onclick="window.App.modal='login';window.render(true)" class="text-xs font-bold text-slate-500 hover:text-slate-800 transition flex items-center justify-center gap-1.5 mx-auto">
+                    Kembali ke Halaman Login
+                  </button>
+                </div>
+              </div>
+            </div>`;
         } else if (window.App.modal === 'juz') {
             let j = window.App.modalData ? window.App.juzs.find(x=>x.id===window.App.modalData) : null;
             mHtml += '<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">' + (j ? 'Edit' : 'Tambah') + ' Juz</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let id=' + (window.App.modalData||'null') + ';let v=window.val(\'m_v\');let nD={id:(id||Date.now()),name:v};if(!id)window.App.juzs.push(nD);window.dbSave(\'juzs\',nD.id,nD);if(!id)window.App.actJuzId=nD.id;window.App.modal=null;window.render(true)"><input type="text" id="m_v" required value="' + (j ? window.esc(j.name) : '') + '" class="input-std mb-6" placeholder="Nama Juz"><button type="submit" class="btn-std">Simpan</button></form></div></div>';
@@ -1519,7 +1759,11 @@
             mHtml += '<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">Ganti Video</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let sid=' + (window.App.actSurahId||'null') + ';let v=window.val(\'m_v\');let id=window.extractVideoId(v)||v;if(id&&id.length>=10){let o=window.App.surahs.find(x=>x.id===sid);if(o){o.videoId=id;window.dbSave(\'surahs\',sid,o);}if(window.App.yt&&typeof window.App.yt.loadVideoById===\'function\'){window.App.yt.loadVideoById(id);window.App.isPlay=false;}else{setTimeout(()=>window.initYTPlayer(),100);}window.App.modal=null;window.render(true)}else window.showAlert(\'Tautan URL YouTube tidak valid!\')"><input type="text" id="m_v" required value="' + (s?.videoId ? 'https://youtu.be/'+s.videoId : '') + '" class="input-std mb-6" placeholder="Paste link YouTube di sini..."><button type="submit" class="btn-std">Simpan</button></form></div></div>';
         } else if (window.App.modal==='level') {
             let l = window.App.modalData ? window.App.levels.find(x=>x.id===window.App.modalData) : null;
-            mHtml += '<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">' + (l ? 'Edit' : 'Tambah') + ' Level</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let id=' + (window.App.modalData||'null') + ';let n=window.val(\'m_v\');if(id){let o=window.App.levels.find(x=>x.id===id);if(o){o.name=n;window.dbSave(\'levels\',id,o);}}else{let nid=Date.now();let nD={id:nid,surahId:' + window.App.actSurahId + ',name:n};window.App.levels.push(nD);window.dbSave(\'levels\',nid,nD);}window.App.modal=null;window.render(true)"><input type="text" id="m_v" required class="input-std mb-6" value="' + (l ? window.esc(l.name) : '') + '" placeholder="Contoh: Level 2..."><button type="submit" class="btn-std">Simpan</button></form></div></div>';
+            let lvlsForM = window.App.levels.filter(x => x.surahId === window.App.actSurahId);
+            lvlsForM.sort((a,b) => (a.order||0) - (b.order||0));
+            let curO = l ? (lvlsForM.findIndex(x=>x.id===l.id) + 1) : (lvlsForM.length + 1);
+            
+            mHtml += '<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">' + (l ? 'Edit' : 'Tambah') + ' Level</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let id=' + (window.App.modalData||'null') + ';let n=window.val(\'m_v\'),oVal=parseInt(window.val(\'m_o\'))-1;if(id){let o=window.App.levels.find(x=>x.id===id);if(o){o.name=n;let oldIdx=lvlsForM.findIndex(x=>x.id===id);if(oVal!==oldIdx){lvlsForM.splice(oldIdx,1);lvlsForM.splice(oVal,0,o);lvlsForM.forEach((lvl,idx)=>{let al=window.App.levels.find(x=>x.id===lvl.id);if(al){al.order=idx;window.dbSave(\'levels\',al.id,al);}});}else{window.dbSave(\'levels\',id,o);}}}else{let nid=Date.now();let nD={id:nid,surahId:' + window.App.actSurahId + ',name:n,order:oVal};window.App.levels.push(nD);lvlsForM.splice(oVal,0,nD);lvlsForM.forEach((lvl,idx)=>{let al=window.App.levels.find(x=>x.id===lvl.id);if(al){al.order=idx;window.dbSave(\'levels\',al.id,al);}});}window.App.modal=null;window.render(true)"><div class="flex gap-3 mb-4"><div class="w-20"><label class="block text-[10px] text-emerald-600 font-bold mb-1">URUTAN</label><input type="number" id="m_o" value="' + curO + '" min="1" class="input-std text-center"></div><div class="flex-1"><label class="block text-[10px] text-emerald-600 font-bold mb-1">NAMA LEVEL</label><input type="text" id="m_v" required class="input-std" value="' + (l ? window.esc(l.name) : '') + '" placeholder="Contoh: Level 2..."></div></div><button type="submit" class="btn-std">Simpan</button></form></div></div>';
         } else if (window.App.modal==='segment') {
             let sg = window.App.modalData ? window.App.segs.find(x=>x.id===window.App.modalData) : null;
             let actSurah = window.App.surahs.find(s=>s.id===window.App.actSurahId);
@@ -1718,6 +1962,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+    import { getDatabase, ref, onValue, set, remove, get } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 
     let fbConf = {
         apiKey: "AIzaSyCdfYQeAiBMfAPsBGuzS7qWIoi_u3CaSvE", authDomain: "tahfidzqu-7c937.firebaseapp.com",
@@ -1785,6 +2030,31 @@
     onAuthStateChanged(auth, u => {
        fbUser = u; if(!u) return;
 
+       window.syncFirebaseData = async () => {
+          if (!fbUser) return;
+          const collections = ['juzs','surahs','levels','segs','ustadz','halaqohs','siswas','subs'];
+          const promises = collections.map(c => get(ref(db, `artifacts/${safeId}/public/data/${c}`)));
+          promises.push(get(ref(db, `artifacts/${safeId}/public/data/settings/app`)));
+          
+          const snapshots = await Promise.all(promises);
+          snapshots.forEach((snap, i) => {
+             const obj = snap.val();
+             if (i < collections.length) {
+                const c = collections[i];
+                window.App[c] = obj ? Object.keys(obj).map(k => ({id: isNaN(k) ? k : Number(k), ...obj[k]})) : [];
+                if (c === 'juzs' && window.App.juzs.length > 0) {
+                    if (!window.App.juzs.some(j => j.id == window.App.actJuzId)) {
+                        let defaultJuz = window.App.juzs.find(j => j.id == 30 || String(j.name).includes("30"));
+                        window.App.actJuzId = defaultJuz ? defaultJuz.id : window.App.juzs[0].id;
+                    }
+                }
+             } else if (obj) {
+                window.App.schLogo = obj.logo || '';
+                window.App.schSub = obj.subtitle || '';
+             }
+          });
+       };
+
        onValue(ref(db, `artifacts/${safeId}/public/data/settings/app`), snap => {
            const obj = snap.val();
            if(obj) {
@@ -1835,4 +2105,5 @@
     });
   </script>
 </body>
+    ) {}
 </html>
