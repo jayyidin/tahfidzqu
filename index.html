@@ -541,16 +541,9 @@
         </div>
       </div>`;
 
-    window.refreshApp = function() {
     window.refreshApp = async function() {
       if (window.App.isLoading) return;
       window.App.isLoading = true;
-      window.render(true);
-      setTimeout(() => {
-          window.App.isLoading = false;
-          window.render(true);
-          window.showAlert('Data telah diperbarui');
-      }, 800);
 
       try {
           if (window.syncFirebaseData) {
@@ -1961,7 +1954,6 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
     import { getDatabase, ref, onValue, set, remove, get } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
 
     let fbConf = {
@@ -2105,5 +2097,4 @@
     });
   </script>
 </body>
-    ) {}
 </html>
