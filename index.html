@@ -11,6 +11,8 @@
   <link href="https://fonts.googleapis.com/earlyaccess/thuluth.css" rel="stylesheet">
   
   <script src="https://cdn.jsdelivr.net/npm/modern-screenshot"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -533,6 +535,51 @@
       }, 400);
     };
 
+    window.exportHalaqohPDF = function(hId) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const h = window.App.halaqohs.find(x => x.id == hId);
+        if (!h) return;
+        const u = window.App.ustadz.find(x => x.id == h.ustadzId);
+        
+        // Filter setoran lulus dalam 7 hari terakhir (mingguan)
+        const semingguLalu = Date.now() - (7 * 24 * 60 * 60 * 1000);
+        const weeklySubs = window.App.subs.filter(s => s.halaqohId == hId && s.id >= semingguLalu && s.status === 'graded');
+        
+        // Header Laporan
+        doc.setFontSize(18);
+        doc.setTextColor(5, 150, 105); // Emerald-600
+        doc.text("Laporan Statistik Mingguan TahfidzQu", 14, 22);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Halaqoh: ${h.name}`, 14, 32);
+        doc.text(`Pembimbing: ${u ? u.name : '-'}`, 14, 38);
+        doc.text(`Periode: 7 Hari Terakhir (${new Date().toLocaleDateString('id-ID')})`, 14, 44);
+
+        const tableData = weeklySubs.map(s => {
+            const siswa = window.App.siswas.find(x => x.id == s.siswaId);
+            const surah = window.App.surahs.find(x => x.id == s.surahId);
+            const seg = window.App.segs.find(x => x.id == s.segmentId);
+            return [
+                siswa ? siswa.name : '-',
+                surah ? surah.title : '-',
+                seg ? seg.title : '-',
+                s.date,
+                s.grade
+            ];
+        });
+
+        doc.autoTable({
+            startY: 52,
+            head: [['Nama Santri', 'Surah', 'Ayat', 'Tanggal', 'Nilai']],
+            body: tableData,
+            headStyles: { fillColor: [16, 185, 129] }, // Emerald-500
+        });
+
+        doc.save(`Laporan_Mingguan_${h.name.replace(/\s+/g, '_')}.pdf`);
+    };
+
     window.getPullIndicatorHtml = () => `
       <div id="pull-indicator" class="overflow-hidden h-0 opacity-0 flex items-center justify-center transition-all duration-300 bg-emerald-50/50 dark:bg-emerald-500/5 w-full shrink-0 border-b border-emerald-100/50 dark:border-emerald-500/10 md:hidden">
         <div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] uppercase tracking-[0.2em]">
@@ -555,7 +602,6 @@
 
       window.App.isLoading = false;
       window.render(true);
-      window.showAlert('Data telah diperbarui');
     };
 
     document.addEventListener('touchstart', (e) => {
@@ -1514,7 +1560,11 @@
                 let btnCls = isAct ? 'text-white hover:bg-white/20' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-[#15241e]';
                 let pendingBadge = isPending ? '<span class="ml-2 px-1.5 py-0.5 bg-orange-100 text-orange-600 text-[8px] font-bold rounded uppercase">Menunggu</span>' : '';
                 let approveBtn = (isSuper && isPending) ? '<button onclick="event.stopPropagation(); window.approveUstadz(' + u.id + ')" class="p-2 rounded-xl text-emerald-500 hover:bg-emerald-50 transition-colors" title="Setujui Akun"><i class="ph-fill ph-check-circle text-lg"></i></button>' : '';
-                return '<div onclick="window.App.hierSel.u=' + u.id + ';window.App.hierSel.h=null;window.App.search=\'\';window.App.searchSiswa=\'\';window.render(true)" class="group flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ' + actCls + '"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ' + iconBg + '"><i class="ph-fill ph-user text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate transition-colors ' + textCls + '">' + window.esc(u.name) + pendingBadge + '</span><span class="text-[10px] font-mono mt-0.5 flex items-center gap-1.5 transition-colors ' + subCls + '"><i class="ph-fill ph-identification-card"></i> ' + window.esc(u.username) + (u.phone ? ' &bull; <i class="ph-fill ph-whatsapp-logo text-emerald-400"></i> ' + window.esc(u.phone) : '') + '</span></div></div>' + (isSuper ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ' + (isAct?'opacity-100':'') + '">' + approveBtn + '<button onclick="event.stopPropagation();window.App.modal=\'ustadz\';window.App.modalData=' + u.id + ';window.render(true)" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-blue-500"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="event.stopPropagation();window.confirmDelete(\'ustadz\', ' + u.id + ')" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-red-500"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
+                
+                let uHals = window.App.halaqohs.filter(h => h.ustadzId === u.id).map(h => h.id);
+                let uGraded = window.App.subs.filter(sb => (sb.ustadzId === u.id || uHals.includes(sb.halaqohId)) && sb.status === 'graded').length;
+                
+                return '<div onclick="window.App.hierSel.u=' + u.id + ';window.App.hierSel.h=null;window.App.search=\'\';window.App.searchSiswa=\'\';window.render(true)" class="group flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ' + actCls + '"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ' + iconBg + '"><i class="ph-fill ph-user text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate transition-colors ' + textCls + '">' + window.esc(u.name) + pendingBadge + '</span><span class="text-[10px] font-mono mt-0.5 flex items-center gap-1.5 transition-colors ' + subCls + '"><i class="ph-fill ph-identification-card"></i> ' + window.esc(u.username) + ' &bull; <i class="ph-fill ph-check-circle text-emerald-500"></i> ' + uGraded + ' Lulus</span></div></div>' + (isSuper ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ' + (isAct?'opacity-100':'') + '">' + approveBtn + '<button onclick="event.stopPropagation();window.App.modal=\'ustadz\';window.App.modalData=' + u.id + ';window.render(true)" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-blue-500"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="event.stopPropagation();window.confirmDelete(\'ustadz\', ' + u.id + ')" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-red-500"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
             }).join('');
         }
         html += '</div></div>';
@@ -1532,7 +1582,10 @@
                 let iconBg = isAct ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 dark:bg-[#15241e]';
                 let textCls = isAct ? 'text-white' : 'text-slate-800 dark:text-white';
                 let btnCls = isAct ? 'text-white hover:bg-white/20' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-[#15241e]';
-                return '<div onclick="window.App.hierSel.h=' + h.id + ';window.App.search=\'\';window.App.searchSiswa=\'\';window.render(true)" class="group flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ' + actCls + '"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ' + iconBg + '"><i class="ph-fill ph-users-three text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate transition-colors ' + textCls + '">' + window.esc(h.name) + '</span></div></div>' + (isAdmin ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ' + (isAct?'opacity-100':'') + '"><button onclick="event.stopPropagation();window.App.modal=\'halaqoh\';window.App.modalData=' + h.id + ';window.render(true)" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-purple-500"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="event.stopPropagation();window.confirmDelete(\'halaqoh\', ' + h.id + ')" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-red-500"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
+                
+                let hGraded = window.App.subs.filter(sb => sb.halaqohId == h.id && sb.status === 'graded').length;
+                
+                return '<div onclick="window.App.hierSel.h=' + h.id + ';window.App.search=\'\';window.App.searchSiswa=\'\';window.render(true)" class="group flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ' + actCls + '"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ' + iconBg + '"><i class="ph-fill ph-users-three text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate transition-colors ' + textCls + '">' + window.esc(h.name) + '</span><span class="text-[10px] font-bold block mt-0.5 ' + (isAct?'text-blue-100':'text-blue-500') + '"><i class="ph-fill ph-check-circle"></i> ' + hGraded + ' Hafalan Lulus</span></div></div>' + (isAdmin ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ' + (isAct?'opacity-100':'') + '"><button onclick="event.stopPropagation();window.exportHalaqohPDF(' + h.id + ')" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-emerald-500" title="Cetak PDF Mingguan"><i class="ph-bold ph-file-pdf text-lg"></i></button><button onclick="event.stopPropagation();window.App.modal=\'halaqoh\';window.App.modalData=' + h.id + ';window.render(true)" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-purple-500"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="event.stopPropagation();window.confirmDelete(\'halaqoh\', ' + h.id + ')" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-red-500"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
             }).join('');
         }
         html += '</div></div>';
@@ -1550,7 +1603,8 @@
         else if(!sl.length) html += '<div class="text-xs text-slate-500 italic p-6 text-center border border-dashed border-slate-200 dark:border-[#1a2e26] rounded-2xl">' + ((sQ||sQSiswa)?'Tidak ditemukan.':'Belum ada data.') + '</div>';
         else {
             html += sl.map(es=>{
-                return '<div class="group flex items-center justify-between p-3.5 rounded-2xl border bg-white dark:bg-[#0a120f] border-slate-100 dark:border-[#1a2e26] hover:border-emerald-300 hover:shadow-md transition-all"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 dark:bg-[#15241e] dark:text-emerald-400 flex items-center justify-center shrink-0"><i class="ph-fill ph-user text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate text-slate-800 dark:text-white">' + window.esc(es.name) + '</span><span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 block">Kelas ' + window.esc(es.kelas) + '</span></div></div>' + (isAdmin ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"><button onclick="window.App.modal=\'siswa\';window.App.modalData=' + es.id + ';window.render(true)" class="p-2 rounded-xl text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-[#15241e] transition-colors"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="window.confirmDelete(\'siswa\', ' + es.id + ')" class="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-[#15241e] transition-colors"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
+                let sGraded = window.App.subs.filter(sb => sb.siswaId == es.id && sb.status === 'graded').length;
+                return '<div class="group flex items-center justify-between p-3.5 rounded-2xl border bg-white dark:bg-[#0a120f] border-slate-100 dark:border-[#1a2e26] hover:border-emerald-300 hover:shadow-md transition-all"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 dark:bg-[#15241e] dark:text-emerald-400 flex items-center justify-center shrink-0"><i class="ph-fill ph-user text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate text-slate-800 dark:text-white">' + window.esc(es.name) + '</span><span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 block">Kelas ' + window.esc(es.kelas) + ' &bull; ' + sGraded + ' Lulus</span></div></div>' + (isAdmin ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"><button onclick="window.App.modal=\'siswa\';window.App.modalData=' + es.id + ';window.render(true)" class="p-2 rounded-xl text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-[#15241e] transition-colors"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="window.confirmDelete(\'siswa\', ' + es.id + ')" class="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-[#15241e] transition-colors"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
             }).join('');
         }
         html += '</div></div>';
