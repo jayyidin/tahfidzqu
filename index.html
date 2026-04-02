@@ -250,6 +250,7 @@
       segOrder: savedNavState.segOrder || 'asc',
       editingUstadzId: null, editingHalaqohId: null, editingSiswaId: null,
       currentGradingAudioUrl: null, isGradingRecording: false, gradingMediaRecorder: null, gradingAudioChunks: [],
+      isSubmittingGrade: false,
       studentMediaRecorder: null, studentAudioChunks: [], currentStudentAudioUrl: null,
       audioObj: null, activeAudioId: null, activeAudioDur: 0,
       loggedInUstadzId: savedNavState.loggedInUstadzId || null,
@@ -257,7 +258,6 @@
     };
 
     window.fmtT = s => `${Math.floor(s/60).toString().padStart(2,'0')}:${Math.floor(s%60).toString().padStart(2,'0')}`;
-    
     if (!window.App.audioObj) {
         window.App.audioObj = new Audio();
         
@@ -998,9 +998,22 @@
     };
 
     window.submitGrade = async function(id, grade) {
+        window.App.isSubmittingGrade = true;
+        window.render();
+
         let sub = window.App.subs.find(x => x.id == id);
-        if(sub) { sub.status = grade === 'repeat' ? 'need-repeat' : 'graded'; sub.grade = grade === 'repeat' ? null : grade; sub.note = window.esc(window.val('gn')); sub.voiceNote = window.App.currentGradingAudioUrl; if(window.dbSave) window.dbSave('subs', id, sub); }
-        window.App.currentGradingAudioUrl = null; window.App.modal = null; window.render(true);
+        if(sub) { 
+            sub.status = grade === 'repeat' ? 'need-repeat' : 'graded'; 
+            sub.grade = grade === 'repeat' ? null : grade; 
+            sub.note = window.esc(window.val('gn')); 
+            sub.voiceNote = window.App.currentGradingAudioUrl; 
+            if(window.dbSave) await window.dbSave('subs', id, sub); 
+        }
+        await new Promise(resolve => setTimeout(resolve, 500));
+        window.App.isSubmittingGrade = false;
+        window.App.currentGradingAudioUrl = null; 
+        window.App.modal = null; 
+        window.render(true);
     };
 
     window.toggleGradingRecord = async function() {
@@ -1365,13 +1378,31 @@
                 let sColor = sb.status==='graded'?'text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-900/30 dark:border-emerald-800':sb.status==='need-repeat'?'text-red-600 bg-red-50 border-red-200 dark:bg-red-900/30 dark:border-red-800':'text-orange-600 bg-orange-50 border-orange-200 dark:bg-orange-900/30 dark:border-orange-800'; 
                 let sIcon = sb.status==='graded'?'ph-check-circle':sb.status==='need-repeat'?'ph-arrow-counter-clockwise':'ph-hourglass';
                 let sText = sb.status==='graded'?'LULUS ('+sb.grade+')':sb.status==='need-repeat'?'DIULANG':'MENUNGGU NILAI'; 
-
                 let ustNoteHtml = '';
                 if(sb.note || sb.voiceNote) {
-                    ustNoteHtml = '<div class="mt-4 bg-orange-50 dark:bg-orange-900/10 rounded-2xl p-4 border border-orange-100 dark:border-orange-900/30"><div class="flex items-center gap-1.5 mb-2"><i class="ph-fill ph-chalkboard-teacher text-orange-500"></i><span class="text-[10px] font-bold text-orange-600 uppercase tracking-widest">Catatan Penguji</span></div>';
-                    if(sb.note) ustNoteHtml += '<p class="text-xs text-slate-600 dark:text-gray-300 leading-relaxed mb-3">' + window.esc(sb.note) + '</p>';
-                    if(sb.voiceNote) ustNoteHtml += window.renderCustomAudio('hub_ust_' + sb.id, sb.voiceNote, 0, true);
-                    ustNoteHtml += '</div>';
+                    let noteColorClasses = 'bg-orange-50 dark:bg-orange-900/10 border-orange-100 dark:border-orange-900/30';
+                    let iconColorClasses = 'text-orange-500';
+                    let textColorClasses = 'text-orange-600';
+
+                    if (sb.status === 'graded') {
+                        noteColorClasses = 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-900/30';
+                        iconColorClasses = 'text-emerald-500';
+                        textColorClasses = 'text-emerald-600';
+                    } else if (sb.status === 'need-repeat') {
+                        noteColorClasses = 'bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30';
+                        iconColorClasses = 'text-red-500';
+                        textColorClasses = 'text-red-600';
+                    }
+
+                    let noteContent = '';
+                    if(sb.note) {
+                        noteContent += '<p class="text-xs text-slate-600 dark:text-gray-300 leading-relaxed' + (sb.voiceNote ? ' mb-3' : '') + '">' + window.esc(sb.note) + '</p>';
+                    }
+                    if(sb.voiceNote) {
+                        noteContent += window.renderCustomAudio('hub_ust_' + sb.id, sb.voiceNote, 0, true);
+                    }
+
+                    ustNoteHtml = `<div class="mt-4 ${noteColorClasses} rounded-2xl p-4 border"><div class="flex items-center gap-1.5 mb-2"><i class="ph-fill ph-chalkboard-teacher ${iconColorClasses}"></i><span class="text-[10px] font-bold ${textColorClasses} uppercase tracking-widest">Catatan Penguji</span></div>${noteContent}</div>`;
                 }
 
                 let cStu = window.App.siswas.find(x=>x.id===sb.siswaId);
@@ -1837,14 +1868,28 @@
             mHtml += '<div class="modal-overlay !flex"><div class="modal-box !max-w-xl"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold dark:text-white">Import Data ' + title + '</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><p class="text-xs text-slate-500 mb-4 leading-relaxed">Copy data dari Excel/Spreadsheet dan paste di bawah ini. Gunakan Tab atau Pipe (|) sebagai pemisah kolom.<br>Format: <b>' + placeholder + '</b></p><textarea id="import_text" class="input-std mb-4 !font-mono !text-xs" rows="10" placeholder="Paste di sini..."></textarea><button onclick="window.processImport(\'' + type + '\')" class="btn-std">Proses Import</button></div></div>';
         } else if (window.App.modal === 'grade') {
             let sb = window.App.subs.find(x=>x.id===window.App.modalData);
-            let btns = '';
-            ['A','B+','B','B-'].forEach(g=>{
-                btns += '<button type="button" onclick="window.submitGrade(' + sb.id + ', \'' + g + '\')" class="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 font-bold text-lg hover:bg-emerald-50 hover:border-emerald-500 hover:text-white hover:shadow-lg hover:shadow-emerald-500/30 hover:-translate-y-1 dark:bg-[#0a120f] dark:border-[#1a2e26] dark:text-white transition-all shadow-sm">' + g + '</button>';
-            });
-            let audioHTML = window.App.currentGradingAudioUrl ? window.renderCustomAudio('grade_modal', window.App.currentGradingAudioUrl, 0, true) : '<span class="text-[10px] md:text-xs text-slate-500 dark:text-gray-400 truncate">' + (window.App.isGradingRecording ? 'Merekam...' : 'Ketuk Mic untuk merekam suara') + '</span>';
-            let deleteBtn = window.App.currentGradingAudioUrl ? '<button type="button" onclick="window.deleteGradingAudio()" class="w-8 h-8 rounded-full bg-red-100 text-red-600 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all shadow-sm shrink-0"><i class="ph-bold ph-trash"></i></button>' : '';
-            
-            mHtml += '<div class="modal-overlay !flex"><div class="modal-box text-center"><div class="w-12 h-12 md:w-14 md:h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4"><i class="ph-fill ph-star text-3xl"></i></div><h2 class="text-lg md:text-xl font-bold mb-1 dark:text-white">Beri Nilai</h2><p class="text-xs md:text-sm text-emerald-600 font-bold mb-6">' + window.getSName(sb.siswaId) + '</p><div class="text-left mb-4"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Teks:</label><textarea id="gn" class="input-std" rows="2">' + window.esc(sb.note||'') + '</textarea></div><div class="text-left mb-6"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Suara (Opsional):</label><div class="flex items-center gap-3 bg-slate-50 dark:bg-[#0a120f] border border-slate-200 dark:border-[#1a2e26] p-2 md:p-3 rounded-xl"><button type="button" onclick="window.toggleGradingRecord()" class="w-8 h-8 md:w-10 md:h-10 rounded-full ' + (window.App.isGradingRecording ? 'bg-red-500 text-white animate-pulse shadow-lg' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400') + ' flex items-center justify-center transition-all shrink-0"><i class="ph-fill ' + (window.App.isGradingRecording ? 'ph-stop' : 'ph-microphone') + ' text-lg md:text-xl"></i></button><div class="flex-1">' + audioHTML + '</div>' + deleteBtn + '</div></div><div class="flex justify-center gap-1.5 md:gap-2 mb-4 md:mb-5">' + btns + '</div><button type="button" onclick="window.submitGrade(' + sb.id + ', \'repeat\')" class="w-full py-2.5 md:py-3 bg-red-50 text-red-600 border border-red-100 rounded-xl font-bold text-xs md:text-sm mb-3 md:mb-4 hover:bg-red-500 hover:text-white transition dark:bg-red-900/20 dark:border-transparent">Minta Ulangi</button><button type="button" onclick="window.App.currentGradingAudioUrl=null;window.App.modal=null;window.render(true)" class="w-full py-2 text-slate-500 font-bold text-xs md:text-sm hover:text-slate-800 transition">Batal</button></div></div>';
+            if (window.App.isSubmittingGrade) {
+                mHtml += `
+                <div class="modal-overlay !flex">
+                  <div class="modal-box text-center">
+                    <div class="relative w-20 h-20 mb-6 mx-auto">
+                      <div class="absolute inset-0 border-4 border-emerald-500/10 rounded-full"></div>
+                      <div class="absolute inset-0 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                      <i class="ph-fill ph-star absolute inset-0 flex items-center justify-center text-emerald-500 text-3xl"></i>
+                    </div>
+                    <div class="text-emerald-600 font-bold text-[10px] uppercase tracking-[0.4em] animate-pulse">Menyimpan Penilaian...</div>
+                  </div>
+                </div>`;
+            } else {
+                let btns = '';
+                ['A','B+','B','B-'].forEach(g=>{
+                    btns += '<button type="button" onclick="window.submitGrade(' + sb.id + ', \'' + g + '\')" class="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 font-bold text-lg hover:bg-emerald-50 hover:border-emerald-500 hover:text-white hover:shadow-lg hover:shadow-emerald-500/30 hover:-translate-y-1 dark:bg-[#0a120f] dark:border-[#1a2e26] dark:text-white transition-all shadow-sm">' + g + '</button>';
+                });
+                let audioHTML = window.App.currentGradingAudioUrl ? window.renderCustomAudio('grade_modal', window.App.currentGradingAudioUrl, 0, true) : '<span class="text-[10px] md:text-xs text-slate-500 dark:text-gray-400 truncate">' + (window.App.isGradingRecording ? 'Merekam...' : 'Ketuk Mic untuk merekam suara') + '</span>';
+                let deleteBtn = window.App.currentGradingAudioUrl ? '<button type="button" onclick="window.deleteGradingAudio()" class="w-8 h-8 rounded-full bg-red-100 text-red-600 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all shadow-sm shrink-0"><i class="ph-bold ph-trash"></i></button>' : '';
+                
+                mHtml += '<div class="modal-overlay !flex"><div class="modal-box text-center"><div class="w-12 h-12 md:w-14 md:h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4"><i class="ph-fill ph-star text-3xl"></i></div><h2 class="text-lg md:text-xl font-bold mb-1 dark:text-white">Beri Nilai</h2><p class="text-xs md:text-sm text-emerald-600 font-bold mb-6">' + window.getSName(sb.siswaId) + '</p><div class="text-left mb-4"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Teks:</label><textarea id="gn" class="input-std" rows="2">' + window.esc(sb.note||'') + '</textarea></div><div class="text-left mb-6"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Suara (Opsional):</label><div class="flex items-center gap-3 bg-slate-50 dark:bg-[#0a120f] border border-slate-200 dark:border-[#1a2e26] p-2 md:p-3 rounded-xl"><button type="button" onclick="window.toggleGradingRecord()" class="w-8 h-8 md:w-10 md:h-10 rounded-full ' + (window.App.isGradingRecording ? 'bg-red-500 text-white animate-pulse shadow-lg' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400') + ' flex items-center justify-center transition-all shrink-0"><i class="ph-fill ' + (window.App.isGradingRecording ? 'ph-stop' : 'ph-microphone') + ' text-lg md:text-xl"></i></button><div class="flex-1">' + audioHTML + '</div>' + deleteBtn + '</div></div><div class="flex justify-center gap-1.5 md:gap-2 mb-4 md:mb-5">' + btns + '</div><button type="button" onclick="window.submitGrade(' + sb.id + ', \'repeat\')" class="w-full py-2.5 md:py-3 bg-red-50 text-red-600 border border-red-100 rounded-xl font-bold text-xs md:text-sm mb-3 md:mb-4 hover:bg-red-500 hover:text-white transition dark:bg-red-900/20 dark:border-transparent">Setor Ulang</button><button type="button" onclick="window.App.currentGradingAudioUrl=null;window.App.modal=null;window.render(true)" class="w-full py-2 text-slate-500 font-bold text-xs md:text-sm hover:text-slate-800 transition">Batal</button></div></div>';
+            }
         } else if (window.App.modal === 'share_card') {
             let sb = window.App.subs.find(x=>x.id===window.App.modalData);
             let stu = window.App.siswas.find(x=>x.id===sb.siswaId);
