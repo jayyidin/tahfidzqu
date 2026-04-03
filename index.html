@@ -13,6 +13,7 @@
   <script src="https://cdn.jsdelivr.net/npm/modern-screenshot"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -244,13 +245,14 @@
       actSegId: savedNavState.actSegId || null,
       yt: null, isPlay: false, repTarget: 7, curRep: 0, speed: 1, interval: null,
       modal: null, modalData: null, 
-      filter: savedNavState.filter || {u:'all', h:'all', s:'all', surah: 'all'}, 
+      filter: savedNavState.filter || {u:'all', h:'all', s:'all', surah: 'all', startDate: '', endDate: ''}, 
       hierSel: savedNavState.hierSel || {u:null, h:null, s:null},
       rec: {is:false, secs:0, int:null, src: savedNavState.recSrc || 'player'}, 
       resubmitId: savedNavState.resubmitId || null, 
       segOrder: savedNavState.segOrder || 'asc',
       editingUstadzId: null, editingHalaqohId: null, editingSiswaId: null,
       adminSortOrder: savedNavState.adminSortOrder || 'newest',
+      customAudioSpeed: 1,
       currentGradingAudioUrl: null, isGradingRecording: false, gradingMediaRecorder: null, gradingAudioChunks: [],
       isSubmittingGrade: false,
       selectedGrade: undefined,
@@ -342,6 +344,7 @@
         window.App.activeAudioId = id;
         window.App.activeAudioDur = savedDuration;
         a.src = url;
+        a.playbackRate = window.App.customAudioSpeed || 1;
         a.play().catch(e => {
             window.showAlert('Tidak dapat memutar rekaman. Browser butuh interaksi.');
             let btn = window.getEl('audio-btn-' + id);
@@ -351,6 +354,18 @@
         
         let newBtn = window.getEl('audio-btn-' + id);
         if(newBtn) newBtn.innerHTML = getIcon('pause');
+    };
+
+    window.toggleCustomAudioSpeed = function(e) {
+        if (e) e.stopPropagation();
+        let speeds = [1, 1.25, 1.5, 2, 0.5, 0.75];
+        let cur = window.App.customAudioSpeed || 1;
+        let next = speeds[(speeds.indexOf(cur) + 1) % speeds.length];
+        window.App.customAudioSpeed = next;
+        if (window.App.audioObj) window.App.audioObj.playbackRate = next;
+        document.querySelectorAll('.audio-speed-btn').forEach(btn => {
+            btn.innerText = next + 'x';
+        });
     };
 
     window.renderCustomAudio = function(id, url, duration, isUstadz = false) {
@@ -363,7 +378,7 @@
         let iconSize = isUstadz ? 'text-xs' : 'text-sm';
         let btnSize = isUstadz ? 'w-8 h-8 md:w-9 md:h-9' : 'w-10 h-10 md:w-11 md:h-11';
         
-        return '<div class="flex items-center gap-2 md:gap-3 bg-slate-50 dark:bg-[#0a120f] border border-slate-200 dark:border-[#1a2e26] p-1.5 md:p-2 rounded-full w-full shadow-sm" onclick="event.stopPropagation();"><button type="button" id="audio-btn-' + id + '" onclick="window.playCustomAudio(\'' + id + '\', \'' + url + '\', ' + duration + '); event.stopPropagation();" class="' + btnSize + ' rounded-full ' + btnColor + ' text-white flex items-center justify-center shrink-0 transition-colors shadow-md active:scale-95"><i class="ph-fill ' + ic + ' ' + iconSize + '"></i></button><div class="flex-1 flex items-center gap-2 pr-2 md:pr-3"><div class="h-1.5 flex-1 bg-slate-200 dark:bg-[#15241e] rounded-full overflow-hidden relative"><div id="audio-bar-' + id + '" class="absolute left-0 top-0 h-full ' + barColor + ' rounded-full transition-all duration-100" style="width: ' + (isPlay?'auto':'0%') + '"></div></div><span id="audio-time-' + id + '" class="text-[9px] md:text-[10px] font-mono font-medium text-slate-500 dark:text-gray-400 w-8 text-right">00:00</span></div></div>';
+        return '<div class="flex items-center gap-2 md:gap-3 bg-slate-50 dark:bg-[#0a120f] border border-slate-200 dark:border-[#1a2e26] p-1.5 md:p-2 rounded-full w-full shadow-sm" onclick="event.stopPropagation();"><button type="button" id="audio-btn-' + id + '" onclick="window.playCustomAudio(\'' + id + '\', \'' + url + '\', ' + duration + '); event.stopPropagation();" class="' + btnSize + ' rounded-full ' + btnColor + ' text-white flex items-center justify-center shrink-0 transition-colors shadow-md active:scale-95"><i class="ph-fill ' + ic + ' ' + iconSize + '"></i></button><div class="flex-1 flex items-center gap-2 pr-2 md:pr-3"><div class="h-1.5 flex-1 bg-slate-200 dark:bg-[#15241e] rounded-full overflow-hidden relative"><div id="audio-bar-' + id + '" class="absolute left-0 top-0 h-full ' + barColor + ' rounded-full transition-all duration-100" style="width: ' + (isPlay?'auto':'0%') + '"></div></div><span id="audio-time-' + id + '" class="text-[9px] md:text-[10px] font-mono font-medium text-slate-500 dark:text-gray-400 w-8 text-right shrink-0">00:00</span><button type="button" onclick="window.toggleCustomAudioSpeed(event)" class="audio-speed-btn text-[9px] md:text-[10px] font-bold text-slate-400 hover:text-emerald-500 bg-slate-100 dark:bg-[#15241e] px-1.5 py-0.5 rounded cursor-pointer transition-colors w-8 text-center shrink-0" title="Atur Kecepatan">' + (window.App.customAudioSpeed || 1) + 'x</button></div></div>';
     };
 
     window.getLvl = () => {
@@ -416,6 +431,8 @@
     window.getUName = id => window.esc(window.App.ustadz.find(x=>x.id==id)?.name||"-");
     window.getHName = id => window.esc(window.App.halaqohs.find(x=>x.id==id)?.name||"-");
     window.getSName = id => window.esc(window.App.siswas.find(x=>x.id==id)?.name||"-");
+    window.getRawUName = id => window.App.ustadz.find(x=>x.id==id)?.name||"-";
+    window.getRawHName = id => window.App.halaqohs.find(x=>x.id==id)?.name||"-";
     window.getSKelas = id => window.esc(window.App.siswas.find(x=>x.id==id)?.kelas||"-");
     window.toArabicNumeral = en => (""+en).replace(/[0-9]/g, t=>String.fromCharCode(t.charCodeAt(0)+1584));
     window.extractVideoId = url => { if(!url)return null; var m=url.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/); return (m&&m[2].length===11)?m[2]:null; };
@@ -564,7 +581,10 @@
         doc.setTextColor(100);
         doc.text(`Halaqoh: ${h.name}`, 14, 32);
         doc.text(`Pembimbing: ${u ? u.name : '-'}`, 14, 38);
-        doc.text(`Periode: 7 Hari Terakhir (${new Date().toLocaleDateString('id-ID')})`, 14, 44);
+        
+        const startDateStr = new Date(semingguLalu).toLocaleDateString('id-ID', {day: '2-digit', month: 'short', year: 'numeric'});
+        const endDateStr = new Date().toLocaleDateString('id-ID', {day: '2-digit', month: 'short', year: 'numeric'});
+        doc.text(`Periode: ${startDateStr} - ${endDateStr}`, 14, 44);
 
         const tableData = weeklySubs.map(s => {
             const siswa = window.App.siswas.find(x => x.id == s.siswaId);
@@ -587,6 +607,131 @@
         });
 
         doc.save(`Laporan_Mingguan_${h.name.replace(/\s+/g, '_')}.pdf`);
+    };
+
+    window.exportRekapPDF = function(sId) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const s = window.App.siswas.find(x => x.id == sId);
+        if (!s) return;
+        const h = window.App.halaqohs.find(x => x.id == s.halaqohId);
+        const u = h ? window.App.ustadz.find(x => x.id == h.ustadzId) : null;
+        
+        const sSubs = window.App.subs.filter(x => x.siswaId === s.id && x.status === 'graded').sort((a,b) => b.id - a.id);
+        
+        doc.setFontSize(18);
+        doc.setTextColor(5, 150, 105);
+        doc.text("Rekapitulasi Nilai Hafalan", 14, 22);
+        
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Nama Santri: ${s.name} (Kelas ${s.kelas})`, 14, 32);
+        doc.text(`Halaqoh: ${h ? h.name : '-'}`, 14, 38);
+        doc.text(`Pembimbing: ${u ? u.name : '-'}`, 14, 44);
+
+        const tableData = sSubs.map(sb => {
+            const surah = window.App.surahs.find(x => x.id == sb.surahId);
+            const seg = window.App.segs.find(x => x.id == sb.segmentId);
+            return [surah ? surah.title : '-', seg ? seg.title : '-', sb.date, sb.grade || '-'];
+        });
+
+        doc.autoTable({
+            startY: 52, head: [['Surah', 'Segmen', 'Tanggal', 'Nilai']], body: tableData, headStyles: { fillColor: [16, 185, 129] },
+        });
+
+        doc.save(`Rekap_Nilai_${s.name.replace(/\s+/g, '_')}.pdf`);
+    };
+
+    window.exportToCSV = function(type) {
+        window.App.modal = 'export_csv';
+        window.App.modalData = type;
+        window.render(true);
+    };
+
+    window.executeExportCSV = function() {
+        let type = window.App.modalData;
+        let start = window.getEl('exp_start').value;
+        let end = window.getEl('exp_end').value;
+        
+        let startTime = start ? new Date(start).setHours(0,0,0,0) : 0;
+        let endTime = end ? new Date(end).setHours(23,59,59,999) : Infinity;
+
+        let data, headers, filename, items;
+        const sQ = window.App.search.toLowerCase();
+        const sQSiswa = (window.App.searchSiswa || '').toLowerCase();
+
+        if (type === 'halaqoh') {
+            items = sQ ? window.App.halaqohs.filter(h => h.name.toLowerCase().includes(sQ)) : (window.App.hierSel.u ? window.App.halaqohs.filter(h=>h.ustadzId==window.App.hierSel.u) : []);
+            items = items.filter(x => x.id >= startTime && x.id <= endTime);
+            if (items.length === 0) { window.showAlert('Tidak ada data Halaqoh untuk diekspor pada rentang ini.'); return; }
+            headers = ['ID Halaqoh', 'Nama Halaqoh', 'ID Ustadz', 'Nama Ustadz', 'Total Lulus'];
+            const ustadzName = window.getRawUName(window.App.hierSel.u);
+            filename = `Data_Halaqoh_${ustadzName.replace(/\s+/g, '_')}.csv`;
+            data = items.map(h => {
+                let hGraded = window.App.subs.filter(sb => sb.halaqohId == h.id && sb.status === 'graded').length;
+                return [h.id, h.name, h.ustadzId, window.getRawUName(h.ustadzId), hGraded];
+            });
+        } else if (type === 'siswa') {
+            items = (sQ || sQSiswa) ? window.App.siswas.filter(s => s.name.toLowerCase().includes(sQ || sQSiswa) || s.kelas.toLowerCase().includes(sQ || sQSiswa)) : (window.App.hierSel.h ? window.App.siswas.filter(s=>s.halaqohId==window.App.hierSel.h) : []);
+            items = items.filter(x => x.id >= startTime && x.id <= endTime);
+            if (items.length === 0) { window.showAlert('Tidak ada data Santri untuk diekspor pada rentang ini.'); return; }
+            headers = ['ID Santri', 'Nama Santri', 'Kelas', 'ID Halaqoh', 'Nama Halaqoh', 'Total Lulus'];
+            const halaqohName = window.getRawHName(window.App.hierSel.h);
+            filename = `Data_Santri_${halaqohName.replace(/\s+/g, '_')}.csv`;
+            data = items.map(s => {
+                let sGraded = window.App.subs.filter(sb => sb.siswaId == s.id && sb.status === 'graded').length;
+                return [s.id, s.name, s.kelas, s.halaqohId, window.getRawHName(s.halaqohId), sGraded];
+            });
+        } else if (type === 'hub') {
+            let fs = window.App.subs;
+            let tUidHub = window.App.adminLvl === 2 ? window.App.loggedInUstadzId : (window.App.filter.u !== 'all' ? Number(window.App.filter.u) : null);
+            if (tUidHub !== null) {
+                let uHals = window.App.halaqohs.filter(h=>h.ustadzId === tUidHub).map(h=>h.id);
+                let uSws = window.App.siswas.filter(s=>uHals.includes(s.halaqohId)).map(s=>s.id);
+                fs = fs.filter(sb => sb.ustadzId === tUidHub || uSws.includes(sb.siswaId));
+            }
+            if (window.App.filter.h !== 'all') {
+                let tHid = Number(window.App.filter.h);
+                let hSws = window.App.siswas.filter(s=>s.halaqohId === tHid).map(s=>s.id);
+                fs = fs.filter(sb => sb.halaqohId === tHid || hSws.includes(sb.siswaId));
+            }
+            if (window.App.filter.s !== 'all') {
+                fs = fs.filter(sb => sb.siswaId === Number(window.App.filter.s));
+            }
+            if (sQ) {
+                fs = fs.filter(x=>{
+                    let su=window.App.surahs.find(y=>y.id===x.surahId); 
+                    return (su&&su.title.toLowerCase().includes(sQ)) || window.getSName(x.siswaId).toLowerCase().includes(sQ);
+                });
+            }
+            items = fs.filter(x => x.id >= startTime && x.id <= endTime);
+            if (items.length === 0) { window.showAlert('Tidak ada data Setoran untuk diekspor pada rentang ini.'); return; }
+            headers = ['ID Setoran', 'Tanggal', 'Nama Santri', 'Kelas', 'Halaqoh', 'Ustadz', 'Surah', 'Segmen', 'Status', 'Nilai', 'Catatan Teks'];
+            filename = `Riwayat_Setoran_${new Date().getTime()}.csv`;
+            data = items.map(sb => {
+                let su = window.App.surahs.find(x=>x.id===sb.surahId);
+                let sg = window.App.segs.find(x=>x.id===sb.segmentId);
+                let cStu = window.App.siswas.find(x=>x.id===sb.siswaId);
+                let cHalaqohId = cStu ? cStu.halaqohId : sb.halaqohId;
+                let cHalaqoh = window.App.halaqohs.find(x=>x.id===cHalaqohId);
+                let cUstadzId = cHalaqoh ? cHalaqoh.ustadzId : sb.ustadzId;
+                return [sb.id, sb.date, window.getSName(sb.siswaId), window.getSKelas(sb.siswaId), window.getHName(cHalaqohId), window.getUName(cUstadzId), su ? su.title : '-', sg ? sg.title : '-', sb.status, sb.grade || '-', sb.note || '-'];
+            });
+        } else {
+            return;
+        }
+
+        const toCsv = (rows) => rows.map(row => row.map(val => { const str = String(val === null || val === undefined ? '' : val); return `"${str.replace(/"/g, '""')}"`; }).join(',')).join('\n');
+
+        const csvContent = toCsv([headers, ...data]);
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url); link.setAttribute("download", filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        
+        window.App.modal = null; window.render(true);
     };
 
     window.getPullIndicatorHtml = () => `
@@ -1007,6 +1152,10 @@
     };
 
     window.submitGrade = async function(id, grade) {
+        if(window.App.audioObj && !window.App.audioObj.paused) {
+            window.App.audioObj.pause();
+            window.App.activeAudioId = null;
+        }
         window.App.isSubmittingGrade = true;
         window.render();
 
@@ -1136,6 +1285,58 @@
             window.render(true);
             window.showAlert(`Berhasil mengimpor ${successCount} data.`);
         }, 100);
+    };
+
+    window.chartInstance = null;
+    window.ratioChartInstance = null;
+    window.renderChart = function() {
+        let ctx = document.getElementById('statsChart');
+        if (!ctx || typeof Chart === 'undefined') return;
+        let labels = []; let dataGraded = []; let dataPending = []; let dataRepeat = [];
+        for (let i = 6; i >= 0; i--) {
+            let d = new Date(); d.setDate(d.getDate() - i);
+            labels.push(d.toLocaleDateString('id-ID', {day: '2-digit', month: 'short', year: 'numeric'}));
+            dataGraded.push(0); dataPending.push(0); dataRepeat.push(0);
+        }
+        let subs = window.App.subs;
+        if (window.App.adminLvl === 2 || window.App.hierSel.u) {
+            let uid = window.App.adminLvl === 2 ? window.App.loggedInUstadzId : window.App.hierSel.u;
+            if (uid) subs = subs.filter(s => s.ustadzId == uid);
+        }
+        subs.forEach(s => {
+            let idx = labels.indexOf(s.date);
+            if (idx !== -1) {
+                if (s.status === 'graded') dataGraded[idx]++;
+                else if (s.status === 'pending') dataPending[idx]++;
+                else if (s.status === 'need-repeat') dataRepeat[idx]++;
+            }
+        });
+
+        let tGraded = 0, tPending = 0, tRepeat = 0;
+        subs.forEach(s => {
+            if (s.status === 'graded') tGraded++;
+            else if (s.status === 'pending') tPending++;
+            else if (s.status === 'need-repeat') tRepeat++;
+        });
+
+        if (window.chartInstance) window.chartInstance.destroy();
+        let isDark = window.App.theme === 'dark';
+        let textColor = isDark ? '#9ca3af' : '#64748b'; let gridColor = isDark ? '#1a2e26' : '#f1f5f9';
+        window.chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: { labels: labels, datasets: [ { label: 'Lulus', data: dataGraded, backgroundColor: '#10b981', borderRadius: 4 }, { label: 'Menunggu', data: dataPending, backgroundColor: '#f59e0b', borderRadius: 4 }, { label: 'Diulang', data: dataRepeat, backgroundColor: '#ef4444', borderRadius: 4 } ] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true, grid: { display: false }, ticks: { color: textColor, font: { family: 'Inter', size: 10 } } }, y: { stacked: true, grid: { color: gridColor }, ticks: { color: textColor, stepSize: 1, font: { family: 'Inter', size: 10 } }, beginAtZero: true } }, plugins: { legend: { labels: { color: textColor, font: { family: 'Inter', size: 11, weight: 'bold' }, usePointStyle: true, boxWidth: 8 } } } }
+        });
+
+        let ctxRatio = document.getElementById('ratioChart');
+        if (ctxRatio) {
+            if (window.ratioChartInstance) window.ratioChartInstance.destroy();
+            window.ratioChartInstance = new Chart(ctxRatio, {
+                type: 'doughnut',
+                data: { labels: ['Lulus', 'Menunggu', 'Diulang'], datasets: [{ data: [tGraded, tPending, tRepeat], backgroundColor: ['#10b981', '#f59e0b', '#ef4444'], borderWidth: 0, hoverOffset: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '70%', layout: { padding: 10 }, plugins: { legend: { position: 'bottom', labels: { color: textColor, font: { family: 'Inter', size: 11, weight: 'bold' }, usePointStyle: true, padding: 15 } } } }
+            });
+        }
     };
 
     window.render = function() {
@@ -1397,7 +1598,8 @@
 
         html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-10 min-h-0 relative">' + window.getPullIndicatorHtml() + '<div class="max-w-6xl mx-auto w-full">';
         html += mobileSearchBar;
-        html += '<div class="mb-8 md:mb-12"><div class="flex flex-col md:flex-row justify-between md:items-end border-b border-slate-200 dark:border-[#1a2e26] pb-4 mb-6 gap-4 md:gap-0"><div><h1 class="text-2xl md:text-3xl font-serif dark:text-white mb-1 flex items-center gap-2"><i class="ph-fill ph-clipboard-text text-emerald-500"></i> Papan Riwayat</h1><p class="text-xs md:text-sm text-slate-500">Pantau status hafalan dan progres santri secara real-time.</p></div></div>';
+        let exportHubBtn = isAdmin ? `<button onclick="window.exportToCSV('hub')" class="bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] text-emerald-600 px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 hover:bg-emerald-50 hover:border-emerald-200 transition-colors shadow-sm shrink-0"><i class="ph-bold ph-file-csv text-base"></i> Export CSV</button>` : '';
+        html += '<div class="mb-8 md:mb-12"><div class="flex flex-col md:flex-row justify-between md:items-end border-b border-slate-200 dark:border-[#1a2e26] pb-4 mb-6 gap-4 md:gap-0"><div><h1 class="text-2xl md:text-3xl font-serif dark:text-white mb-1 flex items-center gap-2"><i class="ph-fill ph-clipboard-text text-emerald-500"></i> Papan Riwayat</h1><p class="text-xs md:text-sm text-slate-500">Pantau status hafalan dan progres santri secara real-time.</p></div>' + exportHubBtn + '</div>';
         
         html += '<div class="bg-white dark:bg-[#15241e] border border-slate-100 dark:border-[#1a2e26] p-2 md:p-3 rounded-[2rem] shadow-soft flex flex-col md:flex-row gap-2">';
         html += '<div class="flex-1 relative"><i class="ph-fill ph-chalkboard-teacher absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select id="hub-filter-ustadz" onchange="window.App.filter.u=this.value;window.App.filter.h=\'all\';window.App.filter.s=\'all\';window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none" ' + (window.App.adminLvl===2?'disabled':'') + '>' + oU + '</select></div>';
@@ -1536,6 +1738,14 @@
         if (window.App.filter.surah && window.App.filter.surah !== 'all') {
             fs = fs.filter(sb => sb.surahId === Number(window.App.filter.surah));
         }
+        if (window.App.filter.startDate) {
+            let st = new Date(window.App.filter.startDate).setHours(0,0,0,0);
+            fs = fs.filter(sb => sb.id >= st);
+        }
+        if (window.App.filter.endDate) {
+            let en = new Date(window.App.filter.endDate).setHours(23,59,59,999);
+            fs = fs.filter(sb => sb.id <= en);
+        }
         if(window.App.search) {
             let sq = window.App.search.toLowerCase();
             fs = fs.filter(x=>{
@@ -1555,11 +1765,16 @@
         </button>`;
         html += `<div class="mb-8 md:mb-12"><div class="flex flex-col md:flex-row justify-between md:items-end border-b border-slate-200 dark:border-[#1a2e26] pb-4 mb-6 gap-4 md:gap-0"><div><h1 class="text-3xl md:text-4xl font-serif text-orange-500 dark:text-orange-400 mb-2 flex items-center gap-3 tracking-tight"><i class="ph-fill ph-tray"></i> Antrean Setoran</h1><p class="text-xs md:text-sm text-slate-500">Daftar rekaman hafalan yang menunggu penilaian.</p></div><div>${sortBtnHtml}</div></div></div>`;
         
-        html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-2 bg-white dark:bg-[#15241e] border border-slate-100 dark:border-[#1a2e26] p-2 md:p-3 rounded-[2rem] shadow-soft mb-6 md:mb-8">';
+        html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-2 bg-white dark:bg-[#15241e] border border-slate-100 dark:border-[#1a2e26] p-2 md:p-3 rounded-[2rem] shadow-soft mb-2 md:mb-3">';
         html += '<div class="relative"><i class="ph-fill ph-chalkboard-teacher absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select id="adm-filter-ustadz" onchange="window.App.filter.u=this.value;window.App.filter.h=\'all\';window.App.filter.s=\'all\';window.App.filter.surah=\'all\';window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none" ' + (window.App.adminLvl===2?'disabled':'') + '>' + oU + '</select></div>';
         html += '<div class="relative"><i class="ph-fill ph-users-three absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select id="adm-filter-halaqoh" onchange="window.App.filter.h=this.value;window.App.filter.s=\'all\';window.App.filter.surah=\'all\';window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oH + '</select></div>';
         html += '<div class="relative"><i class="ph-fill ph-user-circle absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select id="adm-filter-siswa" onchange="window.App.filter.s=this.value;window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oS + '</select></div>';
         html += '<div class="relative"><i class="ph-fill ph-book-open absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select id="adm-filter-surah" onchange="window.App.filter.surah=this.value;window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oSurah + '</select></div>';
+        html += '</div>';
+        
+        html += '<div class="grid grid-cols-2 gap-2 bg-white dark:bg-[#15241e] border border-slate-100 dark:border-[#1a2e26] p-2 md:p-3 rounded-[2rem] shadow-soft mb-6 md:mb-8">';
+        html += '<div class="relative"><i class="ph-bold ph-calendar-blank absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><input type="date" id="adm-filter-start" value="' + (window.App.filter.startDate||'') + '" onchange="window.App.filter.startDate=this.value;window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none" title="Mulai Tanggal"></div>';
+        html += '<div class="relative"><i class="ph-bold ph-calendar-blank absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><input type="date" id="adm-filter-end" value="' + (window.App.filter.endDate||'') + '" onchange="window.App.filter.endDate=this.value;window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none" title="Sampai Tanggal"></div>';
         html += '</div>';
 
         if(!fs.length) {
@@ -1628,6 +1843,8 @@
             html += '<div class="flex flex-col md:flex-row gap-4 lg:gap-6 mb-8 shrink-0"><div class="card-std !h-auto !p-4 flex flex-row items-center gap-4 w-full md:w-auto shadow-sm">' + logoC + '<div class="flex-1 overflow-hidden"><p class="text-[10px] font-bold text-emerald-600 mb-1.5 uppercase tracking-widest">Logo Sekolah</p><input type="file" id="aup" accept="image/*" class="hidden" onchange="window.handleLogoUpload(event)"><div class="flex gap-2"><button type="button" onclick="document.getElementById(\'aup\').click()" class="flex-1 md:flex-none text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-4 py-2.5 rounded-xl dark:bg-[#15241e] dark:border-[#1a2e26] dark:text-gray-300 transition shadow-sm truncate">Upload</button><button type="button" onclick="window.removeLogo()" class="text-xs font-bold bg-red-50 text-red-500 hover:bg-red-100 px-4 py-2.5 rounded-xl dark:bg-red-900/20 transition truncate">Hapus</button></div></div></div><div class="card-std !h-auto !p-4 flex flex-row items-center gap-4 flex-1 shadow-sm"><div class="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 flex items-center justify-center shrink-0"><i class="ph-bold ph-text-t text-2xl"></i></div><div class="flex-1 w-full overflow-hidden"><p class="text-[10px] font-bold text-blue-600 mb-1.5 uppercase tracking-widest">Nama Sekolah</p><div class="flex gap-2 w-full"><input type="text" id="i-sub" value="' + window.App.schSub + '" class="input-std !bg-slate-50 dark:!bg-[#0a120f] !border-transparent !py-2.5 !px-4 !rounded-xl text-sm font-medium flex-1 min-w-0"><button type="button" onclick="window.saveSchoolSubtitle()" class="btn-std !w-auto !py-2.5 !px-6 !text-xs !rounded-xl uppercase tracking-widest shadow-md shrink-0">Simpan</button></div></div></div></div>';
         }
         
+        html += '<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 lg:mb-8 shrink-0"><div class="lg:col-span-2 bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-[2rem] p-5 md:p-6 shadow-soft flex flex-col"><div class="flex items-center gap-3 mb-4"><div class="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 flex items-center justify-center"><i class="ph-fill ph-chart-bar text-xl md:text-2xl"></i></div><div><h2 class="text-base md:text-lg font-bold dark:text-white">Statistik Penyetoran</h2><p class="text-[10px] md:text-xs text-slate-500">7 Hari Terakhir</p></div></div><div class="w-full h-48 md:h-64 relative flex-1"><canvas id="statsChart"></canvas></div></div><div class="lg:col-span-1 bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-[2rem] p-5 md:p-6 shadow-soft flex flex-col"><div class="flex items-center gap-3 mb-4"><div class="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 flex items-center justify-center"><i class="ph-fill ph-chart-pie-slice text-xl md:text-2xl"></i></div><div><h2 class="text-base md:text-lg font-bold dark:text-white">Rasio Kelulusan</h2><p class="text-[10px] md:text-xs text-slate-500">Total Keseluruhan</p></div></div><div class="w-full relative flex-1 min-h-[12rem]"><canvas id="ratioChart"></canvas></div></div></div>';
+
         html += '<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 flex-1 pb-10">';
         
         // --- COL 1: USTADZ ---
@@ -1649,15 +1866,17 @@
                 
                 let uHals = window.App.halaqohs.filter(h => h.ustadzId === u.id).map(h => h.id);
                 let uGraded = window.App.subs.filter(sb => (sb.ustadzId === u.id || uHals.includes(sb.halaqohId)) && sb.status === 'graded').length;
+                let hasNewUstadz = window.App.subs.some(sb => (sb.ustadzId === u.id || uHals.includes(sb.halaqohId)) && sb.id > Date.now() - (24 * 60 * 60 * 1000));
+                let newBadgeUstadz = hasNewUstadz ? '<span class="ml-2 px-1.5 py-0.5 bg-emerald-100 text-emerald-600 text-[8px] font-bold rounded uppercase animate-pulse inline-block align-middle">Baru</span>' : '';
                 
-                return '<div onclick="window.App.hierSel.u=' + u.id + ';window.App.hierSel.h=null;window.App.search=\'\';window.App.searchSiswa=\'\';window.render(true)" class="group flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ' + actCls + '"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ' + iconBg + '"><i class="ph-fill ph-user text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate transition-colors ' + textCls + '">' + window.esc(u.name) + pendingBadge + '</span><span class="text-[10px] font-mono mt-0.5 flex items-center gap-1.5 transition-colors ' + subCls + '"><i class="ph-fill ph-identification-card"></i> ' + window.esc(u.username) + ' &bull; <i class="ph-fill ph-check-circle text-emerald-500"></i> ' + uGraded + ' Lulus</span></div></div>' + (isSuper ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ' + (isAct?'opacity-100':'') + '">' + approveBtn + '<button onclick="event.stopPropagation();window.App.modal=\'ustadz\';window.App.modalData=' + u.id + ';window.render(true)" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-blue-500"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="event.stopPropagation();window.confirmDelete(\'ustadz\', ' + u.id + ')" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-red-500"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
+                return '<div onclick="window.App.hierSel.u=' + u.id + ';window.App.hierSel.h=null;window.App.search=\'\';window.App.searchSiswa=\'\';window.render(true)" class="group flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ' + actCls + '"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ' + iconBg + '"><i class="ph-fill ph-user text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate transition-colors ' + textCls + '">' + window.esc(u.name) + pendingBadge + newBadgeUstadz + '</span><span class="text-[10px] font-mono mt-0.5 flex items-center gap-1.5 transition-colors ' + subCls + '"><i class="ph-fill ph-identification-card"></i> ' + window.esc(u.username) + ' &bull; <i class="ph-fill ph-check-circle text-emerald-500"></i> ' + uGraded + ' Lulus</span></div></div>' + (isSuper ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ' + (isAct?'opacity-100':'') + '">' + approveBtn + '<button onclick="event.stopPropagation();window.App.modal=\'ustadz\';window.App.modalData=' + u.id + ';window.render(true)" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-blue-500"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="event.stopPropagation();window.confirmDelete(\'ustadz\', ' + u.id + ')" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-red-500"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
             }).join('');
         }
         html += '</div></div>';
 
         // --- COL 2: HALAQOH ---
         html += '<div class="bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-[2rem] flex flex-col h-[500px] lg:h-[700px] shadow-soft overflow-hidden">';
-        html += '<div class="p-5 border-b border-slate-100 dark:border-[#1a2e26] flex justify-between items-center bg-slate-50 dark:bg-[#0a120f] shrink-0"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 flex items-center justify-center"><i class="ph-fill ph-users-three text-2xl"></i></div><div><h3 class="font-bold text-slate-800 dark:text-white leading-tight">Halaqoh</h3><p class="text-[11px] text-slate-500 font-medium">' + hl.length + ' Data</p></div></div>' + (isAdmin && window.App.hierSel.u && !sQ ? '<div class="flex gap-1.5"><button onclick="window.App.modal=\'import_halaqoh\';window.render(true)" class="w-10 h-10 rounded-xl bg-slate-100 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition shadow-sm active:scale-95 text-lg dark:bg-[#15241e] dark:hover:bg-blue-900/30" title="Import CSV"><i class="ph-bold ph-upload-simple"></i></button><button onclick="window.App.modal=\'halaqoh\';window.App.modalData=null;window.render(true)" class="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600 transition shadow-md shadow-blue-500/30 active:scale-95"><i class="ph-bold ph-plus text-lg"></i></button></div>' : '') + '</div>';
+        html += '<div class="p-5 border-b border-slate-100 dark:border-[#1a2e26] flex justify-between items-center bg-slate-50 dark:bg-[#0a120f] shrink-0"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 flex items-center justify-center"><i class="ph-fill ph-users-three text-2xl"></i></div><div><h3 class="font-bold text-slate-800 dark:text-white leading-tight">Halaqoh</h3><p class="text-[11px] text-slate-500 font-medium">' + hl.length + ' Data</p></div></div>' + (isAdmin && window.App.hierSel.u && !sQ ? '<div class="flex gap-1.5"><button onclick="window.exportToCSV(\'halaqoh\')" class="w-10 h-10 rounded-xl bg-slate-100 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition shadow-sm active:scale-95 text-lg dark:bg-[#15241e] dark:hover:bg-emerald-900/30" title="Export ke CSV"><i class="ph-bold ph-file-csv"></i></button><button onclick="window.App.modal=\'import_halaqoh\';window.render(true)" class="w-10 h-10 rounded-xl bg-slate-100 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition shadow-sm active:scale-95 text-lg dark:bg-[#15241e] dark:hover:bg-blue-900/30" title="Import CSV"><i class="ph-bold ph-upload-simple"></i></button><button onclick="window.App.modal=\'halaqoh\';window.App.modalData=null;window.render(true)" class="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center hover:bg-blue-600 transition shadow-md shadow-blue-500/30 active:scale-95"><i class="ph-bold ph-plus text-lg"></i></button></div>' : '') + '</div>';
         html += '<div class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">';
         if(!window.App.hierSel.u && !sQ) html += '<div class="flex flex-col items-center justify-center h-full opacity-50"><i class="ph-fill ph-chalkboard-teacher text-5xl mb-4 text-slate-400"></i><p class="text-xs font-bold text-slate-500 uppercase tracking-widest text-center">Pilih Ustadz/ah<br>terlebih dahulu</p></div>';
         else if(!hl.length) html += '<div class="text-xs text-slate-500 italic p-6 text-center border border-dashed border-slate-200 dark:border-[#1a2e26] rounded-2xl">' + (sQ?'Tidak ditemukan.':'Belum ada data.') + '</div>';
@@ -1670,8 +1889,10 @@
                 let btnCls = isAct ? 'text-white hover:bg-white/20' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-[#15241e]';
                 
                 let hGraded = window.App.subs.filter(sb => sb.halaqohId == h.id && sb.status === 'graded').length;
+                let hasNewHalaqoh = window.App.subs.some(sb => sb.halaqohId == h.id && sb.id > Date.now() - (24 * 60 * 60 * 1000));
+                let newBadgeHalaqoh = hasNewHalaqoh ? '<span class="ml-2 px-1.5 py-0.5 bg-emerald-100 text-emerald-600 text-[8px] font-bold rounded uppercase animate-pulse inline-block align-middle">Baru</span>' : '';
                 
-                return '<div onclick="window.App.hierSel.h=' + h.id + ';window.App.search=\'\';window.App.searchSiswa=\'\';window.render(true)" class="group flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ' + actCls + '"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ' + iconBg + '"><i class="ph-fill ph-users-three text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate transition-colors ' + textCls + '">' + window.esc(h.name) + '</span><span class="text-[10px] font-bold block mt-0.5 ' + (isAct?'text-blue-100':'text-blue-500') + '"><i class="ph-fill ph-check-circle"></i> ' + hGraded + ' Hafalan Lulus</span></div></div>' + (isAdmin ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ' + (isAct?'opacity-100':'') + '"><button onclick="event.stopPropagation();window.exportHalaqohPDF(' + h.id + ')" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-emerald-500" title="Cetak PDF Mingguan"><i class="ph-bold ph-file-pdf text-lg"></i></button><button onclick="event.stopPropagation();window.App.modal=\'halaqoh\';window.App.modalData=' + h.id + ';window.render(true)" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-purple-500"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="event.stopPropagation();window.confirmDelete(\'halaqoh\', ' + h.id + ')" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-red-500"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
+                return '<div onclick="window.App.hierSel.h=' + h.id + ';window.App.search=\'\';window.App.searchSiswa=\'\';window.render(true)" class="group flex items-center justify-between p-3.5 rounded-2xl border cursor-pointer transition-all ' + actCls + '"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors ' + iconBg + '"><i class="ph-fill ph-users-three text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate transition-colors ' + textCls + '">' + window.esc(h.name) + newBadgeHalaqoh + '</span><span class="text-[10px] font-bold block mt-0.5 ' + (isAct?'text-blue-100':'text-blue-500') + '"><i class="ph-fill ph-check-circle"></i> ' + hGraded + ' Hafalan Lulus</span></div></div>' + (isAdmin ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ' + (isAct?'opacity-100':'') + '"><button onclick="event.stopPropagation();window.exportHalaqohPDF(' + h.id + ')" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-emerald-500" title="Cetak PDF Mingguan"><i class="ph-bold ph-file-pdf text-lg"></i></button><button onclick="event.stopPropagation();window.App.modal=\'halaqoh\';window.App.modalData=' + h.id + ';window.render(true)" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-purple-500"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="event.stopPropagation();window.confirmDelete(\'halaqoh\', ' + h.id + ')" class="p-2 rounded-xl transition-colors ' + btnCls + ' hover:text-red-500"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
             }).join('');
         }
         html += '</div></div>';
@@ -1680,7 +1901,7 @@
         html += '<div class="bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-[2rem] flex flex-col h-[500px] lg:h-[700px] shadow-soft overflow-hidden">';
         
         html += '<div class="p-5 border-b border-slate-100 dark:border-[#1a2e26] flex flex-col gap-4 bg-slate-50 dark:bg-[#0a120f] shrink-0">';
-        html += '<div class="flex justify-between items-center"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 flex items-center justify-center"><i class="ph-fill ph-user-circle text-2xl"></i></div><div><h3 class="font-bold text-slate-800 dark:text-white leading-tight">Santri</h3><p class="text-[11px] text-slate-500 font-medium">' + sl.length + ' Data</p></div></div>' + (isAdmin && window.App.hierSel.h && !sQ && !sQSiswa ? '<div class="flex gap-1.5"><button onclick="window.App.modal=\'import_siswa\';window.render(true)" class="w-10 h-10 rounded-xl bg-slate-100 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition shadow-sm active:scale-95 text-lg dark:bg-[#15241e] dark:hover:bg-emerald-900/30" title="Import CSV"><i class="ph-bold ph-upload-simple"></i></button><button onclick="window.App.modal=\'siswa\';window.App.modalData=null;window.render(true)" class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition shadow-md shadow-emerald-500/30 active:scale-95"><i class="ph-bold ph-plus text-lg"></i></button></div>' : '') + '</div>';
+        html += '<div class="flex justify-between items-center"><div class="flex items-center gap-3"><div class="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 flex items-center justify-center"><i class="ph-fill ph-user-circle text-2xl"></i></div><div><h3 class="font-bold text-slate-800 dark:text-white leading-tight">Santri</h3><p class="text-[11px] text-slate-500 font-medium">' + sl.length + ' Data</p></div></div>' + (isAdmin && window.App.hierSel.h && !sQ && !sQSiswa ? '<div class="flex gap-1.5"><button onclick="window.exportToCSV(\'siswa\')" class="w-10 h-10 rounded-xl bg-slate-100 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition shadow-sm active:scale-95 text-lg dark:bg-[#15241e] dark:hover:bg-emerald-900/30" title="Export ke CSV"><i class="ph-bold ph-file-csv"></i></button><button onclick="window.App.modal=\'import_siswa\';window.render(true)" class="w-10 h-10 rounded-xl bg-slate-100 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition shadow-sm active:scale-95 text-lg dark:bg-[#15241e] dark:hover:bg-emerald-900/30" title="Import CSV"><i class="ph-bold ph-upload-simple"></i></button><button onclick="window.App.modal=\'siswa\';window.App.modalData=null;window.render(true)" class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition shadow-md shadow-emerald-500/30 active:scale-95"><i class="ph-bold ph-plus text-lg"></i></button></div>' : '') + '</div>';
         html += '<div class="relative"><i class="ph-bold ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i><input id="search-siswa-local" type="text" placeholder="Cari nama atau kelas..." value="' + window.esc(window.App.searchSiswa||'') + '" oninput="window.App.searchSiswa=this.value;window.render(true)" class="w-full bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-xl py-2.5 pl-9 pr-3 text-xs focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-colors shadow-sm text-slate-700 dark:text-gray-200"></div>';
         html += '</div>';
         
@@ -1690,7 +1911,9 @@
         else {
             html += sl.map(es=>{
                 let sGraded = window.App.subs.filter(sb => sb.siswaId == es.id && sb.status === 'graded').length;
-                return '<div class="group flex items-center justify-between p-3.5 rounded-2xl border bg-white dark:bg-[#0a120f] border-slate-100 dark:border-[#1a2e26] hover:border-emerald-300 hover:shadow-md transition-all"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 dark:bg-[#15241e] dark:text-emerald-400 flex items-center justify-center shrink-0"><i class="ph-fill ph-user text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate text-slate-800 dark:text-white">' + window.esc(es.name) + '</span><span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 block">Kelas ' + window.esc(es.kelas) + ' &bull; ' + sGraded + ' Lulus</span></div></div>' + (isAdmin ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"><button onclick="window.App.modal=\'siswa\';window.App.modalData=' + es.id + ';window.render(true)" class="p-2 rounded-xl text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-[#15241e] transition-colors"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="window.confirmDelete(\'siswa\', ' + es.id + ')" class="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-[#15241e] transition-colors"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
+                let hasNewSantri = window.App.subs.some(sb => sb.siswaId == es.id && sb.id > Date.now() - (24 * 60 * 60 * 1000));
+                let newBadgeSantri = hasNewSantri ? '<span class="ml-2 px-1.5 py-0.5 bg-emerald-100 text-emerald-600 text-[8px] font-bold rounded uppercase animate-pulse inline-block align-middle">Baru</span>' : '';
+                return '<div class="group flex items-center justify-between p-3.5 rounded-2xl border bg-white dark:bg-[#0a120f] border-slate-100 dark:border-[#1a2e26] hover:border-emerald-300 hover:shadow-md transition-all"><div class="flex items-center gap-3 overflow-hidden"><div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 dark:bg-[#15241e] dark:text-emerald-400 flex items-center justify-center shrink-0"><i class="ph-fill ph-user text-xl"></i></div><div class="flex-1 min-w-0"><span class="text-sm font-bold block truncate text-slate-800 dark:text-white">' + window.esc(es.name) + newBadgeSantri + '</span><span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 block">Kelas ' + window.esc(es.kelas) + ' &bull; ' + sGraded + ' Lulus</span></div></div>' + (isAdmin ? '<div class="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"><button onclick="window.App.modal=\'rekap_siswa\';window.App.modalData=' + es.id + ';window.render(true)" class="p-2 rounded-xl text-slate-400 hover:text-emerald-500 hover:bg-slate-100 dark:hover:bg-[#15241e] transition-colors" title="Lihat Rekap Nilai"><i class="ph-fill ph-table text-lg"></i></button><button onclick="window.App.modal=\'siswa\';window.App.modalData=' + es.id + ';window.render(true)" class="p-2 rounded-xl text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-[#15241e] transition-colors"><i class="ph-fill ph-pencil-simple text-lg"></i></button><button onclick="window.confirmDelete(\'siswa\', ' + es.id + ')" class="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-[#15241e] transition-colors"><i class="ph-fill ph-trash text-lg"></i></button></div>' : '') + '</div>';
             }).join('');
         }
         html += '</div></div>';
@@ -1918,6 +2141,24 @@
         } else if (window.App.modal === 'siswa') {
             let s = window.App.modalData ? window.App.siswas.find(x=>x.id===window.App.modalData) : null;
             mHtml += '<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">' + (s ? 'Edit' : 'Tambah') + ' Santri</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><form onsubmit="event.preventDefault();let id=' + (window.App.modalData||'null') + ';let n=window.val(\'m_n\'),k=window.val(\'m_k\');let nD={id:(id||Date.now()),halaqohId:' + window.App.hierSel.h + ',name:n,kelas:k};if(!id)window.App.siswas.push(nD);else{let o=window.App.siswas.find(x=>x.id===id);if(o){o.name=n;o.kelas=k;}}window.dbSave(\'siswas\',nD.id,nD);window.App.modal=null;window.render(true)"><input type="text" id="m_n" required value="' + (s?window.esc(s.name):'') + '" class="input-std mb-3" placeholder="Nama Lengkap Santri"><input type="text" id="m_k" required value="' + (s?window.esc(s.kelas):'') + '" class="input-std mb-6" placeholder="Kelas (Contoh: 1-A / 7-B)"><button type="submit" class="btn-std">Simpan</button></form></div></div>';
+        } else if (window.App.modal === 'rekap_siswa') {
+            let s = window.App.modalData ? window.App.siswas.find(x=>x.id===window.App.modalData) : null;
+            if (s) {
+                let sSubs = window.App.subs.filter(x => x.siswaId === s.id && x.status === 'graded').sort((a,b) => b.id - a.id);
+                let tableRows = sSubs.length === 0 ? '<tr><td colspan="4" class="p-4 text-center text-xs text-slate-500 italic">Belum ada riwayat nilai kelulusan.</td></tr>' : sSubs.map(sb => {
+                    let sur = window.App.surahs.find(x => x.id === sb.surahId); let seg = window.App.segs.find(x => x.id === sb.segmentId);
+                    return `<tr class="border-b border-slate-100 dark:border-[#1a2e26] hover:bg-slate-50 dark:hover:bg-[#111c18] transition-colors"><td class="p-3 text-xs text-slate-800 dark:text-gray-200 font-medium">${window.esc(sur?.title || '-')}</td><td class="p-3 text-[10px] text-slate-500 dark:text-gray-400 leading-snug">${window.esc(seg?.title || '-')}</td><td class="p-3 text-[10px] text-slate-500 dark:text-gray-400 text-center whitespace-nowrap">${window.esc(sb.date)}</td><td class="p-3 text-xs font-bold text-emerald-600 text-center">${window.esc(sb.grade || '-')}</td></tr>`;
+                }).join('');
+                let totalSegs = window.App.segs.length;
+                let gradedSubs = sSubs.length;
+                let progress = totalSegs > 0 ? Math.round((gradedSubs / totalSegs) * 100) : 0;
+                let progressHtml = `<div class="mt-5"><div class="flex justify-between items-center mb-2"><span class="text-[10px] md:text-[11px] text-slate-500 font-bold uppercase tracking-widest">Progres Keseluruhan</span><span class="text-[10px] md:text-[11px] text-emerald-600 font-bold">${gradedSubs} / ${totalSegs} Segmen (${progress}%)</span></div><div class="h-2 bg-slate-200 dark:bg-[#111c18] rounded-full overflow-hidden w-full"><div style="width: ${progress}%;" class="h-full bg-emerald-500 transition-all duration-500"></div></div></div>`;
+                mHtml += `<div class="modal-overlay !flex"><div class="modal-box !max-w-2xl !p-0 overflow-hidden flex flex-col max-h-[90vh]"><div class="p-5 md:p-6 border-b border-slate-100 dark:border-[#1a2e26] bg-slate-50 dark:bg-[#0a120f] shrink-0"><div class="flex justify-between items-start"><div class="flex items-center gap-3"><div class="w-10 h-10 md:w-12 md:h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center shrink-0"><i class="ph-fill ph-table text-xl md:text-2xl"></i></div><div><h2 class="text-base md:text-lg font-bold dark:text-white leading-tight">Rekapitulasi Nilai</h2><p class="text-[10px] md:text-xs text-emerald-600 font-bold">${window.esc(s.name)} (Kelas ${window.esc(s.kelas)})</p></div></div><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-red-500 w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0"><i class="ph-bold ph-x text-xl"></i></button></div>${progressHtml}</div><div class="flex-1 overflow-y-auto p-4 md:p-6"><div class="border border-slate-200 dark:border-[#1a2e26] rounded-2xl overflow-hidden shadow-sm"><table class="w-full text-left border-collapse"><thead><tr class="bg-slate-100 dark:bg-[#15241e]"><th class="p-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest w-[30%]">Surah</th><th class="p-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest w-[35%]">Segmen</th><th class="p-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">Tanggal</th><th class="p-3 text-[10px] font-bold text-emerald-600 uppercase tracking-widest text-center">Nilai</th></tr></thead><tbody>${tableRows}</tbody></table></div></div><div class="p-4 border-t border-slate-100 dark:border-[#1a2e26] bg-slate-50 dark:bg-[#0a120f] shrink-0 flex justify-end gap-2"><button type="button" onclick="window.exportRekapPDF(${s.id})" class="px-6 py-2.5 bg-emerald-500 text-white hover:bg-emerald-600 rounded-xl text-xs font-bold transition-colors shadow-md flex items-center gap-2"><i class="ph-bold ph-file-pdf text-base"></i> Cetak PDF</button><button type="button" onclick="window.App.modal=null;window.render(true)" class="px-6 py-2.5 bg-slate-200 text-slate-700 hover:bg-slate-300 rounded-xl text-xs font-bold transition-colors dark:bg-[#15241e] dark:text-gray-300 dark:hover:bg-[#1a2e26]">Tutup</button></div></div></div>`;
+            }
+        } else if (window.App.modal === 'export_csv') {
+            let type = window.App.modalData;
+            let title = type === 'halaqoh' ? 'Halaqoh' : (type === 'siswa' ? 'Santri' : 'Riwayat Setoran');
+            mHtml += '<div class="modal-overlay !flex"><div class="modal-box"><div class="flex justify-between items-center mb-6"><h2 class="text-xl font-bold dark:text-white">Export Data ' + title + '</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><p class="text-xs text-slate-500 mb-4 leading-relaxed">Pilih rentang tanggal (berdasarkan waktu data ditambahkan) untuk memfilter baris data yang akan diekspor ke CSV. Kosongkan jika ingin mengekspor semua data.</p><div class="grid grid-cols-2 gap-4 mb-6"><div><label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Mulai Tanggal</label><input type="date" id="exp_start" class="input-std !px-3"></div><div><label class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Sampai Tanggal</label><input type="date" id="exp_end" class="input-std !px-3"></div></div><button type="button" onclick="window.executeExportCSV()" class="btn-std flex items-center justify-center gap-2"><i class="ph-bold ph-download-simple text-lg"></i> Download CSV</button></div></div>';
         } else if (window.App.modal && window.App.modal.startsWith('import_')) {
             let type = window.App.modal.replace('import_', '');
             let title = type === 'ustadz' ? 'Ustadz' : (type === 'halaqoh' ? 'Halaqoh' : 'Santri');
@@ -1976,6 +2217,19 @@
                 return 'Lulus';
             };
 
+            let totalSegs = window.App.segs.length;
+            let gradedSubs = stu ? window.App.subs.filter(s => s.siswaId === stu.id && s.status === 'graded').length : 0;
+            let progress = totalSegs > 0 ? Math.round((gradedSubs / totalSegs) * 100) : 0;
+
+            let progressHtml = `
+            <div style="margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                    <span style="font-family: 'Inter', sans-serif; font-size: 8px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em;">Progres Hafalan</span>
+                    <span style="font-family: 'Inter', sans-serif; font-size: 9px; font-weight: 700; color: #334155;">${gradedSubs} / ${totalSegs} Lulus</span>
+                </div>
+                <div style="height: 8px; background-color: #e2e8f0; border-radius: 4px; overflow: hidden; width: 100%;"><div style="width: ${progress}%; height: 100%; background-color: #10b981; transition: width 0.5s ease-in-out;"></div></div>
+            </div>`;
+
             let stuName = stu ? window.esc(stu.name) : '-';
             let stuKelas = stu ? window.esc(stu.kelas) : '-';
             let lvName = lv ? window.esc(lv.name) : 'Level';
@@ -2015,7 +2269,7 @@
                     <div style="position: relative; z-index: 10; background: #ffffff; border: 2px solid #10b981; border-radius: 20px; padding: 20px; width: 100%; text-align: center; flex-shrink: 0; box-sizing: border-box; margin-bottom: 24px;">
                         <p style="font-family: 'Inter', sans-serif; font-size: 9px; font-weight: 800; color: #059669; text-transform: uppercase; letter-spacing: 0.2em; margin: 0 0 6px 0; white-space: nowrap;">Telah Menyetorkan</p>
                         <h3 style="font-family: 'Merriweather', serif; font-size: 17px; font-weight: 800; color: #0f172a; margin: 0 0 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">${window.esc(sur?.title||'')}</h3>
-                        <p style="font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; color: #64748b; margin: 0 0 16px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">${window.esc(sg?.title||'')} &bull; ${lvName}</p>
+                        <p style="font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; color: #64748b; margin: 0 0 16px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">${window.esc(sg?.title||'')} &bull; ${lvName}</p>${progressHtml}
 
                         <div style="border-top: 1px dashed #cbd5e1; padding-top: 14px; display: flex; justify-content: space-between; align-items: flex-end; width: 100%;">
                             <div style="text-align: left; max-width: 48%; overflow: hidden;">
