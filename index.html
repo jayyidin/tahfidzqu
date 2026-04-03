@@ -261,6 +261,8 @@
       audioObj: null, activeAudioId: null, activeAudioDur: 0,
       loggedInUstadzId: savedNavState.loggedInUstadzId || null,
       firebaseError: '' 
+      firebaseError: '',
+      isFetchingSubs: true
     };
 
     window.fmtT = s => `${Math.floor(s/60).toString().padStart(2,'0')}:${Math.floor(s%60).toString().padStart(2,'0')}`;
@@ -1410,6 +1412,10 @@
 
       if (focusedId) { let el = document.getElementById(focusedId); if (el) { el.focus(); try { el.setSelectionRange(selStart, selEnd); } catch(e){} } }
       window.renderModal();
+      
+      if (window.App.view === 'master' && !window.App.isLoading) {
+          setTimeout(() => { if (window.renderChart) window.renderChart(); }, 50);
+      }
     };
 
     window.generateMainHtml = function() {
@@ -1608,6 +1614,9 @@
         html += '</div></div>';
         
         if(!fs.length) {
+        if(window.App.isFetchingSubs) {
+            html += '<div class="flex flex-col items-center justify-center py-20 text-center bg-white dark:bg-[#15241e] rounded-[2rem] border border-dashed border-slate-200 dark:border-[#1a2e26]"><div class="w-16 h-16 mb-4 relative"><div class="absolute inset-0 border-4 border-emerald-500/20 rounded-full"></div><div class="absolute inset-0 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div><i class="ph-fill ph-clipboard-text absolute inset-0 flex items-center justify-center text-emerald-500 text-xl"></i></div><p class="text-emerald-600 font-bold text-[10px] uppercase tracking-widest animate-pulse">Memuat Riwayat...</p></div>';
+        } else if(!fs.length) {
             html += '<div class="flex flex-col items-center justify-center py-20 text-center bg-white dark:bg-[#15241e] rounded-[2rem] border border-dashed border-slate-200 dark:border-[#1a2e26]"><div class="w-20 h-20 bg-slate-50 dark:bg-[#0a120f] rounded-full flex items-center justify-center text-slate-300 mb-4"><i class="ph-fill ph-clipboard-text text-4xl"></i></div><p class="text-slate-500 font-medium">' + (window.App.search?'Pencarian tidak ditemukan.':'Belum ada riwayat setoran di sini.') + '</p></div>';
         } else {
             let strList = "";
@@ -1778,6 +1787,9 @@
         html += '</div>';
 
         if(!fs.length) {
+        if(window.App.isFetchingSubs) {
+            html += '<div class="flex flex-col items-center justify-center py-20 text-center bg-white dark:bg-[#15241e] rounded-[2rem] border border-dashed border-slate-200 dark:border-[#1a2e26]"><div class="w-16 h-16 mb-4 relative"><div class="absolute inset-0 border-4 border-orange-500/20 rounded-full"></div><div class="absolute inset-0 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div><i class="ph-fill ph-tray absolute inset-0 flex items-center justify-center text-orange-500 text-xl"></i></div><p class="text-orange-600 font-bold text-[10px] uppercase tracking-widest animate-pulse">Memuat Antrean...</p></div>';
+        } else if(!fs.length) {
             html += '<div class="flex flex-col items-center justify-center py-20 text-center bg-white dark:bg-[#15241e] rounded-[2rem] border border-dashed border-slate-200 dark:border-[#1a2e26]"><div class="w-20 h-20 bg-slate-50 dark:bg-[#0a120f] rounded-full flex items-center justify-center text-slate-300 mb-4"><i class="ph-fill ph-check-circle text-4xl"></i></div><p class="text-slate-500 font-medium">' + (window.App.search?'Pencarian tidak ditemukan.':'Luar biasa! Tidak ada antrean saat ini.') + '</p></div>';
         } else {
             let mStr = "";
@@ -2437,6 +2449,7 @@
         } catch (e) { 
             console.error("Auth Error", e);
             window.App.firebaseError = "Gagal login ke Cloud: Pastikan 'Anonymous Sign-in' telah DIAKTIFKAN di menu Authentication Firebase.";
+                window.App.isFetchingSubs = false;
             window.render();
         }
     };
@@ -2457,6 +2470,7 @@
              if (i < collections.length) {
                 const c = collections[i];
                 window.App[c] = obj ? Object.keys(obj).map(k => ({id: isNaN(k) ? k : Number(k), ...obj[k]})) : [];
+                    if (c === 'subs') window.App.isFetchingSubs = false;
                 if (c === 'juzs' && window.App.juzs.length > 0) {
                     if (!window.App.juzs.some(j => j.id == window.App.actJuzId)) {
                         let defaultJuz = window.App.juzs.find(j => j.id == 30 || String(j.name).includes("30"));
@@ -2500,6 +2514,7 @@
              console.error(error);
              if (error.message.includes('permission_denied') || error.code === 'PERMISSION_DENIED') {
                  window.App.firebaseError = "Akses Cloud Ditolak! Ubah Aturan (Rules) Realtime Database Anda menjadi '.read': true dan '.write': true";
+                      window.App.isFetchingSubs = false;
                  window.render();
              }
           });
