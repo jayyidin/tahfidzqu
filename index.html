@@ -260,7 +260,6 @@
       currentGradingNote: null,
       audioObj: null, activeAudioId: null, activeAudioDur: 0,
       loggedInUstadzId: savedNavState.loggedInUstadzId || null,
-      firebaseError: '' 
       firebaseError: '',
       isFetchingSubs: true
     };
@@ -1613,7 +1612,6 @@
         html += '<div class="flex-1 relative"><i class="ph-fill ph-user-circle absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select id="hub-filter-siswa" onchange="window.App.filter.s=this.value;window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oS + '</select></div>';
         html += '</div></div>';
         
-        if(!fs.length) {
         if(window.App.isFetchingSubs) {
             html += '<div class="flex flex-col items-center justify-center py-20 text-center bg-white dark:bg-[#15241e] rounded-[2rem] border border-dashed border-slate-200 dark:border-[#1a2e26]"><div class="w-16 h-16 mb-4 relative"><div class="absolute inset-0 border-4 border-emerald-500/20 rounded-full"></div><div class="absolute inset-0 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div><i class="ph-fill ph-clipboard-text absolute inset-0 flex items-center justify-center text-emerald-500 text-xl"></i></div><p class="text-emerald-600 font-bold text-[10px] uppercase tracking-widest animate-pulse">Memuat Riwayat...</p></div>';
         } else if(!fs.length) {
@@ -1786,7 +1784,6 @@
         html += '<div class="relative"><i class="ph-bold ph-calendar-blank absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><input type="date" id="adm-filter-end" value="' + (window.App.filter.endDate||'') + '" onchange="window.App.filter.endDate=this.value;window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none" title="Sampai Tanggal"></div>';
         html += '</div>';
 
-        if(!fs.length) {
         if(window.App.isFetchingSubs) {
             html += '<div class="flex flex-col items-center justify-center py-20 text-center bg-white dark:bg-[#15241e] rounded-[2rem] border border-dashed border-slate-200 dark:border-[#1a2e26]"><div class="w-16 h-16 mb-4 relative"><div class="absolute inset-0 border-4 border-orange-500/20 rounded-full"></div><div class="absolute inset-0 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div><i class="ph-fill ph-tray absolute inset-0 flex items-center justify-center text-orange-500 text-xl"></i></div><p class="text-orange-600 font-bold text-[10px] uppercase tracking-widest animate-pulse">Memuat Antrean...</p></div>';
         } else if(!fs.length) {
