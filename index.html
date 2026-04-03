@@ -234,6 +234,7 @@
       schSub: localStorage.getItem('tahfidzqu_subtitle') || 'Madrasah Tahfidz Quran',
       search: '', searchSiswa: '', loginAttempts: 0, lockoutTime: 0, loginError: '', registerError: '', inactivityTimer: null,
       isLoading: false,
+      headerAnimated: false,
       pullStart: null, pullDelta: 0,
       customDialog: { show: false, type: 'alert', message: '', onConfirm: null },
       juzs: [], surahs: [], levels: [], segs: [], ustadz: [], halaqohs: [], siswas: [], subs: [],
@@ -253,7 +254,9 @@
       currentGradingAudioUrl: null, isGradingRecording: false, gradingMediaRecorder: null, gradingAudioChunks: [],
       isSubmittingGrade: false,
       selectedGrade: null,
+      selectedGrade: undefined,
       studentMediaRecorder: null, studentAudioChunks: [], currentStudentAudioUrl: null,
+      currentGradingNote: null,
       audioObj: null, activeAudioId: null, activeAudioDur: 0,
       loggedInUstadzId: savedNavState.loggedInUstadzId || null,
       firebaseError: '' 
@@ -1012,14 +1015,16 @@
         if(sub) { 
             sub.status = grade === 'repeat' ? 'need-repeat' : 'graded'; 
             sub.grade = grade === 'repeat' ? null : grade; 
-            sub.note = window.esc(window.val('gn')); 
+            sub.note = window.esc(window.App.currentGradingNote || ''); 
             sub.voiceNote = window.App.currentGradingAudioUrl; 
             if(window.dbSave) await window.dbSave('subs', id, sub); 
         }
         await new Promise(resolve => setTimeout(resolve, 500));
         window.App.isSubmittingGrade = false;
         window.App.currentGradingAudioUrl = null; 
+        window.App.currentGradingNote = null;
         window.App.selectedGrade = null;
+        window.App.selectedGrade = undefined;
         window.App.modal = null; 
         window.render(true);
     };
@@ -1051,7 +1056,12 @@
         }
     };
 
-    window.deleteGradingAudio = function() { window.App.currentGradingAudioUrl = null; window.render(); };
+    window.deleteGradingAudio = function() {
+        window.showConfirm('Yakin ingin menghapus catatan suara ini?', function() {
+            window.App.currentGradingAudioUrl = null;
+            window.render();
+        });
+    };
 
     window.deleteSubmission = function(id) { window.showConfirm('Yakin ingin menghapus riwayat setoran ini secara permanen dari Cloud?', function() { window.App.subs = window.App.subs.filter(x=>x.id!==id); if(window.dbDelete) window.dbDelete('subs', id); window.render(true); }); };
 
@@ -1172,6 +1182,16 @@
           
           window.getEl('app-root').innerHTML = window.generateMainHtml();
           
+          if (!window.App.headerAnimated) {
+              setTimeout(() => {
+                  const header = document.querySelector('#app-root > header');
+                  if (header) {
+                      header.classList.remove('opacity-0', '-translate-y-4');
+                  }
+                  window.App.headerAnimated = true;
+              }, 50);
+          }
+
           if(window.App.view === 'player') {
               let pDest = window.getEl('player-destination');
               if (pWrap && pDest) {
@@ -1204,13 +1224,24 @@
 
       let errorBanner = window.App.firebaseError ? '<div class="bg-red-500 text-white text-[10px] md:text-xs font-bold p-3 text-center w-full shadow-md animate-pulse"><i class="ph-bold ph-warning-circle text-lg align-middle mr-1"></i> ' + window.App.firebaseError + '</div>' : '';
 
-      let html = errorBanner + '<header class="shrink-0 border-b border-slate-200/60 dark:border-[#1a2e26] sticky top-0 z-50 backdrop-blur-xl bg-white/90 dark:bg-[#0a120f]/90 shadow-sm"><div class="flex items-center justify-between px-5 md:px-8 py-3.5 md:py-4"><div class="flex items-center gap-3 text-emerald-500 font-extrabold cursor-pointer transition-transform hover:scale-[1.02]" onclick="window.switchView(\'home\')">';
+      let headerAnimationClass = !window.App.headerAnimated ? 'opacity-0 -translate-y-4' : '';
+
+      let html = errorBanner + `<header class="shrink-0 border-b border-slate-200/60 dark:border-[#1a2e26] sticky top-0 z-50 backdrop-blur-xl bg-white/90 dark:bg-[#0a120f]/90 shadow-sm transition-all duration-500 ease-out ${headerAnimationClass}"><div class="flex items-center justify-between px-5 md:px-8 py-3.5 md:py-4"><div class="flex items-center gap-3 text-emerald-500 font-extrabold cursor-pointer transition-transform hover:scale-[1.02]" onclick="window.switchView(\'home\')">`;
       html += window.App.schLogo ? '<img src="' + window.App.schLogo + '" class="h-8 md:h-10 max-w-[120px] object-contain">' : '<i class="ph-fill ph-monitor-play text-[2rem] md:text-4xl"></i>';
       html += '<div class="flex flex-col justify-center"><span class="text-xl md:text-2xl leading-none tracking-tight text-slate-800 dark:text-white">Tahfidz<span class="text-emerald-500">Qu</span></span>' + (window.App.schSub?'<span class="text-[9px] text-slate-400 mt-1 uppercase tracking-widest font-bold">' + window.App.schSub + '</span>':'') + '</div></div>';
       html += '<div class="flex items-center gap-2 md:hidden"><button onclick="window.App.theme=window.App.theme===\'dark\'?\'light\':\'dark\';window.render(true)" class="w-11 h-11 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 flex items-center justify-center transition-transform active:scale-95"><i class="ph-fill ' + (window.App.theme==='dark'?'ph-sun':'ph-moon') + ' text-lg"></i></button>';
+      
+      const themeToggle = `<button onclick="window.App.theme = window.App.theme === 'dark' ? 'light' : 'dark'; localStorage.setItem('tahfidzqu_theme', window.App.theme); window.render(true);" class="relative w-14 h-8 flex items-center bg-slate-200 dark:bg-slate-700 rounded-full p-1 transition-colors duration-300 ease-in-out shadow-inner">
+          <div class="w-6 h-6 rounded-full bg-white shadow-md transform transition-transform duration-300 ease-in-out flex items-center justify-center ${window.App.theme === 'dark' ? 'translate-x-6' : ''}">
+              <i class="ph-fill text-base ${window.App.theme === 'dark' ? 'ph-sun text-yellow-400' : 'ph-moon text-slate-500'}"></i>
+          </div>
+      </button>`;
+
+      html += '<div class="flex items-center gap-4 md:hidden">' + themeToggle;
       html += isAdmin ? '<button onclick="window.App.adminLvl=0;window.App.loggedInUstadzId=null;window.App.filter.u=\'all\';window.switchView(\'home\');" class="w-11 h-11 rounded-full bg-red-50 text-red-500 flex items-center justify-center transition-transform active:scale-95"><i class="ph-bold ph-sign-out text-lg"></i></button>' : '<button onclick="window.App.modal=\'login\';window.render()" class="w-11 h-11 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 flex items-center justify-center transition-transform active:scale-95"><i class="ph-fill ph-lock-key text-lg"></i></button>';
       html += '</div><div class="hidden md:flex items-center gap-4"><div class="relative"><i class="ph-bold ph-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i><input id="search-desktop" type="text" placeholder="' + searchPh + '" value="' + window.esc(window.App.search) + '" oninput="window.App.search=this.value;window.render()" class="input-std !w-full !rounded-full !pl-14 transition-all focus:!w-80 shadow-sm"></div>';
       html += '<button onclick="window.App.theme=window.App.theme===\'dark\'?\'light\':\'dark\';window.render(true)" class="w-12 h-12 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 hover:text-emerald-500 flex items-center justify-center transition shadow-sm"><i class="ph-fill ' + (window.App.theme==='dark'?'ph-sun':'ph-moon') + ' text-xl"></i></button>';
+      html += themeToggle;
       html += isAdmin ? '<button onclick="window.App.adminLvl=0;window.App.loggedInUstadzId=null;window.App.filter.u=\'all\';window.switchView(\'home\');" class="w-12 h-12 rounded-full bg-red-50 text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition shadow-sm" title="Keluar Akun"><i class="ph-bold ph-sign-out text-xl"></i></button>' : '<button onclick="window.App.modal=\'login\';window.render()" class="w-12 h-12 rounded-full bg-slate-100 dark:bg-[#15241e] text-slate-500 hover:bg-emerald-50 hover:text-emerald-600 flex items-center justify-center transition shadow-sm"><i class="ph-fill ph-lock-key text-xl"></i></button>';
       html += '</div></div><div class="px-5 md:px-8 flex gap-8 text-[13px] font-bold pt-2 overflow-x-auto hide-scrollbar">';
       html += '<button onclick="window.switchView(\'home\')" class="' + (window.App.view==='home'?'text-emerald-600 border-b-[3px] border-emerald-500':'text-slate-400 hover:text-slate-800 dark:text-gray-400 dark:hover:text-white') + ' pb-3 transition whitespace-nowrap flex items-center gap-1.5"><i class="ph-fill ph-house text-lg"></i> Beranda</button>';
@@ -1553,8 +1584,10 @@
                 let sText = sb.status==='pending'?'MENUNGGU':sb.status==='need-repeat'?'DIULANG':'LULUS ('+sb.grade+')'; 
                 
                 let aB = sb.status==='pending' 
-                    ? `<button onclick="window.App.modal='grade';window.App.modalData=${sb.id};window.App.selectedGrade=null;window.render(true)" class="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/30 py-2.5 px-3 rounded-xl font-bold text-[10px] md:text-xs uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all hover:scale-105 active:scale-95"><i class="ph-fill ph-star text-sm md:text-base"></i> Nilai</button>` 
-                    : `<button onclick="window.App.modal='grade';window.App.modalData=${sb.id};window.App.selectedGrade='${sb.grade||''}';window.render(true)" class="flex-1 bg-slate-50 hover:bg-blue-50 text-blue-600 border border-slate-200 py-2.5 px-3 rounded-xl font-bold text-[10px] md:text-xs uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all dark:bg-[#0a120f] dark:border-[#1a2e26] dark:hover:border-blue-500/50"><i class="ph-bold ph-pencil-simple text-sm md:text-base"></i> Edit</button>`;
+                    ? `<button onclick="window.App.modal='grade';window.App.modalData=${sb.id};window.App.selectedGrade=null;window.App.currentGradingNote=null;window.render(true)" class="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/30 py-2.5 px-3 rounded-xl font-bold text-[10px] md:text-xs uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all hover:scale-105 active:scale-95"><i class="ph-fill ph-star text-sm md:text-base"></i> Nilai</button>` 
+                    : `<button onclick="window.App.modal='grade';window.App.modalData=${sb.id};window.App.selectedGrade='${sb.grade||''}';window.App.currentGradingNote=null;window.render(true)" class="flex-1 bg-slate-50 hover:bg-blue-50 text-blue-600 border border-slate-200 py-2.5 px-3 rounded-xl font-bold text-[10px] md:text-xs uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all dark:bg-[#0a120f] dark:border-[#1a2e26] dark:hover:border-blue-500/50"><i class="ph-bold ph-pencil-simple text-sm md:text-base"></i> Edit</button>`;
+                    ? `<button onclick="window.App.modal='grade';window.App.modalData=${sb.id};window.App.currentGradingNote=null;window.render(true)" class="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/30 py-2.5 px-3 rounded-xl font-bold text-[10px] md:text-xs uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all hover:scale-105 active:scale-95"><i class="ph-fill ph-star text-sm md:text-base"></i> Nilai</button>` 
+                    : `<button onclick="window.App.modal='grade';window.App.modalData=${sb.id};window.App.currentGradingNote=null;window.render(true)" class="flex-1 bg-slate-50 hover:bg-blue-50 text-blue-600 border border-slate-200 py-2.5 px-3 rounded-xl font-bold text-[10px] md:text-xs uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all dark:bg-[#0a120f] dark:border-[#1a2e26] dark:hover:border-blue-500/50"><i class="ph-bold ph-pencil-simple text-sm md:text-base"></i> Edit</button>`;
                 
                 let delB = isSuper ? '<button onclick="window.deleteSubmission(' + sb.id + ')" class="bg-red-50 text-red-500 border border-red-100 hover:bg-red-500 hover:text-white w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center transition-colors dark:bg-[#15241e] dark:border-[#1a2e26] shrink-0" title="Hapus"><i class="ph-bold ph-trash text-lg"></i></button>' : '';
                 
@@ -1898,6 +1931,13 @@
             mHtml += '<div class="modal-overlay !flex"><div class="modal-box !max-w-xl"><div class="flex justify-between items-center mb-4"><h2 class="text-xl font-bold dark:text-white">Import Data ' + title + '</h2><button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-slate-600"><i class="ph ph-x text-xl"></i></button></div><p class="text-xs text-slate-500 mb-4 leading-relaxed">Copy data dari Excel/Spreadsheet dan paste di bawah ini. Gunakan Tab atau Pipe (|) sebagai pemisah kolom.<br>Format: <b>' + placeholder + '</b></p><textarea id="import_text" class="input-std mb-4 !font-mono !text-xs" rows="10" placeholder="Paste di sini..."></textarea><button onclick="window.processImport(\'' + type + '\')" class="btn-std">Proses Import</button></div></div>';
         } else if (window.App.modal === 'grade') {
             let sb = window.App.subs.find(x=>x.id===window.App.modalData);
+            if (window.App.currentGradingNote === null) {
+                window.App.currentGradingNote = sb.note || '';
+            }
+            if (window.App.selectedGrade === undefined) {
+                // Initialize grade selection when modal is first opened
+                window.App.selectedGrade = sb.status === 'pending' ? null : (sb.grade || null);
+            }
             if (window.App.isSubmittingGrade) {
                 mHtml += `
                 <div class="modal-overlay !flex">
@@ -1924,7 +1964,8 @@
                 
                 let submitBtn = `<button type="button" onclick="if(window.App.selectedGrade) { window.submitGrade(${sb.id}, window.App.selectedGrade); }" class="btn-std w-full mb-3" ${!window.App.selectedGrade ? 'disabled' : ''}>Kirim Nilai</button>`;
 
-                mHtml += `<div class="modal-overlay !flex"><div class="modal-box text-center"><div class="w-12 h-12 md:w-14 md:h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4"><i class="ph-fill ph-star text-3xl"></i></div><h2 class="text-lg md:text-xl font-bold mb-1 dark:text-white">Beri Nilai</h2><p class="text-xs md:text-sm text-emerald-600 font-bold mb-6">${window.getSName(sb.siswaId)}</p><div class="text-left mb-4"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Teks:</label><textarea id="gn" class="input-std" rows="2">${window.esc(sb.note||'')}</textarea></div><div class="text-left mb-6"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Suara (Opsional):</label><div class="flex items-center gap-3 bg-slate-50 dark:bg-[#0a120f] border border-slate-200 dark:border-[#1a2e26] p-2 md:p-3 rounded-xl"><button type="button" onclick="window.toggleGradingRecord()" class="w-8 h-8 md:w-10 md:h-10 rounded-full ${window.App.isGradingRecording ? 'bg-red-500 text-white animate-pulse shadow-lg' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400'} flex items-center justify-center transition-all shrink-0"><i class="ph-fill ${window.App.isGradingRecording ? 'ph-stop' : 'ph-microphone'} text-lg md:text-xl"></i></button><div class="flex-1">${audioHTML}</div>${deleteBtn}</div></div><div class="flex justify-center gap-1.5 md:gap-2 mb-6">${btns}</div>${submitBtn}<button type="button" onclick="window.submitGrade(${sb.id}, 'repeat')" class="w-full py-2.5 md:py-3 bg-red-50 text-red-600 border border-red-100 rounded-xl font-bold text-xs md:text-sm mb-3 md:mb-4 hover:bg-red-500 hover:text-white transition dark:bg-red-900/20 dark:border-transparent">Setor Ulang</button><button type="button" onclick="window.App.currentGradingAudioUrl=null;window.App.modal=null;window.App.selectedGrade=null;window.render(true)" class="w-full py-2 text-slate-500 font-bold text-xs md:text-sm hover:text-slate-800 transition">Batal</button></div></div>`;
+                mHtml += `<div class="modal-overlay !flex"><div class="modal-box text-center"><div class="w-12 h-12 md:w-14 md:h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4"><i class="ph-fill ph-star text-3xl"></i></div><h2 class="text-lg md:text-xl font-bold mb-1 dark:text-white">Beri Nilai</h2><p class="text-xs md:text-sm text-emerald-600 font-bold mb-6">${window.getSName(sb.siswaId)}</p><div class="text-left mb-4"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Teks:</label><textarea id="gn" oninput="window.App.currentGradingNote = this.value" class="input-std" rows="2">${window.esc(window.App.currentGradingNote)}</textarea></div><div class="text-left mb-6"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Suara (Opsional):</label><div class="flex items-center gap-3 bg-slate-50 dark:bg-[#0a120f] border border-slate-200 dark:border-[#1a2e26] p-2 md:p-3 rounded-xl"><button type="button" onclick="window.toggleGradingRecord()" class="w-8 h-8 md:w-10 md:h-10 rounded-full ${window.App.isGradingRecording ? 'bg-red-500 text-white animate-pulse shadow-lg' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400'} flex items-center justify-center transition-all shrink-0"><i class="ph-fill ${window.App.isGradingRecording ? 'ph-stop' : 'ph-microphone'} text-lg md:text-xl"></i></button><div class="flex-1">${audioHTML}</div>${deleteBtn}</div></div><div class="flex justify-center gap-1.5 md:gap-2 mb-6">${btns}</div>${submitBtn}<button type="button" onclick="window.submitGrade(${sb.id}, 'repeat')" class="w-full py-2.5 md:py-3 bg-red-50 text-red-600 border border-red-100 rounded-xl font-bold text-xs md:text-sm mb-3 md:mb-4 hover:bg-red-500 hover:text-white transition dark:bg-red-900/20 dark:border-transparent">Setor Ulang</button><button type="button" onclick="window.App.currentGradingAudioUrl=null;window.App.modal=null;window.App.selectedGrade=null;window.App.currentGradingNote=null;window.render(true)" class="w-full py-2 text-slate-500 font-bold text-xs md:text-sm hover:text-slate-800 transition">Batal</button></div></div>`;
+                mHtml += `<div class="modal-overlay !flex"><div class="modal-box text-center"><div class="w-12 h-12 md:w-14 md:h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4"><i class="ph-fill ph-star text-3xl"></i></div><h2 class="text-lg md:text-xl font-bold mb-1 dark:text-white">Beri Nilai</h2><p class="text-xs md:text-sm text-emerald-600 font-bold mb-6">${window.getSName(sb.siswaId)}</p><div class="text-left mb-4"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Teks:</label><textarea id="gn" oninput="window.App.currentGradingNote = this.value" class="input-std" rows="2">${window.esc(window.App.currentGradingNote)}</textarea></div><div class="text-left mb-6"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Suara (Opsional):</label><div class="flex items-center gap-3 bg-slate-50 dark:bg-[#0a120f] border border-slate-200 dark:border-[#1a2e26] p-2 md:p-3 rounded-xl"><button type="button" onclick="window.toggleGradingRecord()" class="w-8 h-8 md:w-10 md:h-10 rounded-full ${window.App.isGradingRecording ? 'bg-red-500 text-white animate-pulse shadow-lg' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400'} flex items-center justify-center transition-all shrink-0"><i class="ph-fill ${window.App.isGradingRecording ? 'ph-stop' : 'ph-microphone'} text-lg md:text-xl"></i></button><div class="flex-1">${audioHTML}</div>${deleteBtn}</div></div><div class="flex justify-center gap-1.5 md:gap-2 mb-6">${btns}</div>${submitBtn}<button type="button" onclick="window.submitGrade(${sb.id}, 'repeat')" class="w-full py-2.5 md:py-3 bg-red-50 text-red-600 border border-red-100 rounded-xl font-bold text-xs md:text-sm mb-3 md:mb-4 hover:bg-red-500 hover:text-white transition dark:bg-red-900/20 dark:border-transparent">Setor Ulang</button><button type="button" onclick="window.App.currentGradingAudioUrl=null;window.App.modal=null;window.App.selectedGrade=undefined;window.App.currentGradingNote=null;window.render(true)" class="w-full py-2 text-slate-500 font-bold text-xs md:text-sm hover:text-slate-800 transition">Batal</button></div></div>`;
             }
         } else if (window.App.modal === 'share_card') {
             let sb = window.App.subs.find(x=>x.id===window.App.modalData);
