@@ -245,7 +245,7 @@
       actSegId: savedNavState.actSegId || null,
       yt: null, isPlay: false, repTarget: 7, curRep: 0, speed: 1, interval: null,
       modal: null, modalData: null, 
-      filter: savedNavState.filter || {u:'all', h:'all', s:'all', surah: 'all', startDate: '', endDate: ''}, 
+      filter: savedNavState.filter || {u:'all', h:'all', s:'all', surah: 'all', startDate: '', endDate: '', status: 'all'}, 
       hierSel: savedNavState.hierSel || {u:null, h:null, s:null},
       rec: {is:false, secs:0, int:null, src: savedNavState.recSrc || 'player'}, 
       resubmitId: savedNavState.resubmitId || null, 
@@ -2248,7 +2248,64 @@
                 let studentAudioPlayer = window.renderCustomAudio('grade_stu_' + sb.id, sb.audioUrl, sb.duration || 0, false);
 
                 let submitBtn = `<button type="button" onclick="if(window.App.selectedGrade) { window.submitGrade(${sb.id}, window.App.selectedGrade); }" class="btn-std w-full mb-3" ${!window.App.selectedGrade ? 'disabled' : ''}>Kirim Nilai</button>`;
+                
+                // Re-add the complete HTML structure for the grade modal
+                let sur = window.App.surahs.find(x => x.id === sb.surahId); 
+                let seg = window.App.segs.find(x => x.id === sb.segmentId);
+                let stu = window.App.siswas.find(x => x.id === sb.siswaId);
+                
+                mHtml += `
+                <div class="modal-overlay !flex">
+                  <div class="modal-box !max-w-xl !p-0 overflow-hidden flex flex-col max-h-[90vh]">
+                    <div class="p-5 md:p-6 border-b border-slate-100 dark:border-[#1a2e26] bg-slate-50 dark:bg-[#0a120f] flex justify-between items-start shrink-0">
+                      <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 md:w-12 md:h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center shrink-0">
+                          <i class="ph-fill ph-star text-xl md:text-2xl"></i>
+                        </div>
+                        <div>
+                          <h2 class="text-base md:text-lg font-bold dark:text-white leading-tight">Beri Nilai Hafalan</h2>
+                          <p class="text-[10px] md:text-xs text-emerald-600 font-bold">${window.esc(stu?.name)} (Kelas ${window.esc(stu?.kelas)})</p>
+                        </div>
+                      </div>
+                      <button type="button" onclick="window.App.modal=null;window.render(true)" class="text-slate-400 hover:text-red-500 w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0"><i class="ph-bold ph-x text-xl"></i></button>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-4 md:p-6">
+                      <div class="bg-white border border-slate-100 rounded-2xl p-4 md:p-5 shadow-soft mb-6 dark:bg-[#15241e] dark:border-[#1a2e26]">
+                        <h3 class="text-sm md:text-base font-bold text-slate-700 dark:text-gray-200 mb-1.5">${window.esc(sur?.title || '-')}</h3>
+                        <p class="text-[10px] md:text-xs text-slate-500 mb-4">${window.esc(seg?.title || '-')}</p>
+                        <label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Rekaman Hafalan Santri:</label>
+                        <div class="mb-2">${studentAudioPlayer}</div>
+                      </div>
 
+                      <label class="block text-[10px] md:text-[11px] text-emerald-600 font-bold uppercase tracking-widest mb-2">Pilih Nilai Kelulusan:</label>
+                      <div class="grid grid-cols-4 gap-2 mb-6">${btns}</div>
+
+                      <div class="mb-6">
+                        <label class="block text-[10px] md:text-[11px] text-emerald-600 font-bold uppercase tracking-widest mb-2">Catatan Penguji:</label>
+                        <textarea id="grading-note" oninput="window.App.currentGradingNote=this.value" class="input-std min-h-[80px] mb-3" placeholder="Tambahkan catatan tertulis (opsional)...">${window.esc(window.App.currentGradingNote)}</textarea>
+                        <div class="flex items-center gap-3">
+                          <button type="button" onclick="window.toggleGradingRecord()" class="w-10 h-10 md:w-11 md:h-11 rounded-full ${window.App.isGradingRecording ? 'bg-red-500 shadow-lg shadow-red-500/30' : 'bg-slate-50 border border-slate-200 dark:bg-[#0a120f] dark:border-[#1a2e26]'} text-white flex items-center justify-center shrink-0 transition-all shadow-sm active:scale-95" title="${window.App.isGradingRecording ? 'Hentikan Rekaman' : 'Rekam Suara'}">
+                            <i class="ph-fill ${window.App.isGradingRecording ? 'ph-stop' : 'ph-microphone'} text-lg"></i>
+                          </button>
+                          <div class="flex-1 min-w-0 flex items-center gap-2">
+                            ${audioHTML}
+                            ${deleteBtn}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="flex gap-2">
+                        <button type="button" onclick="window.submitGrade(${sb.id}, 'repeat');" class="px-6 py-2.5 bg-red-500 text-white hover:bg-red-600 rounded-xl text-xs font-bold transition-colors shadow-md flex items-center gap-2 flex-1">
+                          <i class="ph-bold ph-arrow-counter-clockwise text-base"></i> Diulang
+                        </button>
+                        ${submitBtn}
+                      </div>
+                    </div>
+                    <div class="p-4 border-t border-slate-100 dark:border-[#1a2e26] bg-slate-50 dark:bg-[#0a120f] shrink-0 flex justify-end gap-2">
+                        <button type="button" onclick="window.App.modal=null;window.render(true)" class="px-6 py-2.5 bg-slate-200 text-slate-700 hover:bg-slate-300 rounded-xl text-xs font-bold transition-colors dark:bg-[#15241e] dark:text-gray-300 dark:hover:bg-[#1a2e26]">Batal</button>
+                    </div>
+                  </div>
+                </div>`;
             }
         } else if (window.App.modal === 'share_card') {
             let sb = window.App.subs.find(x=>x.id===window.App.modalData);
@@ -2576,4 +2633,5 @@
     });
   </script>
 </body>
+</html>
 </html>
