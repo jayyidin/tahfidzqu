@@ -2499,6 +2499,10 @@
              const obj = snap.val();
              window.App[c] = obj ? Object.keys(obj).map(k => ({id: isNaN(k) ? k : Number(k), ...obj[k]})) : [];
              
+             if (c === 'subs') {
+                 window.App.isFetchingSubs = false; // Set to false when subs data is received
+             }
+
              if (c === 'juzs' && window.App.juzs.length > 0) {
                  if (!window.App.juzs.some(j => j.id == window.App.actJuzId)) {
                      let defaultJuz = window.App.juzs.find(j => j.id == 30 || String(j.name).includes("30"));
