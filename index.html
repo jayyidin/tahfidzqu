@@ -74,7 +74,7 @@
 
   <div id="app-root" class="flex flex-col w-full h-full relative z-10"></div>
   
-  <div id="modal-root" class="relative z-[300] hidden"></div>
+  <div id="modal-root" class="relative hidden"></div>
 
   <div id="persistent-player-wrapper" class="hidden pointer-events-none">
       <div id="youtube-player" class="w-full h-full"></div>
@@ -246,7 +246,6 @@
       yt: null, isPlay: false, repTarget: 7, curRep: 0, speed: 1, interval: null,
       modal: null, modalData: null, 
       filter: savedNavState.filter || {u:'all', h:'all', s:'all', surah: 'all', startDate: '', endDate: ''}, 
-      filter: savedNavState.filter || {u:'all', h:'all', s:'all', surah: 'all', startDate: '', endDate: '', status: 'all'}, 
       rec: {is:false, secs:0, int:null, src: savedNavState.recSrc || 'player'}, 
       resubmitId: savedNavState.resubmitId || null, 
       segOrder: savedNavState.segOrder || 'asc',
