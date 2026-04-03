@@ -243,14 +243,16 @@
       actSegId: savedNavState.actSegId || null,
       yt: null, isPlay: false, repTarget: 7, curRep: 0, speed: 1, interval: null,
       modal: null, modalData: null, 
-      filter: savedNavState.filter || {u:'all', h:'all', s:'all'}, 
+      filter: savedNavState.filter || {u:'all', h:'all', s:'all', surah: 'all'}, 
       hierSel: savedNavState.hierSel || {u:null, h:null, s:null},
       rec: {is:false, secs:0, int:null, src: savedNavState.recSrc || 'player'}, 
       resubmitId: savedNavState.resubmitId || null, 
       segOrder: savedNavState.segOrder || 'asc',
       editingUstadzId: null, editingHalaqohId: null, editingSiswaId: null,
+      adminSortOrder: savedNavState.adminSortOrder || 'newest',
       currentGradingAudioUrl: null, isGradingRecording: false, gradingMediaRecorder: null, gradingAudioChunks: [],
       isSubmittingGrade: false,
+      selectedGrade: null,
       studentMediaRecorder: null, studentAudioChunks: [], currentStudentAudioUrl: null,
       audioObj: null, activeAudioId: null, activeAudioDur: 0,
       loggedInUstadzId: savedNavState.loggedInUstadzId || null,
@@ -387,6 +389,11 @@
         const orders = ['asc', 'desc', 'random'];
         let idx = orders.indexOf(window.App.segOrder || 'asc');
         window.App.segOrder = orders[(idx + 1) % orders.length];
+        window.render(true);
+    };
+
+    window.toggleAdminSort = function() {
+        window.App.adminSortOrder = window.App.adminSortOrder === 'newest' ? 'oldest' : 'newest';
         window.render(true);
     };
 
@@ -1012,6 +1019,7 @@
         await new Promise(resolve => setTimeout(resolve, 500));
         window.App.isSubmittingGrade = false;
         window.App.currentGradingAudioUrl = null; 
+        window.App.selectedGrade = null;
         window.App.modal = null; 
         window.render(true);
     };
@@ -1136,6 +1144,7 @@
               filter: window.App.filter,
               hierSel: window.App.hierSel,
               segOrder: window.App.segOrder,
+              adminSortOrder: window.App.adminSortOrder,
               recSrc: window.App.rec.src,
               resubmitId: window.App.resubmitId,
               loggedInUstadzId: window.App.loggedInUstadzId
@@ -1185,17 +1194,6 @@
     };
 
     window.generateMainHtml = function() {
-      if (window.App.isLoading) {
-          return `
-          <div class="flex-1 flex flex-col items-center justify-center bg-slate-50 dark:bg-[#0a120f]">
-            <div class="relative w-20 h-20 mb-6">
-              <div class="absolute inset-0 border-4 border-emerald-500/10 rounded-full"></div>
-              <div class="absolute inset-0 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-              <i class="ph-fill ph-monitor-play absolute inset-0 flex items-center justify-center text-emerald-500 text-3xl"></i>
-            </div>
-            <div class="text-emerald-600 font-bold text-[10px] uppercase tracking-[0.4em] animate-pulse">Menyiapkan Halaman...</div>
-          </div>`;
-      }
       const isAdmin = window.App.adminLvl > 0;
       const isSuper = window.App.adminLvl === 1;
       const pend = window.App.subs.filter(s=>s.status==='pending').length;
@@ -1222,8 +1220,20 @@
           html += '<button onclick="window.switchView(\'master\')" class="' + (window.App.view==='master'?'text-purple-600 border-b-[3px] border-purple-500':'text-slate-400 hover:text-slate-800 dark:text-gray-400 dark:hover:text-white') + ' pb-3 transition whitespace-nowrap flex items-center gap-1.5"><i class="ph-fill ph-database text-lg"></i> Data Master</button>';
       }
       html += '</div></header><div class="flex-1 overflow-hidden flex flex-col w-full bg-slate-50/50 dark:bg-[#111c18]">';
+      
+      if (window.App.isLoading) {
+        html += `
+          <div class="flex-1 flex flex-col items-center justify-center">
+            <div class="relative w-20 h-20 mb-6">
+              <div class="absolute inset-0 border-4 border-emerald-500/10 rounded-full"></div>
+              <div class="absolute inset-0 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+              <i class="ph-fill ph-monitor-play absolute inset-0 flex items-center justify-center text-emerald-500 text-3xl"></i>
+            </div>
+            <div class="text-emerald-600 font-bold text-[10px] uppercase tracking-[0.4em] animate-pulse">Menyiapkan Halaman...</div>
+          </div>`;
+      } else {
 
-      if(window.App.view === 'home') {
+        if(window.App.view === 'home') {
         const jName = window.App.juzs.find(j=>j.id===window.App.actJuzId)?.name||'';
         const sList = window.App.search ? window.App.surahs.filter(s=>s.title.toLowerCase().includes(window.App.search.toLowerCase())) : window.App.surahs.filter(s=>s.juzId===window.App.actJuzId);
         sList.sort((a,b)=> (Q_SURAHS.find(q=>q.name===a.title.replace("Surah ",""))?.no||999) - (Q_SURAHS.find(q=>q.name===b.title.replace("Surah ",""))?.no||999));
@@ -1332,7 +1342,7 @@
         const hl = window.App.filter.u!=='all'?window.App.halaqohs.filter(h=>h.ustadzId==window.App.filter.u):window.App.halaqohs;
         const oH = '<option value="all">-- Semua Halaqoh --</option>'+hl.map(h=>'<option value="' + h.id + '" ' + (window.App.filter.h==h.id?'selected':'') + '>' + window.esc(h.name) + '</option>').join('');
         let sl = window.App.siswas; if(window.App.filter.h!=='all')sl=sl.filter(s=>s.halaqohId==window.App.filter.h);else if(window.App.filter.u!=='all'){let ids=hl.map(x=>x.id);sl=sl.filter(s=>ids.includes(s.halaqohId))}
-        const oS = '<option value="all">-- Semua Siswa --</option>'+window.App.siswas.map(s=>'<option value="' + s.id + '" ' + (window.App.filter.s==s.id?'selected':'') + '>' + window.esc(s.name) + '</option>').join('');
+        const oS = '<option value="all">-- Semua Siswa --</option>'+sl.map(s=>'<option value="' + s.id + '" ' + (window.App.filter.s==s.id?'selected':'') + '>' + window.esc(s.name) + '</option>').join('');
 
         let fs = window.App.subs;
         let tUidHub = window.App.adminLvl === 2 ? window.App.loggedInUstadzId : (window.App.filter.u !== 'all' ? Number(window.App.filter.u) : null);
@@ -1477,7 +1487,8 @@
         const hl = window.App.filter.u!=='all'?window.App.halaqohs.filter(h=>h.ustadzId==window.App.filter.u):window.App.halaqohs;
         const oH = '<option value="all">Semua Halaqoh</option>'+hl.map(h=>'<option value="' + h.id + '" ' + (window.App.filter.h==h.id?'selected':'') + '>' + window.esc(h.name) + '</option>').join('');
         let sl = window.App.siswas; if(window.App.filter.h!=='all')sl=sl.filter(s=>s.halaqohId==window.App.filter.h);else if(window.App.filter.u!=='all'){let ids=hl.map(x=>x.id);sl=sl.filter(s=>ids.includes(s.halaqohId))}
-        const oS = '<option value="all">Semua Siswa</option>'+window.App.siswas.map(s=>'<option value="' + s.id + '" ' + (window.App.filter.s==s.id?'selected':'') + '>' + window.esc(s.name) + '</option>').join('');
+        const oS = '<option value="all">Semua Siswa</option>'+sl.map(s=>'<option value="' + s.id + '" ' + (window.App.filter.s==s.id?'selected':'') + '>' + window.esc(s.name) + '</option>').join('');
+        const oSurah = '<option value="all">Semua Surah</option>' + window.App.surahs.sort((a,b) => (Q_SURAHS.find(q=>q.name===a.title.replace("Surah ",""))?.no||999) - (Q_SURAHS.find(q=>q.name===b.title.replace("Surah ",""))?.no||999)).map(s => '<option value="' + s.id + '" ' + (window.App.filter.surah == s.id ? 'selected' : '') + '>' + window.esc(s.title) + '</option>').join('');
 
         let fs = window.App.subs;
         let tUidAdmin = window.App.adminLvl === 2 ? window.App.loggedInUstadzId : (window.App.filter.u !== 'all' ? Number(window.App.filter.u) : null);
@@ -1495,6 +1506,9 @@
         if (window.App.filter.s !== 'all') {
             fs = fs.filter(sb => sb.siswaId === Number(window.App.filter.s));
         }
+        if (window.App.filter.surah && window.App.filter.surah !== 'all') {
+            fs = fs.filter(sb => sb.surahId === Number(window.App.filter.surah));
+        }
         if(window.App.search) {
             let sq = window.App.search.toLowerCase();
             fs = fs.filter(x=>{
@@ -1505,19 +1519,33 @@
 
         html += '<div id="main-scroll" class="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10 min-h-0 relative">' + window.getPullIndicatorHtml() + '<div class="max-w-6xl mx-auto w-full">';
         html += mobileSearchBar;
-        html += '<div class="mb-8 md:mb-12"><div class="flex flex-col md:flex-row justify-between md:items-end border-b border-slate-200 dark:border-[#1a2e26] pb-4 mb-6 gap-4 md:gap-0"><div><h1 class="text-3xl md:text-4xl font-serif text-orange-500 dark:text-orange-400 mb-2 flex items-center gap-3 tracking-tight"><i class="ph-fill ph-tray"></i> Antrean Setoran</h1><p class="text-xs md:text-sm text-slate-500">Daftar rekaman hafalan yang menunggu penilaian.</p></div></div>';
         
-        html += '<div class="bg-white dark:bg-[#15241e] border border-slate-100 dark:border-[#1a2e26] p-2 md:p-3 rounded-[2rem] shadow-soft flex flex-col md:flex-row gap-2 mb-6 md:mb-8">';
-        html += '<div class="flex-1 relative"><i class="ph-fill ph-chalkboard-teacher absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select id="adm-filter-ustadz" onchange="window.App.filter.u=this.value;window.App.filter.h=\'all\';window.App.filter.s=\'all\';window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none" ' + (window.App.adminLvl===2?'disabled':'') + '>' + oU + '</select></div>';
-        html += '<div class="flex-1 relative"><i class="ph-fill ph-users-three absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select id="adm-filter-halaqoh" onchange="window.App.filter.h=this.value;window.App.filter.s=\'all\';window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oH + '</select></div>';
-        html += '<div class="flex-1 relative"><i class="ph-fill ph-user-circle absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select id="adm-filter-siswa" onchange="window.App.filter.s=this.value;window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oS + '</select></div>';
+        let sortIcon = window.App.adminSortOrder === 'newest' ? 'ph-sort-descending' : 'ph-sort-ascending';
+        let sortLabel = window.App.adminSortOrder === 'newest' ? 'Terbaru' : 'Terlama';
+        const sortBtnHtml = `<button onclick="window.toggleAdminSort()" class="flex items-center gap-2 bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-gray-300 hover:border-orange-300 hover:text-orange-500 transition-colors shadow-sm">
+            <i class="ph-bold ${sortIcon} text-base"></i>
+            <span>Urutkan: ${sortLabel}</span>
+        </button>`;
+        html += `<div class="mb-8 md:mb-12"><div class="flex flex-col md:flex-row justify-between md:items-end border-b border-slate-200 dark:border-[#1a2e26] pb-4 mb-6 gap-4 md:gap-0"><div><h1 class="text-3xl md:text-4xl font-serif text-orange-500 dark:text-orange-400 mb-2 flex items-center gap-3 tracking-tight"><i class="ph-fill ph-tray"></i> Antrean Setoran</h1><p class="text-xs md:text-sm text-slate-500">Daftar rekaman hafalan yang menunggu penilaian.</p></div><div>${sortBtnHtml}</div></div></div>`;
+        
+        html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-2 bg-white dark:bg-[#15241e] border border-slate-100 dark:border-[#1a2e26] p-2 md:p-3 rounded-[2rem] shadow-soft mb-6 md:mb-8">';
+        html += '<div class="relative"><i class="ph-fill ph-chalkboard-teacher absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select id="adm-filter-ustadz" onchange="window.App.filter.u=this.value;window.App.filter.h=\'all\';window.App.filter.s=\'all\';window.App.filter.surah=\'all\';window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none" ' + (window.App.adminLvl===2?'disabled':'') + '>' + oU + '</select></div>';
+        html += '<div class="relative"><i class="ph-fill ph-users-three absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select id="adm-filter-halaqoh" onchange="window.App.filter.h=this.value;window.App.filter.s=\'all\';window.App.filter.surah=\'all\';window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oH + '</select></div>';
+        html += '<div class="relative"><i class="ph-fill ph-user-circle absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select id="adm-filter-siswa" onchange="window.App.filter.s=this.value;window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oS + '</select></div>';
+        html += '<div class="relative"><i class="ph-fill ph-book-open absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select id="adm-filter-surah" onchange="window.App.filter.surah=this.value;window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none">' + oSurah + '</select></div>';
         html += '</div>';
 
         if(!fs.length) {
             html += '<div class="flex flex-col items-center justify-center py-20 text-center bg-white dark:bg-[#15241e] rounded-[2rem] border border-dashed border-slate-200 dark:border-[#1a2e26]"><div class="w-20 h-20 bg-slate-50 dark:bg-[#0a120f] rounded-full flex items-center justify-center text-slate-300 mb-4"><i class="ph-fill ph-check-circle text-4xl"></i></div><p class="text-slate-500 font-medium">' + (window.App.search?'Pencarian tidak ditemukan.':'Luar biasa! Tidak ada antrean saat ini.') + '</p></div>';
         } else {
             let mStr = "";
-            fs.sort((a,b)=>{if(a.status==='pending'&&b.status!=='pending')return -1;if(a.status!=='pending'&&b.status==='pending')return 1;return b.id-a.id;}).forEach(sb=>{
+            fs.sort((a,b)=>{
+                if(a.status==='pending' && b.status!=='pending') return -1;
+                if(a.status!=='pending' && b.status==='pending') return 1;
+                if (window.App.adminSortOrder === 'newest') {
+                    return b.id - a.id;
+                } else { return a.id - b.id; }
+            }).forEach(sb=>{
                 let su=window.App.surahs.find(x=>x.id===sb.surahId); let sg=window.App.segs.find(x=>x.id===sb.segmentId); let lv=sg?window.App.levels.find(l=>l.id===sg.levelId):null;
                 
                 let sColor = sb.status==='pending'?'text-orange-600 bg-orange-50 border-orange-200 dark:bg-orange-900/30 dark:border-orange-800':sb.status==='need-repeat'?'text-red-600 bg-red-50 border-red-200 dark:bg-red-900/30 dark:border-red-800':'text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-900/30 dark:border-emerald-800'; 
@@ -1525,8 +1553,8 @@
                 let sText = sb.status==='pending'?'MENUNGGU':sb.status==='need-repeat'?'DIULANG':'LULUS ('+sb.grade+')'; 
                 
                 let aB = sb.status==='pending' 
-                    ? '<button onclick="window.App.modal=\'grade\';window.App.modalData=' + sb.id + ';window.render(true)" class="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/30 py-2.5 px-3 rounded-xl font-bold text-[10px] md:text-xs uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all hover:scale-105 active:scale-95"><i class="ph-fill ph-star text-sm md:text-base"></i> Nilai</button>' 
-                    : '<button onclick="window.App.modal=\'grade\';window.App.modalData=' + sb.id + ';window.render(true)" class="flex-1 bg-slate-50 hover:bg-blue-50 text-blue-600 border border-slate-200 py-2.5 px-3 rounded-xl font-bold text-[10px] md:text-xs uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all dark:bg-[#0a120f] dark:border-[#1a2e26] dark:hover:border-blue-500/50"><i class="ph-bold ph-pencil-simple text-sm md:text-base"></i> Edit</button>';
+                    ? `<button onclick="window.App.modal='grade';window.App.modalData=${sb.id};window.App.selectedGrade=null;window.render(true)" class="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md shadow-orange-500/30 py-2.5 px-3 rounded-xl font-bold text-[10px] md:text-xs uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all hover:scale-105 active:scale-95"><i class="ph-fill ph-star text-sm md:text-base"></i> Nilai</button>` 
+                    : `<button onclick="window.App.modal='grade';window.App.modalData=${sb.id};window.App.selectedGrade='${sb.grade||''}';window.render(true)" class="flex-1 bg-slate-50 hover:bg-blue-50 text-blue-600 border border-slate-200 py-2.5 px-3 rounded-xl font-bold text-[10px] md:text-xs uppercase tracking-widest flex items-center justify-center gap-1.5 transition-all dark:bg-[#0a120f] dark:border-[#1a2e26] dark:hover:border-blue-500/50"><i class="ph-bold ph-pencil-simple text-sm md:text-base"></i> Edit</button>`;
                 
                 let delB = isSuper ? '<button onclick="window.deleteSubmission(' + sb.id + ')" class="bg-red-50 text-red-500 border border-red-100 hover:bg-red-500 hover:text-white w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center transition-colors dark:bg-[#15241e] dark:border-[#1a2e26] shrink-0" title="Hapus"><i class="ph-bold ph-trash text-lg"></i></button>' : '';
                 
@@ -1643,6 +1671,8 @@
         html += '</div></div></div></div>';
       }
       
+      }
+
       return html + '</div><footer class="shrink-0 pt-4 pb-8 md:pb-4 text-center text-[10px] md:text-xs font-medium text-slate-400 dark:text-slate-500 bg-white dark:bg-[#0a120f] border-t border-slate-200 dark:border-[#1a2e26] transition-colors z-40 relative">Copyright &copy; 2026 Juman Jayyidin</footer>';
     };
 
@@ -1883,12 +1913,18 @@
             } else {
                 let btns = '';
                 ['A','B+','B','B-'].forEach(g=>{
-                    btns += '<button type="button" onclick="window.submitGrade(' + sb.id + ', \'' + g + '\')" class="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 font-bold text-lg hover:bg-emerald-50 hover:border-emerald-500 hover:text-white hover:shadow-lg hover:shadow-emerald-500/30 hover:-translate-y-1 dark:bg-[#0a120f] dark:border-[#1a2e26] dark:text-white transition-all shadow-sm">' + g + '</button>';
+                    let isSelected = window.App.selectedGrade === g;
+                    let selectedClass = isSelected 
+                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 -translate-y-1' 
+                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-emerald-500 hover:text-white hover:shadow-lg hover:shadow-emerald-500/30 hover:-translate-y-1 dark:bg-[#0a120f] dark:border-[#1a2e26] dark:text-white';
+                    btns += `<button type="button" onclick="window.App.selectedGrade='${g}';window.render(true)" class="w-10 h-10 md:w-12 md:h-12 rounded-lg border font-bold text-lg transition-all shadow-sm ${selectedClass}">${g}</button>`;
                 });
                 let audioHTML = window.App.currentGradingAudioUrl ? window.renderCustomAudio('grade_modal', window.App.currentGradingAudioUrl, 0, true) : '<span class="text-[10px] md:text-xs text-slate-500 dark:text-gray-400 truncate">' + (window.App.isGradingRecording ? 'Merekam...' : 'Ketuk Mic untuk merekam suara') + '</span>';
                 let deleteBtn = window.App.currentGradingAudioUrl ? '<button type="button" onclick="window.deleteGradingAudio()" class="w-8 h-8 rounded-full bg-red-100 text-red-600 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all shadow-sm shrink-0"><i class="ph-bold ph-trash"></i></button>' : '';
                 
-                mHtml += '<div class="modal-overlay !flex"><div class="modal-box text-center"><div class="w-12 h-12 md:w-14 md:h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4"><i class="ph-fill ph-star text-3xl"></i></div><h2 class="text-lg md:text-xl font-bold mb-1 dark:text-white">Beri Nilai</h2><p class="text-xs md:text-sm text-emerald-600 font-bold mb-6">' + window.getSName(sb.siswaId) + '</p><div class="text-left mb-4"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Teks:</label><textarea id="gn" class="input-std" rows="2">' + window.esc(sb.note||'') + '</textarea></div><div class="text-left mb-6"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Suara (Opsional):</label><div class="flex items-center gap-3 bg-slate-50 dark:bg-[#0a120f] border border-slate-200 dark:border-[#1a2e26] p-2 md:p-3 rounded-xl"><button type="button" onclick="window.toggleGradingRecord()" class="w-8 h-8 md:w-10 md:h-10 rounded-full ' + (window.App.isGradingRecording ? 'bg-red-500 text-white animate-pulse shadow-lg' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400') + ' flex items-center justify-center transition-all shrink-0"><i class="ph-fill ' + (window.App.isGradingRecording ? 'ph-stop' : 'ph-microphone') + ' text-lg md:text-xl"></i></button><div class="flex-1">' + audioHTML + '</div>' + deleteBtn + '</div></div><div class="flex justify-center gap-1.5 md:gap-2 mb-4 md:mb-5">' + btns + '</div><button type="button" onclick="window.submitGrade(' + sb.id + ', \'repeat\')" class="w-full py-2.5 md:py-3 bg-red-50 text-red-600 border border-red-100 rounded-xl font-bold text-xs md:text-sm mb-3 md:mb-4 hover:bg-red-500 hover:text-white transition dark:bg-red-900/20 dark:border-transparent">Setor Ulang</button><button type="button" onclick="window.App.currentGradingAudioUrl=null;window.App.modal=null;window.render(true)" class="w-full py-2 text-slate-500 font-bold text-xs md:text-sm hover:text-slate-800 transition">Batal</button></div></div>';
+                let submitBtn = `<button type="button" onclick="if(window.App.selectedGrade) { window.submitGrade(${sb.id}, window.App.selectedGrade); }" class="btn-std w-full mb-3" ${!window.App.selectedGrade ? 'disabled' : ''}>Kirim Nilai</button>`;
+
+                mHtml += `<div class="modal-overlay !flex"><div class="modal-box text-center"><div class="w-12 h-12 md:w-14 md:h-14 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4"><i class="ph-fill ph-star text-3xl"></i></div><h2 class="text-lg md:text-xl font-bold mb-1 dark:text-white">Beri Nilai</h2><p class="text-xs md:text-sm text-emerald-600 font-bold mb-6">${window.getSName(sb.siswaId)}</p><div class="text-left mb-4"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Teks:</label><textarea id="gn" class="input-std" rows="2">${window.esc(sb.note||'')}</textarea></div><div class="text-left mb-6"><label class="block text-[10px] md:text-[11px] text-slate-500 font-bold mb-1.5">Catatan Suara (Opsional):</label><div class="flex items-center gap-3 bg-slate-50 dark:bg-[#0a120f] border border-slate-200 dark:border-[#1a2e26] p-2 md:p-3 rounded-xl"><button type="button" onclick="window.toggleGradingRecord()" class="w-8 h-8 md:w-10 md:h-10 rounded-full ${window.App.isGradingRecording ? 'bg-red-500 text-white animate-pulse shadow-lg' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400'} flex items-center justify-center transition-all shrink-0"><i class="ph-fill ${window.App.isGradingRecording ? 'ph-stop' : 'ph-microphone'} text-lg md:text-xl"></i></button><div class="flex-1">${audioHTML}</div>${deleteBtn}</div></div><div class="flex justify-center gap-1.5 md:gap-2 mb-6">${btns}</div>${submitBtn}<button type="button" onclick="window.submitGrade(${sb.id}, 'repeat')" class="w-full py-2.5 md:py-3 bg-red-50 text-red-600 border border-red-100 rounded-xl font-bold text-xs md:text-sm mb-3 md:mb-4 hover:bg-red-500 hover:text-white transition dark:bg-red-900/20 dark:border-transparent">Setor Ulang</button><button type="button" onclick="window.App.currentGradingAudioUrl=null;window.App.modal=null;window.App.selectedGrade=null;window.render(true)" class="w-full py-2 text-slate-500 font-bold text-xs md:text-sm hover:text-slate-800 transition">Batal</button></div></div>`;
             }
         } else if (window.App.modal === 'share_card') {
             let sb = window.App.subs.find(x=>x.id===window.App.modalData);
