@@ -261,7 +261,10 @@
       audioObj: null, activeAudioId: null, activeAudioDur: 0,
       loggedInUstadzId: savedNavState.loggedInUstadzId || null,
       firebaseError: '',
-      isFetchingSubs: true
+      isFetchingSubs: true,
+      autoRefreshEnabled: savedNavState.autoRefreshEnabled || false,
+      autoRefreshTimer: null, // This will not be saved, it's a runtime object
+      autoRefreshInterval: 5 * 60 * 1000 // 5 minutes
     };
 
     window.fmtT = s => `${Math.floor(s/60).toString().padStart(2,'0')}:${Math.floor(s%60).toString().padStart(2,'0')}`;
@@ -1357,6 +1360,7 @@
               adminSortOrder: window.App.adminSortOrder,
               recSrc: window.App.rec.src,
               resubmitId: window.App.resubmitId,
+              autoRefreshEnabled: window.App.autoRefreshEnabled, // Save auto-refresh state
               loggedInUstadzId: window.App.loggedInUstadzId
           }));
       } catch(e){}
@@ -1412,6 +1416,21 @@
       if (focusedId) { let el = document.getElementById(focusedId); if (el) { el.focus(); try { el.setSelectionRange(selStart, selEnd); } catch(e){} } }
       window.renderModal();
       
+      // Auto-refresh logic for Admin view (Antrean Setoran)
+      if (window.App.view === 'admin') {
+          if (window.App.autoRefreshEnabled && !window.App.autoRefreshTimer) {
+              window.App.autoRefreshTimer = setInterval(() => {
+                  console.log('Auto-refreshing Antrean Setoran...');
+                  window.refreshApp();
+              }, window.App.autoRefreshInterval);
+          }
+      } else {
+          if (window.App.autoRefreshTimer) {
+              clearInterval(window.App.autoRefreshTimer);
+              window.App.autoRefreshTimer = null;
+          }
+      }
+
       if (window.App.view === 'master' && !window.App.isLoading) {
           setTimeout(() => { if (window.renderChart) window.renderChart(); }, 50);
       }
@@ -1767,10 +1786,17 @@
         let sortIcon = window.App.adminSortOrder === 'newest' ? 'ph-sort-descending' : 'ph-sort-ascending';
         let sortLabel = window.App.adminSortOrder === 'newest' ? 'Terbaru' : 'Terlama';
         const sortBtnHtml = `<button onclick="window.toggleAdminSort()" class="flex items-center gap-2 bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 dark:text-gray-300 hover:border-orange-300 hover:text-orange-500 transition-colors shadow-sm">
-            <i class="ph-bold ${sortIcon} text-base"></i>
+            <i class="ph-bold ${sortIcon} text-base"></i> 
             <span>Urutkan: ${sortLabel}</span>
         </button>`;
-        html += `<div class="mb-8 md:mb-12"><div class="flex flex-col md:flex-row justify-between md:items-end border-b border-slate-200 dark:border-[#1a2e26] pb-4 mb-6 gap-4 md:gap-0"><div><h1 class="text-3xl md:text-4xl font-serif text-orange-500 dark:text-orange-400 mb-2 flex items-center gap-3 tracking-tight"><i class="ph-fill ph-tray"></i> Antrean Setoran</h1><p class="text-xs md:text-sm text-slate-500">Daftar rekaman hafalan yang menunggu penilaian.</p></div><div>${sortBtnHtml}</div></div></div>`;
+        const autoRefreshToggleHtml = `
+            <button onclick="window.App.autoRefreshEnabled = !window.App.autoRefreshEnabled; window.render(true);" 
+                    class="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-colors shadow-sm
+                    ${window.App.autoRefreshEnabled ? 'bg-emerald-500 text-white hover:bg-emerald-600' : 'bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] text-slate-600 dark:text-gray-300 hover:border-emerald-300 hover:text-emerald-500'}">
+                <i class="ph-bold ph-arrow-clockwise text-base"></i>
+                <span>Auto-Refresh ${window.App.autoRefreshEnabled ? 'Aktif' : 'Nonaktif'}</span>
+            </button>`;
+        html += `<div class="mb-8 md:mb-12"><div class="flex flex-col md:flex-row justify-between md:items-end border-b border-slate-200 dark:border-[#1a2e26] pb-4 mb-6 gap-4 md:gap-0"><div><h1 class="text-3xl md:text-4xl font-serif text-orange-500 dark:text-orange-400 mb-2 flex items-center gap-3 tracking-tight"><i class="ph-fill ph-tray"></i> Antrean Setoran</h1><p class="text-xs md:text-sm text-slate-500">Daftar rekaman hafalan yang menunggu penilaian.</p></div><div class="flex gap-2">${sortBtnHtml}${autoRefreshToggleHtml}</div></div></div>`;
         
         html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-2 bg-white dark:bg-[#15241e] border border-slate-100 dark:border-[#1a2e26] p-2 md:p-3 rounded-[2rem] shadow-soft mb-2 md:mb-3">';
         html += '<div class="relative"><i class="ph-fill ph-chalkboard-teacher absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg pointer-events-none"></i><select id="adm-filter-ustadz" onchange="window.App.filter.u=this.value;window.App.filter.h=\'all\';window.App.filter.s=\'all\';window.App.filter.surah=\'all\';window.render(true)" class="w-full bg-slate-50 dark:bg-[#0a120f] border border-slate-100 dark:border-[#1a2e26] rounded-2xl py-3.5 pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 dark:text-gray-300 outline-none cursor-pointer hover:border-emerald-300 transition-colors appearance-none" ' + (window.App.adminLvl===2?'disabled':'') + '>' + oU + '</select></div>';
