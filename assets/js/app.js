@@ -1,16 +1,4 @@
-﻿<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"><title>TahfidzQu</title>
-<link rel="icon" href="data:,">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="preconnect" href="https://cdn.jsdelivr.net"><link rel="preconnect" href="https://cdnjs.cloudflare.com">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">
-<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@400;500;600;700;800&family=Katibeh&family=Merriweather:wght@700;900&display=swap" rel="stylesheet">
-<script defer src="https://cdn.jsdelivr.net/npm/modern-screenshot"></script><script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script><script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script><script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script><script defer src="https://unpkg.com/@phosphor-icons/web"></script>
-<script src="https://cdn.tailwindcss.com"></script><script>tailwind.config={darkMode:'class',theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],serif:['Merriweather','serif']},boxShadow:{soft:'0 4px 20px -2px rgba(0,0,0,0.05)'}}}}</script>
-<style>html,body{height:100%;height:100dvh;overflow:hidden;margin:0;padding:0;overscroll-behavior-y:none}@supports (-webkit-touch-callout:none){html,body{height:-webkit-fill-available}}::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:10px}.dark ::-webkit-scrollbar-thumb{background:#1a2e26}.hide-scrollbar{-ms-overflow-style:none;scrollbar-width:none}.hide-scrollbar::-webkit-scrollbar{display:none}.font-arabic{font-family:'Amiri',serif!important;line-height:2.8!important;padding-top:.5rem;padding-bottom:.5rem;direction:rtl;text-align:right}</style>
-<style type="text/tailwindcss">@layer components{.input-std{@apply w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-sm text-slate-800 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-inner dark:bg-[#15241e] dark:border-[#1a2e26] dark:text-white dark:focus:ring-emerald-500/40 transition-all duration-200}.btn-std{@apply w-full py-3.5 bg-emerald-500 text-white font-bold rounded-2xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-500/30 active:scale-95 disabled:opacity-50}.modal-overlay{@apply fixed inset-0 bg-slate-900/80 flex items-center justify-center z-[100] backdrop-blur-sm transition-all p-4}.modal-box{@apply bg-white border border-slate-100 rounded-[2rem] w-full max-w-[420px] p-8 shadow-2xl dark:bg-[#0f1915] dark:border-[#1a2e26] transition-all max-h-[90vh] overflow-y-auto}.card-std{@apply bg-white border border-slate-100 shadow-soft dark:bg-[#15241e] dark:border-[#1a2e26] rounded-3xl p-5 hover:border-emerald-400 hover:shadow-xl dark:hover:border-emerald-500/50 transition-all duration-300 cursor-pointer flex flex-col h-full relative overflow-hidden}.btn-action{@apply flex-1 bg-slate-50 hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 border border-slate-200 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 dark:bg-[#0a120f] dark:border-[#1a2e26] dark:hover:bg-[#15241e] dark:text-gray-300}.tab-active{@apply bg-emerald-500 text-white dark:text-black shadow-lg shadow-emerald-500/30 border border-emerald-500 dark:border-transparent px-4 py-2 md:px-6 md:py-2.5 rounded-full font-bold transition-all flex-shrink-0 active:scale-95 text-[11px] md:text-sm}.tab-inactive{@apply bg-white border border-slate-200 text-slate-500 hover:text-emerald-600 hover:bg-slate-50 dark:bg-[#15241e] dark:border-[#1a2e26] dark:text-gray-400 dark:hover:text-white px-4 py-2 md:px-6 md:py-2.5 rounded-full font-bold transition-all shadow-sm flex-shrink-0 active:scale-95 text-[11px] md:text-sm}}</style></head>
-<body class="bg-slate-50 text-slate-800 dark:bg-[#0a120f] dark:text-gray-200 font-sans flex flex-col w-full h-full transition-colors duration-300 antialiased"><div id="app-root" class="flex flex-col w-full h-full relative z-10"></div><div id="modal-root" class="relative hidden"></div><div id="persistent-player-wrapper" class="hidden pointer-events-none"><div id="youtube-player" class="w-full h-full"></div></div>
-
-  <script>
-    window.updateOnlineStatus = function() {
+﻿﻿﻿﻿window.updateOnlineStatus = function() {
         let indicator = document.getElementById('offline-indicator');
         if (!indicator) return;
         
@@ -22,57 +10,6 @@
             indicator.className = 'fixed top-0 left-0 w-full z-[10000] transition-transform duration-500 text-center py-2 px-4 font-bold text-[11px] md:text-xs shadow-md flex items-center justify-center gap-2 pointer-events-none bg-red-500 text-white translate-y-0';
             indicator.innerHTML = '<i class="ph-bold ph-wifi-slash text-base"></i> Anda sedang Offline. Beberapa fitur mungkin tertunda.';
         }
-    };
-
-    window.exportFullDatabase = function() {
-        let dbData = {
-            juzs: window.App.juzs,
-            surahs: window.App.surahs,
-            levels: window.App.levels,
-            segs: window.App.segs,
-            ustadz: window.App.ustadz,
-            halaqohs: window.App.halaqohs,
-            siswas: window.App.siswas,
-            subs: window.App.subs,
-            settings: { logo: window.App.schLogo, subtitle: window.App.schSub }
-        };
-        const dataStr = JSON.stringify(dbData, null, 2);
-        const blob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `TahfidzQu_Backup_${new Date().toISOString().slice(0, 10)}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    window.importFullDatabase = function(e) {
-        let f = e.target.files[0];
-        if (!f) return;
-        
-        window.showConfirm('Peringatan: Mengimpor database akan MENGHAPUS & MENGGANTI semua data saat ini di Cloud. Apakah Anda yakin?', function() {
-            let reader = new FileReader();
-            reader.onload = async function(ev) {
-                try {
-                    let data = JSON.parse(ev.target.result);
-                    window.App.isLoading = true;
-                    window.render(true);
-                    const cols = ['juzs','surahs','levels','segs','ustadz','halaqohs','siswas','subs'];
-                    if (window.dbSaveCollection) {
-                        for (let col of cols) { if (data[col] && Array.isArray(data[col])) await window.dbSaveCollection(col, data[col]); }
-                        if (data.settings) await window.dbSaveCollection('settings/app', {logo: data.settings.logo || '', subtitle: data.settings.subtitle || ''});
-                    } else {
-                        for (let col of cols) { if (data[col] && Array.isArray(data[col])) { let cIds = window.App[col].map(x => x.id); let iIds = data[col].map(x => x.id); let toDelete = cIds.filter(id => !iIds.includes(id)); for (let id of toDelete) { if (window.dbDelete) window.dbDelete(col, id); } for (let item of data[col]) { if (window.dbSave) window.dbSave(col, item.id, item); } } }
-                        if (data.settings && window.dbSave) window.dbSave('settings', 'app', {logo: data.settings.logo || '', subtitle: data.settings.subtitle || ''});
-                    }
-                    window.showAlert("Migrasi/Restore Database berhasil! Halaman akan dimuat ulang.");
-                    setTimeout(() => window.location.reload(), 2000);
-                } catch(err) { window.App.isLoading = false; window.render(true); window.showAlert("Gagal memproses file JSON. Pastikan format file benar."); }
-            };
-            reader.readAsText(f);
-        });
-        e.target.value = '';
     };
     window.addEventListener('online', window.updateOnlineStatus);
     window.addEventListener('offline', window.updateOnlineStatus);
@@ -1077,10 +1014,10 @@
             let segIdNum = window.App.actSegId;
             let hIdNum = Number(window.App.hierSel.h); 
             
-            let exists = window.App.subs.some(x => x.siswaId === sIdNum && x.segmentId === segIdNum && x.halaqohId === hIdNum && x.status !== 'need-repeat');
+            let exists = window.App.subs.some(x => x.siswaId === sIdNum && x.segmentId === segIdNum && x.halaqohId === hIdNum);
             if (exists) {
                 if(evt) evt.target.value='';
-                window.showAlert('Siswa ini sudah pernah menyetorkan hafalan untuk segmen ini. Tunggu penilaian atau cek riwayat.');
+                window.showAlert('Siswa ini sudah pernah menyetorkan hafalan untuk segmen ini di Halaqoh saat ini. Tidak bisa mengirim data ganda.');
                 return;
             }
         }
@@ -1089,27 +1026,39 @@
         if(type === 'file' && evt && evt.target.files[0]) { audioData = await window.blobToBase64(evt.target.files[0]); }
         
         let finalSubData = null;
-        if (window.App.resubmitId) window.App.resubmitId = null;
-        
-        let nid = Date.now();
-        let subData = { 
-            id: nid, 
-            siswaId: Number(window.App.hierSel.s), 
-            halaqohId: Number(window.App.hierSel.h), 
-            ustadzId: Number(window.App.hierSel.u), 
-            surahId: window.App.actSurahId, 
-            segmentId: window.App.actSegId, 
-            type: mediaType, 
-            date: tDate, 
-            status: 'pending', 
-            grade: null, 
-            note: null, 
-            audioUrl: audioData,
-            duration: window.App.rec.secs 
-        };
-        window.App.subs.push(subData);
-        if(window.dbSave) window.dbSave('subs', nid, subData);
-        finalSubData = subData;
+        if (window.App.resubmitId) {
+            var existingSub = window.App.subs.find(x => x.id === window.App.resubmitId);
+            if (existingSub) { 
+                existingSub.status = 'pending'; 
+                existingSub.type = mediaType; 
+                existingSub.date = tDate; 
+                existingSub.audioUrl = audioData; 
+                existingSub.duration = window.App.rec.secs; 
+                if(window.dbSave) window.dbSave('subs', existingSub.id, existingSub); 
+                finalSubData = existingSub;
+            }
+            window.App.resubmitId = null;
+        } else {
+            let nid = Date.now();
+            let subData = { 
+                id: nid, 
+                siswaId: Number(window.App.hierSel.s), 
+                halaqohId: Number(window.App.hierSel.h), 
+                ustadzId: Number(window.App.hierSel.u), 
+                surahId: window.App.actSurahId, 
+                segmentId: window.App.actSegId, 
+                type: mediaType, 
+                date: tDate, 
+                status: 'pending', 
+                grade: null, 
+                note: null, 
+                audioUrl: audioData,
+                duration: window.App.rec.secs 
+            };
+            window.App.subs.push(subData);
+            if(window.dbSave) window.dbSave('subs', nid, subData);
+            finalSubData = subData;
+        }
         
         window.App.currentStudentAudioUrl = null; 
         if(window.App.rec.is){clearInterval(window.App.rec.int);window.App.rec.is=false;} 
@@ -1126,7 +1075,7 @@
                 let phone = ustadzData.phone.replace(/\D/g, '');
                 if (phone.startsWith('0')) phone = '62' + phone.substring(1);
                 
-                let textMsg = `Assalamu'alaikum *${ustadzData.name}*,\n\nAlhamdulillah, ada setoran hafalan baru masuk:\n\n👤 *Siswa:* ${siswaData ? siswaData.name : '-'}\n📖 *Surah:* ${surahData ? surahData.title : '-'} (${segData ? segData.title : '-'})\n\nMohon berkenan untuk menyimak dan memberikan penilaian di aplikasi TahfidzQu. Syukron.`;
+                let textMsg = `Assalamu'alaikum *${ustadzData.name}*,\n\nAlhamdulillah, ada setoran hafalan baru masuk:\n\nðŸ‘¤ *Siswa:* ${siswaData ? siswaData.name : '-'}\nðŸ“– *Surah:* ${surahData ? surahData.title : '-'} (${segData ? segData.title : '-'})\n\nMohon berkenan untuk menyimak dan memberikan penilaian di aplikasi TahfidzQu. Syukron.`;
                 
                 const waApiToken = "MwQYzC2XsY4UdA7n8Ury"; 
                 if (waApiToken !== "TOKEN_API_WA_KAMU_DISINI") {
@@ -1469,7 +1418,6 @@
       html += '</div></header><div class="flex-1 overflow-hidden flex flex-col w-full bg-slate-50/50 dark:bg-[#111c18]">';
       
       if (window.App.isLoading) {
-        let progressHtml = window.App.loadingProgress !== null ? '<div class="w-48 h-2 bg-slate-200 dark:bg-[#1a2e26] rounded-full overflow-hidden mt-4"><div class="h-full bg-emerald-500 transition-all duration-300" style="width: ' + window.App.loadingProgress + '%"></div></div><div class="mt-2 text-xs font-bold text-emerald-600">' + window.App.loadingProgress + '%</div>' : '';
         html += `
           <div class="flex-1 flex flex-col items-center justify-center">
             <div class="relative w-20 h-20 mb-6">
@@ -1477,8 +1425,7 @@
               <div class="absolute inset-0 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
               <i class="ph-fill ph-monitor-play absolute inset-0 flex items-center justify-center text-emerald-500 text-3xl"></i>
             </div>
-            <div class="text-emerald-600 font-bold text-[10px] uppercase tracking-[0.4em] animate-pulse">${window.App.loadingMessage || 'Menyiapkan Halaman...'}</div>
-            ${progressHtml}
+            <div class="text-emerald-600 font-bold text-[10px] uppercase tracking-[0.4em] animate-pulse">Menyiapkan Halaman...</div>
           </div>`;
       } else {
 
@@ -2027,11 +1974,7 @@
         
         if(isSuper) {
             let logoC = window.App.schLogo ? '<img src="' + window.App.schLogo + '" class="h-12 w-12 rounded-xl object-contain bg-white dark:bg-[#0a120f] p-1 shadow-sm">' : '<div class="h-12 w-12 rounded-xl bg-emerald-50 text-emerald-500 dark:bg-emerald-500/10 flex items-center justify-center shrink-0"><i class="ph-fill ph-image text-2xl"></i></div>';
-            html += '<div class="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 mb-8 shrink-0">';
-            html += '<div class="card-std !h-auto !p-4 flex flex-row items-center gap-4 shadow-sm">' + logoC + '<div class="flex-1 overflow-hidden"><p class="text-[10px] font-bold text-emerald-600 mb-1.5 uppercase tracking-widest">Logo Sekolah</p><input type="file" id="aup" accept="image/*" class="hidden" onchange="window.handleLogoUpload(event)"><div class="flex gap-2"><button type="button" onclick="document.getElementById(\'aup\').click()" class="flex-1 text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-3 py-2.5 rounded-xl dark:bg-[#15241e] dark:border-[#1a2e26] dark:text-gray-300 transition shadow-sm truncate">Upload</button><button type="button" onclick="window.removeLogo()" class="text-xs font-bold bg-red-50 text-red-500 hover:bg-red-100 px-3 py-2.5 rounded-xl dark:bg-red-900/20 transition truncate">Hapus</button></div></div></div>';
-            html += '<div class="card-std !h-auto !p-4 flex flex-row items-center gap-4 shadow-sm"><div class="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 flex items-center justify-center shrink-0"><i class="ph-bold ph-text-t text-2xl"></i></div><div class="flex-1 w-full overflow-hidden"><p class="text-[10px] font-bold text-blue-600 mb-1.5 uppercase tracking-widest">Nama Sekolah</p><div class="flex gap-2 w-full"><input type="text" id="i-sub" value="' + window.App.schSub + '" class="input-std !bg-slate-50 dark:!bg-[#0a120f] !border-transparent !py-2.5 !px-3 !rounded-xl text-xs font-medium flex-1 min-w-0"><button type="button" onclick="window.saveSchoolSubtitle()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold px-3 py-2.5 rounded-xl shadow-md shrink-0 text-xs transition">Simpan</button></div></div></div>';
-            html += '<div class="card-std !h-auto !p-4 flex flex-row items-center gap-4 shadow-sm"><div class="h-12 w-12 rounded-xl bg-orange-50 text-orange-600 dark:bg-orange-500/10 flex items-center justify-center shrink-0"><i class="ph-bold ph-database text-2xl"></i></div><div class="flex-1 w-full overflow-hidden"><p class="text-[10px] font-bold text-orange-600 mb-1.5 uppercase tracking-widest">Migrasi Database</p><input type="file" id="db-up" accept=".json" class="hidden" onchange="window.importFullDatabase(event)"><div class="flex gap-2 w-full"><button type="button" onclick="window.exportFullDatabase()" class="flex-1 text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-3 py-2.5 rounded-xl dark:bg-[#15241e] dark:border-[#1a2e26] dark:text-gray-300 transition shadow-sm truncate">Export</button><button type="button" onclick="document.getElementById(\'db-up\').click()" class="flex-1 text-xs font-bold bg-orange-50 text-orange-600 hover:bg-orange-100 px-3 py-2.5 rounded-xl transition truncate dark:bg-orange-900/20 dark:hover:bg-orange-900/40">Import</button></div></div></div>';
-            html += '</div>';
+            html += '<div class="flex flex-col md:flex-row gap-4 lg:gap-6 mb-8 shrink-0"><div class="card-std !h-auto !p-4 flex flex-row items-center gap-4 w-full md:w-auto shadow-sm">' + logoC + '<div class="flex-1 overflow-hidden"><p class="text-[10px] font-bold text-emerald-600 mb-1.5 uppercase tracking-widest">Logo Sekolah</p><input type="file" id="aup" accept="image/*" class="hidden" onchange="window.handleLogoUpload(event)"><div class="flex gap-2"><button type="button" onclick="document.getElementById(\'aup\').click()" class="flex-1 md:flex-none text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-4 py-2.5 rounded-xl dark:bg-[#15241e] dark:border-[#1a2e26] dark:text-gray-300 transition shadow-sm truncate">Upload</button><button type="button" onclick="window.removeLogo()" class="text-xs font-bold bg-red-50 text-red-500 hover:bg-red-100 px-4 py-2.5 rounded-xl dark:bg-red-900/20 transition truncate">Hapus</button></div></div></div><div class="card-std !h-auto !p-4 flex flex-row items-center gap-4 flex-1 shadow-sm"><div class="h-12 w-12 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 flex items-center justify-center shrink-0"><i class="ph-bold ph-text-t text-2xl"></i></div><div class="flex-1 w-full overflow-hidden"><p class="text-[10px] font-bold text-blue-600 mb-1.5 uppercase tracking-widest">Nama Sekolah</p><div class="flex gap-2 w-full"><input type="text" id="i-sub" value="' + window.App.schSub + '" class="input-std !bg-slate-50 dark:!bg-[#0a120f] !border-transparent !py-2.5 !px-4 !rounded-xl text-sm font-medium flex-1 min-w-0"><button type="button" onclick="window.saveSchoolSubtitle()" class="btn-std !w-auto !py-2.5 !px-6 !text-xs !rounded-xl uppercase tracking-widest shadow-md shrink-0">Simpan</button></div></div></div></div>';
         }
         
         html += '<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 lg:mb-8 shrink-0"><div class="lg:col-span-2 bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-[2rem] p-5 md:p-6 shadow-soft flex flex-col"><div class="flex items-center gap-3 mb-4"><div class="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 flex items-center justify-center"><i class="ph-fill ph-chart-bar text-xl md:text-2xl"></i></div><div><h2 class="text-base md:text-lg font-bold dark:text-white">Statistik Penyetoran</h2><p class="text-[10px] md:text-xs text-slate-500">7 Hari Terakhir</p></div></div><div class="w-full h-48 md:h-64 relative flex-1"><canvas id="statsChart"></canvas></div></div><div class="lg:col-span-1 bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-[2rem] p-5 md:p-6 shadow-soft flex flex-col"><div class="flex items-center gap-3 mb-4"><div class="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 flex items-center justify-center"><i class="ph-fill ph-chart-pie-slice text-xl md:text-2xl"></i></div><div><h2 class="text-base md:text-lg font-bold dark:text-white">Rasio Kelulusan</h2><p class="text-[10px] md:text-xs text-slate-500">Total Keseluruhan</p></div></div><div class="w-full relative flex-1 min-h-[12rem]"><canvas id="ratioChart"></canvas></div></div></div>';
@@ -2185,8 +2128,8 @@
             let displayArabic = cSg.arabic || '';
             let isFatihah = sur && sur.title.toLowerCase().includes('al-fatihah');
             if (!isFatihah) {
-                displayArabic = displayArabic.replace(/^[\u200B-\u200D\uFEFF\u200E\u200F]*بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\s*/, '').trim();
-                displayArabic = displayArabic.replace(/^[\u200B-\u200D\uFEFF\u200E\u200F]*بِسْمِ[\s\S]+?ٱلرَّحِيمِ\s*/, '').trim();
+                displayArabic = displayArabic.replace(/^[\u200B-\u200D\uFEFF\u200E\u200F]*Ø¨ÙØ³Ù’Ù…Ù Ù±Ù„Ù„Ù‘ÙŽÙ‡Ù Ù±Ù„Ø±Ù‘ÙŽØ­Ù’Ù…ÙŽÙ°Ù†Ù Ù±Ù„Ø±Ù‘ÙŽØ­ÙÙŠÙ…Ù\s*/, '').trim();
+                displayArabic = displayArabic.replace(/^[\u200B-\u200D\uFEFF\u200E\u200F]*Ø¨ÙØ³Ù’Ù…Ù[\s\S]+?Ù±Ù„Ø±Ù‘ÙŽØ­ÙÙŠÙ…Ù\s*/, '').trim();
             }
             
             if(document.getElementById('quran-arabic')) document.getElementById('quran-arabic').innerText = displayArabic; 
@@ -2527,7 +2470,7 @@
                     </div>
                     
                     <div style="position: relative; z-index: 10; width: 100%; text-align: center; flex-grow: 1;">
-                        <div style="font-family: 'Katibeh', serif; font-size: 42px; color: #059669; margin-bottom: 8px; white-space: nowrap; line-height: 1;">بَارَكَ اللَّهُ فِيكَ</div>
+                        <div style="font-family: 'Katibeh', serif; font-size: 42px; color: #059669; margin-bottom: 8px; white-space: nowrap; line-height: 1;">Ø¨ÙŽØ§Ø±ÙŽÙƒÙŽ Ø§Ù„Ù„ÙŽÙ‘Ù‡Ù ÙÙÙŠÙƒÙŽ</div>
                         
                         <p style="font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 600; color: #64748b; margin: 0 0 6px 0; white-space: nowrap;">Kepada:</p>
                         <h1 style="font-family: 'Merriweather', serif; font-size: ${nameFontSize}; font-weight: 900; color: #0f172a; margin: 0 0 8px 0; line-height: 1.2; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${stuName}</h1>
@@ -2621,11 +2564,11 @@
             let arabText = window.App.currentSurahAyatData[0].ayahs[id].text;
             
             if (i === 1 && !isFatihah) {
-                arabText = arabText.replace(/^[\u200B-\u200D\uFEFF\u200E\u200F]*بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\s*/, '').trim();
-                arabText = arabText.replace(/^[\u200B-\u200D\uFEFF\u200E\u200F]*بِسْمِ[\s\S]+?ٱلرَّحِيمِ\s*/, '').trim();
+                arabText = arabText.replace(/^[\u200B-\u200D\uFEFF\u200E\u200F]*Ø¨ÙØ³Ù’Ù…Ù Ù±Ù„Ù„Ù‘ÙŽÙ‡Ù Ù±Ù„Ø±Ù‘ÙŽØ­Ù’Ù…ÙŽÙ°Ù†Ù Ù±Ù„Ø±Ù‘ÙŽØ­ÙÙŠÙ…Ù\s*/, '').trim();
+                arabText = arabText.replace(/^[\u200B-\u200D\uFEFF\u200E\u200F]*Ø¨ÙØ³Ù’Ù…Ù[\s\S]+?Ù±Ù„Ø±Ù‘ÙŽØ­ÙÙŠÙ…Ù\s*/, '').trim();
             }
 
-            aT.push(arabText+' ۝'+window.toArabicNumeral(i));
+            aT.push(arabText+' Û'+window.toArabicNumeral(i));
             iT.push('(' + i + ') '+window.App.currentSurahAyatData[1].ayahs[id].text);
         }
         var gt=s===e?'Ayat ' + s:'Ayat ' + s + '-' + e; 
@@ -2639,213 +2582,3 @@
         window.App.isPlay = false;
         window.render(true);
     });
-
-  </script>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getDatabase, ref, onValue, set, remove, get, onChildAdded, onChildChanged, onChildRemoved } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
-    import { getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
-
-    let fbConf = {
-        apiKey: "AIzaSyCdfYQeAiBMfAPsBGuzS7qWIoi_u3CaSvE", authDomain: "tahfidzqu-7c937.firebaseapp.com",
-        projectId: "tahfidzqu-7c937", storageBucket: "tahfidzqu-7c937.firebasestorage.app",
-        messagingSenderId: "596320735782", appId: "1:596320735782:web:340387094ff61f31fecce7",
-        databaseURL: "https://tahfidzqu-7c937-default-rtdb.asia-southeast1.firebasedatabase.app/" 
-    };
-
-    try { if (typeof __firebase_config !== 'undefined' && __firebase_config) fbConf = typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config; } catch(e) {}
-
-    const safeId = (typeof __app_id !== 'undefined' && __app_id ? __app_id : 'tahfidzqu-v2').replace(/[.#$\[\]]/g, '_');
-    const fApp = initializeApp(fbConf);
-    const auth = getAuth(fApp);
-    const db = getDatabase(fApp);
-    const storage = getStorage(fApp);
-    let fbUser = null;
-
-    window.uploadAudioToFirebase = async (base64Data, prefix) => {
-        if (!base64Data || !base64Data.startsWith('data:')) return base64Data;
-        try {
-            const fileName = prefix + '_' + Date.now() + '.webm';
-            const fileRef = storageRef(storage, 'audio/' + fileName);
-            await uploadString(fileRef, base64Data, 'data_url');
-            return await getDownloadURL(fileRef);
-        } catch (e) {
-            console.error("Storage Error", e);
-            return base64Data; // fallback ke base64 jika storage gagal
-        }
-    };
-
-    window.cleanupOldAudio = async (defaultDays = 30) => {
-        let inputDays = prompt("Masukkan batas usia rekaman (dalam hari) yang ingin dihapus:\nContoh: 7 untuk 1 minggu, 30 untuk 1 bulan.", defaultDays);
-        if (inputDays === null) return;
-        let days = parseInt(inputDays);
-        if (isNaN(days) || days < 0) { window.showAlert("Masukkan jumlah hari yang valid!"); return; }
-        
-        window.showConfirm(`Yakin ingin menghapus permanen semua file audio rekaman yang usianya lebih dari ${days} hari? Data teks dan nilai akan tetap aman.`, async function() {
-            window.App.isLoading = true; window.App.loadingProgress = 0; window.App.loadingMessage = 'Mencari rekaman lama...'; window.render(true);
-            
-            let threshold = Date.now() - (days * 24 * 60 * 60 * 1000);
-            let oldSubs = window.App.subs.filter(s => s.id < threshold && (s.audioUrl || s.voiceNote));
-            
-            if (oldSubs.length === 0) {
-                window.App.isLoading = false; window.showAlert(`Tidak ada rekaman audio yang usianya lebih dari ${days} hari.`); window.render(true); return;
-            }
-
-            let total = oldSubs.length; let processed = 0;
-            for (let sub of oldSubs) {
-                let updated = false;
-                if (sub.audioUrl) {
-                    if (sub.audioUrl.startsWith('http')) { try { await deleteObject(storageRef(storage, sub.audioUrl)); } catch(e) {} }
-                    sub.audioUrl = null; updated = true;
-                }
-                if (sub.voiceNote) {
-                    if (sub.voiceNote.startsWith('http')) { try { await deleteObject(storageRef(storage, sub.voiceNote)); } catch(e) {} }
-                    sub.voiceNote = null; updated = true;
-                }
-                if (updated && window.dbSave) await window.dbSave('subs', sub.id, sub);
-                processed++; window.App.loadingProgress = Math.round((processed / total) * 100); window.App.loadingMessage = `Menghapus rekaman (${processed}/${total})...`; window.render(true);
-            }
-            window.App.isLoading = false; window.showAlert(`Berhasil membersihkan ${processed} data rekaman lama.`); window.render(true);
-        });
-    };
-
-    window.dbSave = async (col, id, data) => { 
-        if(fbUser) {
-            try { await set(ref(db, `artifacts/${safeId}/public/data/${col}/${id}`), data); } 
-            catch(e) { window.App.firebaseError = "Gagal menyimpan: Akses Firebase ditolak."; window.render(); }
-        } else { window.App.firebaseError = "Autentikasi Firebase belum aktif."; window.render(); }
-    };
-    
-    window.dbSaveCollection = async (col, dataArray) => {
-        if(fbUser) {
-            try {
-                let dataMap = {};
-                if (Array.isArray(dataArray)) { dataArray.forEach(item => { dataMap[item.id] = item; }); } else { dataMap = dataArray; }
-                await set(ref(db, `artifacts/${safeId}/public/data/${col}`), dataMap);
-            } catch(e) { window.App.firebaseError = "Gagal menyimpan koleksi: Akses Firebase ditolak."; window.render(); }
-        }
-    };
-
-    window.dbDelete = async (col, id) => { 
-        if(fbUser) {
-            try { await remove(ref(db, `artifacts/${safeId}/public/data/${col}/${id}`)); } 
-            catch(e) { window.App.firebaseError = "Gagal menghapus: Akses Firebase ditolak."; window.render(); }
-        }
-    };
-
-    const initAuth = async () => {
-        try {
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
-            else await signInAnonymously(auth);
-        } catch (e) { window.App.firebaseError = "Gagal login Anonymous Firebase."; window.App.isFetchingSubs = false; window.render(); }
-    };
-
-    onAuthStateChanged(auth, u => {
-       fbUser = u; if(!u) return;
-
-       window.syncFirebaseData = async () => {
-          if (!fbUser) return;
-          const collections = ['juzs','surahs','levels','segs','ustadz','halaqohs','siswas','subs'];
-          const promises = collections.map(c => get(ref(db, `artifacts/${safeId}/public/data/${c}`)));
-          promises.push(get(ref(db, `artifacts/${safeId}/public/data/settings/app`)));
-          
-          const snapshots = await Promise.all(promises);
-          snapshots.forEach((snap, i) => {
-             const obj = snap.val();
-             if (i < collections.length) {
-                const c = collections[i];
-                window.App[c] = obj ? Object.keys(obj).map(k => ({id: isNaN(k) ? k : Number(k), ...obj[k]})) : [];
-                if (c === 'subs') window.App.isFetchingSubs = false;
-                if (c === 'juzs' && window.App.juzs.length > 0) {
-                    if (!window.App.juzs.some(j => j.id == window.App.actJuzId)) {
-                        let defaultJuz = window.App.juzs.find(j => j.id == 30 || String(j.name).includes("30"));
-                        window.App.actJuzId = defaultJuz ? defaultJuz.id : window.App.juzs[0].id;
-                    }
-                }
-             } else if (obj) {
-                window.App.schLogo = obj.logo || '';
-                window.App.schSub = obj.subtitle || '';
-             }
-          });
-          window.render();
-        };
-
-       onValue(ref(db, `artifacts/${safeId}/public/data/settings/app`), snap => {
-           const obj = snap.val();
-           if(obj) { window.App.schLogo = obj.logo || ''; window.App.schSub = obj.subtitle || ''; window.render(); }
-       });
-
-       ['juzs','surahs','levels','segs','ustadz','halaqohs','siswas','subs'].forEach(c => {
-          const colRef = ref(db, `artifacts/${safeId}/public/data/${c}`);
-          window.App[c] = [];
-          let initialSyncDone = false;
-
-          onChildAdded(colRef, snap => {
-              if (!initialSyncDone) return;
-              const val = snap.val(); const id = isNaN(snap.key) ? snap.key : Number(snap.key);
-              if (!window.App[c].some(x => x.id === id)) { window.App[c].push({id, ...val}); window.render(); }
-          });
-          onChildChanged(colRef, snap => {
-              if (!initialSyncDone) return;
-              const val = snap.val(); const id = isNaN(snap.key) ? snap.key : Number(snap.key);
-              const idx = window.App[c].findIndex(x => x.id === id);
-              if (idx !== -1) { window.App[c][idx] = {id, ...val}; window.render(); }
-          });
-          onChildRemoved(colRef, snap => {
-              if (!initialSyncDone) return;
-              const id = isNaN(snap.key) ? snap.key : Number(snap.key);
-              window.App[c] = window.App[c].filter(x => x.id !== id); window.render();
-          });
-
-          onValue(colRef, snap => {
-             const obj = snap.val();
-             window.App[c] = obj ? Object.keys(obj).map(k => ({id: isNaN(k) ? k : Number(k), ...obj[k]})) : [];
-             initialSyncDone = true;
-             if (c === 'subs') window.App.isFetchingSubs = false;
-             if (c === 'juzs' && window.App.juzs.length > 0) {
-                 if (!window.App.juzs.some(j => j.id == window.App.actJuzId)) {
-                     let defaultJuz = window.App.juzs.find(j => j.id == 30 || String(j.name).includes("30"));
-                     window.App.actJuzId = defaultJuz ? defaultJuz.id : window.App.juzs[0].id;
-                 }
-             }
-             window.render();
-          }, error => {
-             if (error.message && (error.message.includes('permission_denied') || error.code === 'PERMISSION_DENIED')) {
-                 window.App.firebaseError = "Akses Cloud Ditolak! Cek Aturan Realtime Database."; window.App.isFetchingSubs = false; window.render();
-             }
-          }, { onlyOnce: true });
-       });
-       
-       setInterval(() => {
-          if (window.App.view === 'player' && window.App.isPlay && window.App.yt && typeof window.App.yt.getCurrentTime === 'function' && window.App.actSurahId) {
-             var t = window.App.yt.getCurrentTime(); var sg = window.getActSeg(); if(!sg) return;
-             if(window.getEl('time-display')) window.getEl('time-display').innerText = `${window.fmtT(t)} / ${window.fmtT(sg.end)}`;
-             var td = window.getSgs().slice(-1)[0]?.end || 200;
-             if(window.getEl('current-time-indicator')) window.getEl('current-time-indicator').style.left = `${Math.min(100, (t/td)*100)}%`;
-             if (t >= sg.end) {
-                if (window.App.curRep + 1 < window.App.repTarget) { window.App.yt.seekTo(sg.start); window.App.curRep++; if(window.getEl('rep-text')) window.getEl('rep-text').innerText = `(Ke-${window.App.curRep+1})`; }
-                else { window.App.yt.pauseVideo(); window.App.isPlay = false; window.App.curRep = 0; if(window.getEl('rep-text')) window.getEl('rep-text').innerText = ''; }
-             }
-          }
-       }, 200);
-    });
-
-    window.render(true);
-    initAuth();
-  </script>
-
-  <!-- Registrasi Service Worker untuk Mode Offline -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('Mode Offline (Service Worker) Aktif:', reg.scope))
-          .catch(err => console.error('Gagal memuat Service Worker:', err));
-      });
-    }
-  </script>
-</body>
-</html>
-</html>
