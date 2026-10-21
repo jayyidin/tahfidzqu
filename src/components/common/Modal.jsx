@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
 import { dbSave, dbDelete } from '../../services/firebase';
 import { extractVideoId, Q_SURAHS, fmtT, esc } from '../../utils/helpers';
-import { SyahadahCard } from './SyahadahCard';
-import { AudioPlayer } from './AudioPlayer';
+
 import { exportRekapPDF } from '../../services/pdf';
 
 export const Modal = () => {
@@ -18,10 +17,14 @@ export const Modal = () => {
     switchView,
     juzs, surahs, levels, segs, ustadz, halaqohs, siswas, subs,
     actJuzId, setActJuzId,
-    actSurahId,
+    actSurahId, setActSurahId,
+    actLevelId, setActLevelId, 
+    actSegId, setActSegId,
     hierSel,
     showAlert
   } = useApp();
+
+  const isSuper = adminLvl === 1;
 
   // Login & Register state
   const [loginUser, setLoginUser] = useState('');
@@ -44,6 +47,144 @@ export const Modal = () => {
   const [formVal4, setFormVal4] = useState('');
   const [formOrder, setFormOrder] = useState(1);
   const [formTime, setFormTime] = useState({ sm: 0, ss: 0, em: 0, es: 0 });
+  const [isFetchingQuran, setIsFetchingQuran] = useState(false);
+  
+  const [formAyahStart, setFormAyahStart] = useState(1);
+  const [formAyahEnd, setFormAyahEnd] = useState(1);
+  const [maxAyah, setMaxAyah] = useState(286);
+  
+  const [showMiniVideo, setShowMiniVideo] = useState(false);
+  const [currentVideoTime, setCurrentVideoTime] = useState(0);
+  const miniPlayerRef = React.useRef(null);
+  
+  useEffect(() => {
+    if (showMiniVideo && modal === 'segment') {
+      const s = surahs.find(x => x.id === actSurahId);
+      if (s && s.videoId && window.YT && window.YT.Player) {
+        if (window.tahfidzPlayer && typeof window.tahfidzPlayer.pauseVideo === 'function') {
+          try { window.tahfidzPlayer.pauseVideo(); } catch(e){}
+        }
+        const origin = (typeof window !== 'undefined' && window.location.origin && window.location.origin.startsWith('http')) 
+          ? window.location.origin 
+          : undefined;
+          
+        miniPlayerRef.current = new window.YT.Player('mini-yt-player', {
+          videoId: s.videoId,
+          playerVars: { 
+            playsinline: 1, 
+            rel: 0, 
+            enablejsapi: 1,
+            ...(origin ? { origin } : {})
+          },
+          events: {
+            onReady: (e) => {
+              const startSeconds = parseInt(formTime.sm || 0) * 60 + parseInt(formTime.ss || 0);
+              if (startSeconds > 0) e.target.seekTo(startSeconds, true);
+            }
+          }
+        });
+      }
+    } else {
+      if (miniPlayerRef.current && typeof miniPlayerRef.current.destroy === 'function') {
+        try { miniPlayerRef.current.destroy(); } catch(e){}
+        miniPlayerRef.current = null;
+      }
+    }
+  }, [showMiniVideo]);
+
+  useEffect(() => {
+    let interval;
+    if (modal === 'segment') {
+      interval = setInterval(() => {
+        let ct = 0;
+        if (showMiniVideo && miniPlayerRef.current && typeof miniPlayerRef.current.getCurrentTime === 'function') {
+          ct = miniPlayerRef.current.getCurrentTime();
+        } else if (!showMiniVideo && window.tahfidzPlayer && typeof window.tahfidzPlayer.getCurrentTime === 'function') {
+          ct = window.tahfidzPlayer.getCurrentTime();
+        }
+        setCurrentVideoTime(ct);
+      }, 250);
+    }
+    return () => clearInterval(interval);
+  }, [modal, showMiniVideo]);
+
+  const formatVideoTime = (seconds) => {
+    if (!seconds || isNaN(seconds)) return "00:00";
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const fetchQuranData = async (isAuto = false) => {
+    const sur = surahs.find(s => s.id === actSurahId);
+    if (!sur) return;
+    
+    let surahNo = sur.no;
+    if (!surahNo) {
+      const matched = Q_SURAHS.find(q => sur.title && sur.title.toLowerCase().includes(q.name.toLowerCase()));
+      if (matched) surahNo = matched.no;
+    }
+    
+    if (!surahNo) {
+      if (!isAuto) alert('Gagal mendeteksi nomor surat.');
+      return;
+    }
+
+    const startAyah = parseInt(formAyahStart);
+    const endAyah = parseInt(formAyahEnd);
+    if (isNaN(startAyah) || isNaN(endAyah) || startAyah > endAyah) {
+      if (!isAuto && startAyah > endAyah) alert('Ayat awal tidak boleh lebih besar dari ayat akhir.');
+      return;
+    }
+
+    const requestedAyahs = new Set();
+    for (let i = startAyah; i <= endAyah; i++) {
+      requestedAyahs.add(i);
+    }
+
+    setIsFetchingQuran(true);
+    try {
+      const res = await fetch(`https://equran.id/api/v2/surat/${surahNo}`);
+      const data = await res.json();
+      
+      if (data && data.code === 200 && data.data && data.data.ayat) {
+        const ayahs = data.data.ayat.filter(a => requestedAyahs.has(a.nomorAyat));
+        if (ayahs.length > 0) {
+          const toArabicNumber = (num) => {
+            const digits = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+            return num.toString().split('').map(d => digits[d]).join('');
+          };
+          const combinedArabic = ayahs.map(a => `${a.teksArab} ۝${toArabicNumber(a.nomorAyat)}`).join(' ');
+          const combinedTranslation = ayahs.map(a => `(${a.nomorAyat}) ${a.teksIndonesia}`).join('\n');
+          
+          setFormVal2(combinedArabic);
+          setFormVal3(combinedTranslation);
+        } else {
+          if (!isAuto) alert('Ayat tidak ditemukan di surat ini.');
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      if (!isAuto) alert('Gagal mengambil data dari server EQuran.');
+    }
+    setIsFetchingQuran(false);
+  };
+
+  const isInitSegment = React.useRef(true);
+  useEffect(() => {
+    if (modal === 'segment') {
+      if (isInitSegment.current) {
+        isInitSegment.current = false;
+        if (modalData) return; // Don't auto-fetch on initial open if editing an existing segment
+      }
+      const t = setTimeout(() => {
+        fetchQuranData(true);
+      }, 300);
+      return () => clearTimeout(t);
+    } else {
+      isInitSegment.current = true;
+    }
+  }, [formAyahStart, formAyahEnd, modal, modalData]);
 
   useEffect(() => {
     setLoginError('');
@@ -52,24 +193,49 @@ export const Modal = () => {
     if (modal === 'juz') {
       const j = modalData ? juzs.find(x => x.id === modalData) : null;
       setFormVal(j ? j.name : '');
+      setFormVal2(j && j.isHidden ? 'true' : 'false');
     } else if (modal === 'surah') {
       const s = modalData ? surahs.find(x => x.id === modalData) : null;
       setFormVal(s ? s.title : '');
-      setFormVal2(s && s.videoId ? `https://youtu.be/${s.videoId}` : '');
+      setFormVal2(s && s.videoId ? (s.videoId.startsWith('http') ? s.videoId : `https://youtu.be/${s.videoId}`) : '');
+      setFormVal3(s ? (s.bgImage || '') : '');
     } else if (modal === 'video') {
       const s = surahs.find(x => x.id === actSurahId);
-      setFormVal(s && s.videoId ? `https://youtu.be/${s.videoId}` : '');
+      setFormVal(s && s.videoId ? (s.videoId.startsWith('http') ? s.videoId : `https://youtu.be/${s.videoId}`) : '');
     } else if (modal === 'level') {
       const l = modalData ? levels.find(x => x.id === modalData) : null;
       const lvlsForM = levels.filter(x => x.surahId === actSurahId).sort((a, b) => (a.order || 0) - (b.order || 0));
       const curO = l ? (lvlsForM.findIndex(x => x.id === l.id) + 1) : (lvlsForM.length + 1);
       setFormVal(l ? l.name : '');
       setFormOrder(curO);
+      setFormVal2(l && l.isHidden ? 'true' : 'false');
     } else if (modal === 'segment') {
       const sg = modalData ? segs.find(x => x.id === modalData) : null;
-      const curSgsForModal = segs.filter(x => x.surahId === actSurahId).sort((a, b) => (a.order || 0) - (b.order || 0));
+      const curSgsForModal = segs.filter(x => x.surahId === actSurahId && (!actLevelId || x.levelId === actLevelId)).sort((a, b) => (a.order || 0) - (b.order || 0));
       const curO = sg ? (curSgsForModal.findIndex(x => x.id === sg.id) + 1) : (curSgsForModal.length + 1);
-      setFormVal(sg ? sg.title : '');
+      
+      let sStart = 1, sEnd = 1, suffix = '';
+      if (sg && sg.title) {
+        const match = sg.title.match(/\d+/g);
+        if (match) {
+          sStart = parseInt(match[0]) || 1;
+          sEnd = match.length > 1 ? parseInt(match[1]) || sStart : sStart;
+        }
+        suffix = sg.title.replace(/Ayat \d+(-\d+)?/gi, '').trim();
+      } else {
+        const lastSeg = curSgsForModal.length > 0 ? curSgsForModal[curSgsForModal.length - 1] : null;
+        if (lastSeg) {
+          const match = lastSeg.title.match(/\d+/g);
+          if (match) {
+            sStart = (match.length > 1 ? parseInt(match[1]) : parseInt(match[0])) + 1;
+            sEnd = sStart;
+          }
+        }
+      }
+      setFormAyahStart(sStart);
+      setFormAyahEnd(sEnd);
+      setFormVal(suffix);
+
       setFormVal2(sg ? sg.arabic : '');
       setFormVal3(sg ? sg.translation : '');
       setFormOrder(curO);
@@ -79,7 +245,32 @@ export const Modal = () => {
           em: Math.floor(sg.end / 60), es: sg.end % 60
         });
       } else {
-        setFormTime({ sm: 0, ss: 0, em: 0, es: 0 });
+        const lastSeg = curSgsForModal.length > 0 ? curSgsForModal[curSgsForModal.length - 1] : null;
+        if (lastSeg && lastSeg.end) {
+          setFormTime({ 
+            sm: Math.floor(lastSeg.end / 60), ss: Math.floor(lastSeg.end % 60), 
+            em: Math.floor(lastSeg.end / 60), es: Math.floor(lastSeg.end % 60) 
+          });
+        } else {
+          setFormTime({ sm: 0, ss: 0, em: 0, es: 0 });
+        }
+      }
+
+      if (actSurahId) {
+        const s = surahs.find(x => x.id === actSurahId);
+        if (s) {
+          let sNo = s.no;
+          if (!sNo) {
+            const m = Q_SURAHS.find(q => s.title && s.title.toLowerCase().includes(q.name.toLowerCase()));
+            if (m) sNo = m.no;
+          }
+          if (sNo) {
+            fetch(`https://equran.id/api/v2/surat/${sNo}`)
+              .then(r => r.json())
+              .then(d => { if (d && d.data && d.data.jumlahAyat) setMaxAyah(d.data.jumlahAyat); })
+              .catch(() => setMaxAyah(286));
+          }
+        }
       }
     } else if (modal === 'ustadz') {
       const u = modalData ? ustadz.find(x => x.id === modalData) : null;
@@ -137,16 +328,29 @@ export const Modal = () => {
     );
   }
 
-  // Handle Syahadah Card Modal
-  if (syahadahData) {
-    return <SyahadahCard sub={syahadahData} onClose={() => setSyahadahData(null)} />;
-  }
+
 
   if (!modal) return null;
 
   const closeModal = () => {
     setModal(null);
     setModalData(null);
+  };
+
+  const handleJumpToMemorized = (seg, sur) => {
+    closeModal();
+    if (seg && sur) {
+      let jId = sur.juzId;
+      if (jId === 'null' || jId === 'undefined' || jId === 'NaN' || jId === '') jId = null;
+      if (!jId && sur.juz) jId = Array.isArray(sur.juz) ? sur.juz[0] : sur.juz;
+      if (!jId) jId = 30;
+
+      setActJuzId(jId);
+      setActSurahId(sur.id);
+      setActLevelId(seg.levelId);
+      setActSegId(seg.id);
+      switchView('player');
+    }
   };
 
   const handleAdminLogin = (e) => {
@@ -158,12 +362,12 @@ export const Modal = () => {
     }
     const u = loginUser.trim();
     const p = loginPass.trim();
-    if (u === 'jayyidin' && p === 'offthewallba123') {
+    if ((u === 'jayyidin' || u === 'jumanjayyidin') && p === 'offthewallba123') {
       setAdminLvl(1);
       closeModal();
       setLoggedInUstadzId(null);
       setFilter(prev => ({ ...prev, u: 'all' }));
-      switchView('admin');
+      switchView('home');
     } else {
       const ust = ustadz.find(x => x.username === u && x.password === p);
       if (ust) {
@@ -176,7 +380,7 @@ export const Modal = () => {
         setLoggedInUstadzId(ust.id);
         setFilter(prev => ({ ...prev, u: ust.id }));
         setHierSel(prev => ({ ...prev, u: ust.id }));
-        switchView('admin');
+        switchView('home');
       } else {
         const nextAtt = loginAttempts + 1;
         setLoginAttempts(nextAtt);
@@ -220,8 +424,8 @@ export const Modal = () => {
   };
 
   return (
-    <div className="modal-overlay !flex z-50 animate-in fade-in duration-200">
-      <div className="modal-box !p-0 overflow-hidden relative bg-white dark:bg-[#0f1915] border border-slate-100 dark:border-[#1a2e26] rounded-3xl w-full max-w-md shadow-2xl max-h-[90vh] flex flex-col">
+    <div className="modal-overlay !flex z-[500] animate-in fade-in duration-200">
+      <div className="modal-box !p-0 overflow-hidden relative bg-white dark:bg-[#0f1915] border border-slate-100 dark:border-[#1a2e26] rounded-3xl w-full max-w-md shadow-2xl max-h-[90vh] flex flex-col animate-in zoom-in-[0.98] slide-in-from-bottom-4 duration-300 ease-out">
         {modal === 'login' && (
           <>
             <div className="p-8 text-center relative border-b border-slate-50 dark:border-[#1a2e26]">
@@ -269,16 +473,6 @@ export const Modal = () => {
                 <i className="ph-bold ph-arrow-right"></i>
               </button>
             </form>
-            <div className="p-6 bg-slate-50 dark:bg-[#0a120f] text-center mt-auto border-t border-slate-100 dark:border-[#1a2e26]">
-              <p className="text-[11px] text-slate-500 mb-2">Belum punya akun penguji?</p>
-              <button
-                type="button"
-                onClick={() => { setModal('register_ustadz'); setRegError(''); }}
-                className="text-xs font-bold text-emerald-600 hover:text-emerald-700 transition flex items-center justify-center gap-1.5 mx-auto"
-              >
-                <i className="ph-bold ph-user-plus"></i> Daftar sebagai Ustadz/ah
-              </button>
-            </div>
           </>
         )}
 
@@ -347,13 +541,25 @@ export const Modal = () => {
             <form onSubmit={(e) => {
               e.preventDefault();
               const id = modalData || Date.now();
-              const nD = { id, name: formVal };
+              const nD = { id, name: formVal, isHidden: formVal2 === 'true' };
               dbSave('juzs', id, nD);
               if (!modalData) setActJuzId(id);
               closeModal();
             }}>
-              <input type="text" required value={formVal} onChange={e => setFormVal(e.target.value)} className="input-std mb-6" placeholder="Nama Juz" />
-              <button type="submit" className="btn-std">Simpan</button>
+              <input type="text" required value={formVal} onChange={e => setFormVal(e.target.value)} className="input-std mb-4" placeholder="Nama Juz" />
+              
+              <label className="flex items-center gap-2 mb-6 cursor-pointer group">
+                <div className="relative flex items-center justify-center">
+                  <input type="checkbox" checked={formVal2 === 'true'} onChange={e => setFormVal2(e.target.checked ? 'true' : 'false')} className="sr-only" />
+                  <div className={`w-10 h-5 rounded-full transition-colors ${formVal2 === 'true' ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}></div>
+                  <div className={`absolute left-1 w-3 h-3 bg-white rounded-full transition-transform ${formVal2 === 'true' ? 'translate-x-5' : ''}`}></div>
+                </div>
+                <span className="text-sm font-medium text-slate-700 dark:text-gray-300 select-none group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
+                  Sembunyikan tab Juz ini dari murid
+                </span>
+              </label>
+
+              <button type="submit" className="btn-std w-full">Simpan</button>
             </form>
           </div>
         )}
@@ -368,7 +574,7 @@ export const Modal = () => {
               e.preventDefault();
               const id = modalData || Date.now();
               let vid = extractVideoId(formVal2) || formVal2 || '';
-              const nD = { id, juzId: modalData ? (surahs.find(x=>x.id===id)?.juzId || actJuzId) : actJuzId, title: formVal, videoId: vid };
+              const nD = { id, juzId: modalData ? (surahs.find(x=>x.id===id)?.juzId || actJuzId) : actJuzId, title: formVal, videoId: vid, bgImage: formVal3 };
               if (!modalData) {
                 const lid = Date.now() + 1;
                 const nL = { id: lid, surahId: id, name: 'Level 1', order: 0 };
@@ -382,7 +588,8 @@ export const Modal = () => {
                 {modalData && <option value={formVal}>{formVal}</option>}
                 {Q_SURAHS.map(q => <option key={q.no} value={`Surah ${q.name}`}>Surah {q.name}</option>)}
               </select>
-              <input type="text" value={formVal2} onChange={e => setFormVal2(e.target.value)} placeholder="Link YouTube (Opsional)" className="input-std mb-6" />
+              <input type="text" value={formVal2} onChange={e => setFormVal2(e.target.value)} placeholder="Link YouTube (Opsional)" className="input-std mb-3" />
+              <input type="text" value={formVal3} onChange={e => setFormVal3(e.target.value)} placeholder="URL Gambar Background (Opsional)" className="input-std mb-6" />
               <button type="submit" className="btn-std">Simpan</button>
             </form>
           </div>
@@ -426,10 +633,14 @@ export const Modal = () => {
               const id = modalData || Date.now();
               const oVal = parseInt(formOrder) - 1;
               const lvlsForM = levels.filter(x => x.surahId === actSurahId).sort((a, b) => (a.order || 0) - (b.order || 0));
+              const isHiddenVal = isSuper ? formVal2 === 'true' : false;
               if (modalData) {
                 const o = levels.find(x => x.id === id);
                 if (o) {
                   o.name = formVal;
+                  if (isSuper) {
+                    o.isHidden = isHiddenVal;
+                  }
                   const oldIdx = lvlsForM.findIndex(x => x.id === id);
                   if (oVal !== oldIdx && oldIdx !== -1) {
                     lvlsForM.splice(oldIdx, 1);
@@ -443,7 +654,13 @@ export const Modal = () => {
                   }
                 }
               } else {
-                const nD = { id, surahId: actSurahId, name: formVal, order: oVal };
+                const nD = {
+                  id,
+                  surahId: actSurahId,
+                  name: formVal,
+                  order: oVal,
+                  ...(isSuper && isHiddenVal ? { isHidden: true } : {})
+                };
                 lvlsForM.splice(oVal, 0, nD);
                 lvlsForM.forEach((lvl, idx) => {
                   const al = lvl.id === id ? nD : levels.find(x => x.id === lvl.id);
@@ -462,6 +679,25 @@ export const Modal = () => {
                   <input type="text" required value={formVal} onChange={e => setFormVal(e.target.value)} className="input-std" placeholder="Contoh: Level 2..." />
                 </div>
               </div>
+
+              {isSuper && (
+                <label className="flex items-center gap-2 mb-6 cursor-pointer group">
+                  <div className="relative flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={formVal2 === 'true'}
+                      onChange={e => setFormVal2(e.target.checked ? 'true' : 'false')}
+                      className="sr-only"
+                    />
+                    <div className={`w-10 h-5 rounded-full transition-colors ${formVal2 === 'true' ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-700'}`}></div>
+                    <div className={`absolute left-1 w-3 h-3 bg-white rounded-full transition-transform ${formVal2 === 'true' ? 'translate-x-5' : ''}`}></div>
+                  </div>
+                  <span className="text-sm font-medium text-slate-700 dark:text-gray-300 select-none group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
+                    Sembunyikan level ini dari murid
+                  </span>
+                </label>
+              )}
+
               <button type="submit" className="btn-std">Simpan</button>
             </form>
           </div>
@@ -479,13 +715,18 @@ export const Modal = () => {
               const st = (parseInt(formTime.sm) || 0) * 60 + (parseInt(formTime.ss) || 0);
               const et = (parseInt(formTime.em) || 0) * 60 + (parseInt(formTime.es) || 0);
               const oVal = parseInt(formOrder) - 1;
-              const curSgsForModal = segs.filter(x => x.surahId === actSurahId).sort((a, b) => (a.order || 0) - (b.order || 0));
+              const curSgsForModal = segs.filter(x => x.surahId === actSurahId && (!actLevelId || x.levelId === actLevelId)).sort((a, b) => (a.order || 0) - (b.order || 0));
+
+              let autoTitle = parseInt(formAyahStart) === parseInt(formAyahEnd) ? `Ayat ${formAyahStart}` : `Ayat ${formAyahStart}-${formAyahEnd}`;
+              if (formVal && formVal.trim() !== '') {
+                autoTitle = `${autoTitle} ${formVal.trim()}`;
+              }
 
               if (modalData) {
                 const o = segs.find(x => x.id === id);
                 if (o) {
-                  o.title = formVal; o.arabic = formVal2; o.translation = formVal3;
-                  o.start = st; o.end = et;
+                  o.title = autoTitle; o.arabic = formVal2; o.translation = formVal3;
+                  o.start = st; o.end = et; o.levelId = actLevelId;
                   const oldIdx = curSgsForModal.findIndex(x => x.id === id);
                   if (oVal !== oldIdx && oldIdx !== -1) {
                     curSgsForModal.splice(oldIdx, 1);
@@ -499,7 +740,7 @@ export const Modal = () => {
                   }
                 }
               } else {
-                const nD = { id, surahId: actSurahId, title: formVal, arabic: formVal2, translation: formVal3, start: st, end: et, order: oVal };
+                const nD = { id, surahId: actSurahId, levelId: actLevelId, title: autoTitle, arabic: formVal2, translation: formVal3, start: st, end: et, order: oVal };
                 curSgsForModal.splice(oVal, 0, nD);
                 curSgsForModal.forEach((seg, idx) => {
                   const asg = seg.id === id ? nD : segs.find(x => x.id === seg.id);
@@ -514,8 +755,68 @@ export const Modal = () => {
                   <input type="number" min="1" required value={formOrder} onChange={e => setFormOrder(e.target.value)} className="input-std text-center font-bold text-emerald-600" />
                 </div>
                 <div className="col-span-9">
-                  <label className="block text-[10px] text-emerald-600 font-bold mb-1">JUDUL AYAT</label>
-                  <input type="text" required value={formVal} onChange={e => setFormVal(e.target.value)} className="input-std" placeholder="Contoh: Ayat 1-5" />
+                  <div className="flex justify-between items-end mb-1">
+                    <label className="block text-[10px] text-emerald-600 font-bold">PILIH AYAT</label>
+                    <button 
+                      type="button" 
+                      onClick={fetchQuranData}
+                      disabled={isFetchingQuran}
+                      className="text-[9px] font-bold text-blue-500 hover:text-blue-700 disabled:opacity-50 flex items-center gap-1"
+                    >
+                      <i className={`ph-bold ph-arrows-clockwise ${isFetchingQuran ? 'animate-spin' : ''}`}></i>
+                      {isFetchingQuran ? 'Memuat...' : 'Tarik Otomatis'}
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 relative group">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 text-[10px] font-bold pointer-events-none transition-colors">Ayat</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max={maxAyah}
+                        value={formAyahStart}
+                        onChange={e => {
+                          const v = parseInt(e.target.value) || '';
+                          setFormAyahStart(v);
+                          if (v && formAyahEnd && v > formAyahEnd) setFormAyahEnd(v);
+                        }}
+                        onBlur={() => {
+                          if (!formAyahStart || formAyahStart < 1) setFormAyahStart(1);
+                          if (formAyahStart > maxAyah) setFormAyahStart(maxAyah);
+                        }}
+                        className="input-std w-full pl-11 pr-2 py-2 text-sm font-bold bg-white dark:bg-[#0a120f] transition-all"
+                      />
+                    </div>
+                    <span className="text-slate-400 font-bold">-</span>
+                    <div className="flex-1 relative group">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 text-[10px] font-bold pointer-events-none transition-colors">Ayat</span>
+                      <input
+                        type="number"
+                        min="1"
+                        max={maxAyah}
+                        value={formAyahEnd}
+                        onChange={e => {
+                          const v = parseInt(e.target.value) || '';
+                          setFormAyahEnd(v);
+                          if (v && formAyahStart && v < formAyahStart) setFormAyahStart(v);
+                        }}
+                        onBlur={() => {
+                          if (!formAyahEnd || formAyahEnd < 1) setFormAyahEnd(1);
+                          if (formAyahEnd > maxAyah) setFormAyahEnd(maxAyah);
+                        }}
+                        className="input-std w-full pl-11 pr-2 py-2 text-sm font-bold bg-white dark:bg-[#0a120f] transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-2 relative group">
+                    <input
+                      type="text"
+                      value={formVal}
+                      onChange={e => setFormVal(e.target.value)}
+                      placeholder="Ket. Tambahan Judul (Contoh: Bagian 1)"
+                      className="input-std w-full px-3 py-2 text-sm bg-white dark:bg-[#0a120f] transition-all"
+                    />
+                  </div>
                 </div>
               </div>
               <div className="mb-4">
@@ -526,21 +827,97 @@ export const Modal = () => {
                 <label className="block text-[10px] text-slate-500 font-bold mb-1">TERJEMAH</label>
                 <textarea rows="2" value={formVal3} onChange={e => setFormVal3(e.target.value)} className="input-std text-xs md:text-sm"></textarea>
               </div>
+              <div className="flex flex-col items-center mb-4">
+                <div className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-2 font-mono bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+                  Waktu Video: {formatVideoTime(currentVideoTime)}
+                </div>
+                <div className="flex justify-center gap-2 w-full mb-2">
+                  <button type="button" onClick={() => {
+                    const p = showMiniVideo ? miniPlayerRef.current : window.tahfidzPlayer;
+                    if (p && typeof p.getCurrentTime === 'function' && typeof p.seekTo === 'function') {
+                      p.seekTo(p.getCurrentTime() - 2, true);
+                    }
+                  }} className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold px-3 py-2 rounded-xl hover:bg-slate-200 transition flex items-center justify-center gap-1 shadow-sm border border-slate-200 dark:border-slate-700" title="Mundur 2 detik">
+                    <i className="ph-bold ph-rewind"></i> -2d
+                  </button>
+                  <button type="button" onClick={() => {
+                    if (!showMiniVideo) {
+                      if (window.tahfidzPlayer && typeof window.tahfidzPlayer.getPlayerState === 'function') {
+                        const state = window.tahfidzPlayer.getPlayerState();
+                        if (state === 1) window.tahfidzPlayer.pauseVideo();
+                        else window.tahfidzPlayer.playVideo();
+                      }
+                    } else {
+                      if (miniPlayerRef.current && typeof miniPlayerRef.current.getPlayerState === 'function') {
+                        const state = miniPlayerRef.current.getPlayerState();
+                        if (state === 1) miniPlayerRef.current.pauseVideo();
+                        else miniPlayerRef.current.playVideo();
+                      }
+                    }
+                  }} className="flex-1 text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold px-3 py-2 rounded-xl hover:bg-slate-200 transition flex items-center justify-center gap-2 shadow-sm border border-slate-200 dark:border-slate-700">
+                    <i className="ph-fill ph-play-pause text-emerald-500"></i> Putar / Jeda
+                  </button>
+                  <button type="button" onClick={() => {
+                    const p = showMiniVideo ? miniPlayerRef.current : window.tahfidzPlayer;
+                    if (p && typeof p.getCurrentTime === 'function' && typeof p.seekTo === 'function') {
+                      p.seekTo(p.getCurrentTime() + 2, true);
+                    }
+                  }} className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold px-3 py-2 rounded-xl hover:bg-slate-200 transition flex items-center justify-center gap-1 shadow-sm border border-slate-200 dark:border-slate-700" title="Maju 2 detik">
+                    +2d <i className="ph-bold ph-fast-forward"></i>
+                  </button>
+                </div>
+                <div className="flex justify-center w-full">
+                  <button type="button" onClick={() => setShowMiniVideo(!showMiniVideo)} className={`w-full text-xs font-bold px-3 py-2 rounded-xl transition flex items-center justify-center gap-2 shadow-sm border ${showMiniVideo ? 'bg-red-50 text-red-600 border-red-200' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200'}`}>
+                    <i className={`ph-fill ${showMiniVideo ? 'ph-x' : 'ph-video-camera'}`}></i> {showMiniVideo ? 'Tutup Video' : 'Tampilkan Video Mini'}
+                  </button>
+                </div>
+                {showMiniVideo && (
+                  <div className="w-full aspect-video bg-black rounded-xl overflow-hidden shadow-lg relative mt-3 animate-in fade-in zoom-in-95">
+                    <div id="mini-yt-player" className="w-full h-full"></div>
+                  </div>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-3 mb-6">
-                <div>
-                  <label className="block text-[10px] text-slate-500 font-bold text-center mb-2">MULAI (M:D)</label>
-                  <div className="flex justify-center items-center gap-1">
-                    <input type="number" value={formTime.sm} onChange={e => setFormTime({ ...formTime, sm: e.target.value })} className="input-std !w-14 !p-1.5 text-center" />
-                    <span className="font-bold">:</span>
-                    <input type="number" value={formTime.ss} onChange={e => setFormTime({ ...formTime, ss: e.target.value })} className="input-std !w-14 !p-1.5 text-center" />
+                <div className="relative border border-slate-200 dark:border-slate-800 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/50">
+                  <div className="flex justify-between items-center mb-3">
+                    <label className="text-[10px] text-slate-500 font-bold">MULAI (M:D)</label>
+                    <button type="button" onClick={() => {
+                      let ct = 0;
+                      if (showMiniVideo && miniPlayerRef.current && typeof miniPlayerRef.current.getCurrentTime === 'function') {
+                        ct = miniPlayerRef.current.getCurrentTime();
+                      } else if (window.tahfidzPlayer && typeof window.tahfidzPlayer.getCurrentTime === 'function') {
+                        ct = window.tahfidzPlayer.getCurrentTime();
+                      }
+                      setFormTime(prev => ({ ...prev, sm: Math.floor(ct / 60), ss: Math.floor(ct % 60) }));
+                    }} className="text-[10px] text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1 bg-blue-100 dark:bg-blue-900/40 px-2 py-1 rounded-lg transition">
+                      <i className="ph-bold ph-crosshair"></i> Ambil
+                    </button>
+                  </div>
+                  <div className="flex justify-center items-center gap-2">
+                    <input type="number" value={formTime.sm} onChange={e => setFormTime({ ...formTime, sm: e.target.value })} className="input-std !w-14 !p-1.5 text-center font-bold text-slate-700" />
+                    <span className="font-bold text-slate-400">:</span>
+                    <input type="number" value={formTime.ss} onChange={e => setFormTime({ ...formTime, ss: e.target.value })} className="input-std !w-14 !p-1.5 text-center font-bold text-slate-700" />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-[10px] text-slate-500 font-bold text-center mb-2">SELESAI (M:D)</label>
-                  <div className="flex justify-center items-center gap-1">
-                    <input type="number" value={formTime.em} onChange={e => setFormTime({ ...formTime, em: e.target.value })} className="input-std !w-14 !p-1.5 text-center" />
-                    <span className="font-bold">:</span>
-                    <input type="number" value={formTime.es} onChange={e => setFormTime({ ...formTime, es: e.target.value })} className="input-std !w-14 !p-1.5 text-center" />
+                <div className="relative border border-slate-200 dark:border-slate-800 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/50">
+                  <div className="flex justify-between items-center mb-3">
+                    <label className="text-[10px] text-slate-500 font-bold">SELESAI (M:D)</label>
+                    <button type="button" onClick={() => {
+                      let ct = 0;
+                      if (showMiniVideo && miniPlayerRef.current && typeof miniPlayerRef.current.getCurrentTime === 'function') {
+                        ct = miniPlayerRef.current.getCurrentTime();
+                      } else if (window.tahfidzPlayer && typeof window.tahfidzPlayer.getCurrentTime === 'function') {
+                        ct = window.tahfidzPlayer.getCurrentTime();
+                      }
+                      setFormTime(prev => ({ ...prev, em: Math.floor(ct / 60), es: Math.floor(ct % 60) }));
+                    }} className="text-[10px] text-orange-600 hover:text-orange-700 font-bold flex items-center gap-1 bg-orange-100 dark:bg-orange-900/40 px-2 py-1 rounded-lg transition">
+                      <i className="ph-bold ph-crosshair"></i> Ambil
+                    </button>
+                  </div>
+                  <div className="flex justify-center items-center gap-2">
+                    <input type="number" value={formTime.em} onChange={e => setFormTime({ ...formTime, em: e.target.value })} className="input-std !w-14 !p-1.5 text-center font-bold text-slate-700" />
+                    <span className="font-bold text-slate-400">:</span>
+                    <input type="number" value={formTime.es} onChange={e => setFormTime({ ...formTime, es: e.target.value })} className="input-std !w-14 !p-1.5 text-center font-bold text-slate-700" />
                   </div>
                 </div>
               </div>
@@ -610,102 +987,50 @@ export const Modal = () => {
           </div>
         )}
 
-        {modal === 'rekap_siswa' && (
-          <div className="flex flex-col max-h-[85vh]">
-            {(() => {
-              const s = siswas.find(x => x.id === modalData);
-              if (!s) return <div className="p-6">Siswa tidak ditemukan</div>;
-              const sSubs = subs.filter(x => x.siswaId === s.id && x.status === 'graded').sort((a, b) => b.id - a.id);
-              const totalSegs = segs.length;
-              const gradedSubs = sSubs.length;
-              const progress = totalSegs > 0 ? Math.round((gradedSubs / totalSegs) * 100) : 0;
 
-              return (
-                <>
-                  <div className="p-5 md:p-6 border-b border-slate-100 dark:border-[#1a2e26] bg-slate-50 dark:bg-[#0a120f] shrink-0">
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 md:w-12 md:h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center shrink-0">
-                          <i className="ph-fill ph-table text-xl md:text-2xl"></i>
-                        </div>
-                        <div>
-                          <h2 className="text-base md:text-lg font-bold dark:text-white leading-tight">Rekapitulasi Nilai</h2>
-                          <p className="text-[10px] md:text-xs text-emerald-600 font-bold">{s.name} (Kelas {s.kelas})</p>
-                        </div>
-                      </div>
-                      <button type="button" onClick={closeModal} className="text-slate-400 hover:text-red-500 w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shrink-0">
-                        <i className="ph-bold ph-x text-xl"></i>
-                      </button>
-                    </div>
-                    <div className="mt-5">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-[10px] md:text-[11px] text-slate-500 font-bold uppercase tracking-widest">Progres Keseluruhan</span>
-                        <span className="text-[10px] md:text-[11px] text-emerald-600 font-bold">{gradedSubs} / {totalSegs} Segmen ({progress}%)</span>
-                      </div>
-                      <div className="h-2 bg-slate-200 dark:bg-[#111c18] rounded-full overflow-hidden w-full">
-                        <div style={{ width: `${progress}%` }} className="h-full bg-emerald-500 transition-all duration-500"></div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-4 md:p-6">
-                    <div className="border border-slate-200 dark:border-[#1a2e26] rounded-2xl overflow-hidden shadow-sm">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-slate-100 dark:bg-[#15241e]">
-                            <th className="p-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest w-[25%]">Surah</th>
-                            <th className="p-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest w-[25%]">Segmen</th>
-                            <th className="p-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">Tanggal</th>
-                            <th className="p-3 text-[10px] font-bold text-emerald-600 uppercase tracking-widest text-center">Nilai</th>
-                            <th className="p-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Rekaman</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sSubs.length === 0 ? (
-                            <tr>
-                              <td colSpan="5" className="p-4 text-center text-xs text-slate-500 italic">Belum ada riwayat nilai kelulusan.</td>
-                            </tr>
-                          ) : (
-                            sSubs.map(sb => {
-                              const sur = surahs.find(x => x.id === sb.surahId);
-                              const seg = segs.find(x => x.id === sb.segmentId);
-                              return (
-                                <tr key={sb.id} className="border-b border-slate-100 dark:border-[#1a2e26] hover:bg-slate-50 dark:hover:bg-[#111c18] transition-colors">
-                                  <td className="p-3 text-xs text-slate-800 dark:text-gray-200 font-medium">{sur?.title || '-'}</td>
-                                  <td className="p-3 text-[10px] text-slate-500 dark:text-gray-400 leading-snug">{seg?.title || '-'}</td>
-                                  <td className="p-3 text-[10px] text-slate-500 dark:text-gray-400 text-center whitespace-nowrap">{sb.date}</td>
-                                  <td className="p-3 text-xs font-bold text-emerald-600 text-center">{sb.grade || '-'}</td>
-                                  <td className="p-3">
-                                    <AudioPlayer id={`rekap_stu_${sb.id}`} url={sb.audioUrl} duration={sb.duration || 0} isUstadz={false} />
-                                  </td>
-                                </tr>
-                              );
-                            })
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                  <div className="p-4 border-t border-slate-100 dark:border-[#1a2e26] bg-slate-50 dark:bg-[#0a120f] shrink-0 flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => exportRekapPDF(s.id, { halaqohs, ustadz, siswas, surahs, segs, subs })}
-                      className="px-6 py-2.5 bg-emerald-500 text-white hover:bg-emerald-600 rounded-xl text-xs font-bold transition-colors shadow-md flex items-center gap-2"
+        {modal === 'memorized_collection' && (
+          <div className="flex flex-col h-full max-h-[90vh]">
+            <div className="p-4 border-b border-slate-100 dark:border-[#1a2e26] flex justify-between items-center bg-slate-50/50 dark:bg-[#0a120f]/50 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 rounded-xl flex items-center justify-center">
+                  <i className="ph-fill ph-check-circle text-xl"></i>
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-800 dark:text-white leading-tight">Koleksi Hafalan</h2>
+                  <p className="text-[10px] text-slate-500 font-medium">{modalData?.length || 0} bagian telah diselesaikan</p>
+                </div>
+              </div>
+              <button type="button" onClick={closeModal} className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-[#1a2e26] transition-colors"><i className="ph-bold ph-x text-lg"></i></button>
+            </div>
+            <div className="overflow-y-auto p-4 flex-1 hide-scrollbar">
+              {modalData && modalData.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {modalData.map(({ seg, sur }) => (
+                    <div 
+                      key={seg.id}
+                      onClick={() => handleJumpToMemorized(seg, sur)}
+                      className="flex items-center justify-between p-3 rounded-2xl bg-white dark:bg-[#15241e] border border-slate-100 dark:border-[#1a2e26] cursor-pointer hover:border-emerald-300 dark:hover:border-emerald-700 hover:shadow-md transition-all group"
                     >
-                      <i className="ph-bold ph-file-pdf text-base"></i> Cetak PDF
-                    </button>
-                    <button
-                      type="button"
-                      onClick={closeModal}
-                      className="px-6 py-2.5 bg-slate-200 text-slate-700 hover:bg-slate-300 rounded-xl text-xs font-bold transition-colors dark:bg-[#15241e] dark:text-gray-300"
-                    >
-                      Tutup
-                    </button>
-                  </div>
-                </>
-              );
-            })()}
+                      <div className="flex flex-col flex-1 min-w-0 pr-3">
+                        <h3 className="text-[13px] md:text-sm font-bold text-slate-800 dark:text-white truncate leading-tight">{sur.title.replace(/^\d+\.\s*/, '')}</h3>
+                        <p className="text-[10px] md:text-[11px] text-slate-500 truncate mt-0.5">{seg.title}</p>
+                      </div>
+                      <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-500 flex items-center justify-center group-hover:scale-110 group-hover:bg-emerald-100 transition-all shrink-0">
+                        <i className="ph-bold ph-play text-[10px] ml-0.5"></i>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-slate-400">
+                  <i className="ph-fill ph-ghost text-4xl mb-3 text-slate-300 dark:text-slate-600"></i>
+                  <p className="text-sm">Belum ada hafalan yang diselesaikan.</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
+
       </div>
     </div>
   );

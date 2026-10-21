@@ -142,7 +142,7 @@ export const ImportExportModal = () => {
 
     return (
       <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[500] p-4 animate-in fade-in duration-300">
-        <div className="bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-3xl w-full max-w-xl p-6 shadow-2xl">
+        <div className="bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-3xl w-full max-w-xl p-6 shadow-2xl animate-in zoom-in-[0.95] duration-300 ease-out">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold dark:text-white">Import Data {title}</h2>
             <button
@@ -191,7 +191,7 @@ export const ImportExportModal = () => {
 
     return (
       <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[500] p-4 animate-in fade-in duration-300">
-        <div className="bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-3xl w-full max-w-md p-6 shadow-2xl">
+        <div className="bg-white dark:bg-[#15241e] border border-slate-200 dark:border-[#1a2e26] rounded-3xl w-full max-w-md p-6 shadow-2xl animate-in zoom-in-[0.95] duration-300 ease-out">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold dark:text-white">Export Data {title}</h2>
             <button

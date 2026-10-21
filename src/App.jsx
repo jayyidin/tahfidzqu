@@ -1,21 +1,19 @@
 import React, { useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { OfflineBanner } from './components/layout/OfflineBanner';
+import { InstallBanner } from './components/layout/InstallBanner';
 import { Header } from './components/layout/Header';
 import { Modal } from './components/common/Modal';
-import { GradeModal } from './components/common/GradeModal';
 import { ImportExportModal } from './components/common/ImportExportModal';
-import { SyahadahCard } from './components/common/SyahadahCard';
+import { PullToRefresh } from './components/common/PullToRefresh';
+import { SwipeToClose } from './components/common/SwipeToClose';
 import { HomeView } from './components/views/HomeView';
 import { PlayerView } from './components/views/PlayerView';
-import { SetoranView } from './components/views/SetoranView';
-import { HubView } from './components/views/HubView';
-import { AdminView } from './components/views/AdminView';
 import { MasterDataView } from './components/views/MasterDataView';
 
 const MainContent = () => {
   const {
-    isFetchingData,
+    isAppLoading,
     view,
     customDialog, setCustomDialog,
     schLogo, schSub
@@ -28,46 +26,59 @@ const MainContent = () => {
   const isConf = customDialog?.type === 'confirm';
 
   return (
-    <div className="flex flex-col w-full h-full relative z-10 bg-slate-50 dark:bg-[#0a120f] text-slate-800 dark:text-gray-200 transition-colors duration-300">
+    <div className="flex flex-col w-full h-[100dvh] relative z-10 bg-slate-50 dark:bg-[#0a120f] text-slate-800 dark:text-gray-200 transition-colors duration-300">
       <OfflineBanner />
-      <Header />
+      <InstallBanner />
+      
+      <div className="block">
+        <Header />
+      </div>
 
       <main className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-        {isFetchingData ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-50 dark:bg-[#0a120f]">
-            <div className="relative w-24 h-24 mb-6">
-              <div className="absolute inset-0 border-4 border-emerald-500/20 rounded-full"></div>
-              <div className="absolute inset-0 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-              {schLogo ? (
-                <img src={schLogo} alt="Logo" className="absolute inset-2 w-20 h-20 object-contain rounded-full p-1" />
-              ) : (
-                <i className="ph-fill ph-book-open absolute inset-0 flex items-center justify-center text-emerald-500 text-4xl"></i>
-              )}
+        {isAppLoading ? (
+          <div className="flex-1 flex flex-col p-4 md:p-8 bg-slate-50 dark:bg-[#0a120f] overflow-hidden">
+            <div className="max-w-6xl mx-auto w-full animate-pulse">
+              {/* Juz Tabs Skeleton */}
+              <div className="flex gap-2 mb-6 overflow-hidden">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <div key={i} className="h-10 w-24 bg-slate-200 dark:bg-[#1a2e26] rounded-2xl shrink-0"></div>
+                ))}
+              </div>
+              {/* Search Bar Skeleton */}
+              <div className="h-12 w-full bg-slate-200 dark:bg-[#1a2e26] rounded-xl mb-6 max-w-sm"></div>
+              {/* Grid Skeleton */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+                  <div key={i} className="h-28 w-full bg-slate-200 dark:bg-[#15241e] rounded-3xl border border-slate-100 dark:border-transparent"></div>
+                ))}
+              </div>
             </div>
-            <h2 className="text-xl font-bold font-serif text-slate-800 dark:text-white mb-1">
-              {schSub || 'TahfidzQu'}
-            </h2>
-            <p className="text-xs text-emerald-600 font-bold uppercase tracking-widest animate-pulse">
-              Memuat Data Aplikasi...
-            </p>
           </div>
         ) : (
-          <>
-            {view === 'home' && <HomeView />}
-            {view === 'player' && <PlayerView />}
-            {view === 'setoran' && <SetoranView />}
-            {view === 'hub' && <HubView />}
-            {view === 'admin' && <AdminView />}
-            {view === 'master' && <MasterDataView />}
-          </>
+          <PullToRefresh onRefresh={() => { window.location.reload(); return new Promise(res => setTimeout(res, 500)); }}>
+            <>
+              <div className={`w-full h-full flex flex-col ${view === 'home' || view === 'player' ? 'animate-in fade-in zoom-in-[0.98] duration-500 ease-out' : 'hidden'}`}>
+                {(view === 'home' || view === 'player') && <HomeView />}
+              </div>
+              <div className={`w-full h-full flex flex-col ${view === 'master' && view !== 'player' ? 'animate-in fade-in zoom-in-[0.98] duration-500 ease-out' : 'hidden'}`}>
+                {(view === 'master' && view !== 'player') && <MasterDataView />}
+              </div>
+            </>
+          </PullToRefresh>
         )}
       </main>
 
+      {!isAppLoading && view === 'player' && (
+        <SwipeToClose onClose={() => {
+          if (typeof window !== 'undefined' && window.history) window.history.back();
+        }}>
+          <PlayerView />
+        </SwipeToClose>
+      )}
+
       {/* Modals */}
       <Modal />
-      <GradeModal />
       <ImportExportModal />
-      <SyahadahCard />
 
       {/* Custom Alert/Confirm Dialog */}
       {customDialog?.show && (

@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>TahfidzQu - Platform Setoran & Ujian Hafalan Al-Quran</title>
+  <title>TahfidzQur - Platform Setoran & Ujian Hafalan Al-Quran</title>
+  <meta name="rating" content="safe for kids, general" />
+  <meta name="age-rating" content="everyone" />
+  <meta name="target" content="all" />
+  <meta name="content-rating" content="G" />
   <link rel="icon" href="data:," />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -30,5 +34,14 @@
   </div>
 
   <script type="module" src="/src/main.jsx"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(err => {
+          console.log('SW registration failed: ', err);
+        });
+      });
+    }
+  </script>
 </body>
 </html>

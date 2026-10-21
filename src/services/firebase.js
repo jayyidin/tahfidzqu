@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "firebase/auth";
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { getDatabase, ref, onValue, set, remove, get, onChildAdded, onChildChanged, onChildRemoved } from "firebase/database";
 import { getStorage, ref as storageRef, uploadString, getDownloadURL, deleteObject } from "firebase/storage";
 
@@ -48,6 +48,28 @@ export const initFirebaseAuth = (onUserChange, onError) => {
     }
   };
   doAuth();
+};
+
+export const loginWithGoogle = async () => {
+  try {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    const result = await signInWithPopup(auth, provider);
+    return result.user;
+  } catch (e) {
+    console.error("Google Sign-in Error:", e);
+    throw e;
+  }
+};
+
+export const logoutGoogle = async () => {
+  try {
+    await signOut(auth);
+    await signInAnonymously(auth);
+  } catch (e) {
+    console.error("Google Sign-out Error:", e);
+    throw e;
+  }
 };
 
 export const uploadAudioToFirebase = async (base64Data, prefix) => {

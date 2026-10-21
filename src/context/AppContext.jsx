@@ -9,19 +9,35 @@ export const useApp = () => useContext(AppContext);
 
 export const AppProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => localStorage.getItem('tahfidzqu_theme') || 'light');
-  const [adminLvl, setAdminLvl] = useState(0); // 0: public, 1: superadmin, 2: ustadz
-  const [loggedInUstadzId, setLoggedInUstadzId] = useState(null);
+  const [adminLvl, setAdminLvl] = useState(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const p = new URLSearchParams(window.location.search);
+        if (p.has('tq_adminLvl')) return Number(p.get('tq_adminLvl'));
+        if (p.has('admin')) return Number(p.get('admin'));
+        if (window.location.hash && window.location.hash.includes('?')) {
+          const hashQ = window.location.hash.split('?')[1];
+          const hp = new URLSearchParams(hashQ);
+          if (hp.has('tq_adminLvl')) return Number(hp.get('tq_adminLvl'));
+          if (hp.has('admin')) return Number(hp.get('admin'));
+        }
+      }
+    } catch (e) {}
+    const v = localStorage.getItem('tq_adminLvl');
+    return v ? Number(v) : 0;
+  }); // 0: public, 1: superadmin, 2: ustadz
+  const [loggedInUstadzId, setLoggedInUstadzId] = useState(() => localStorage.getItem('tq_logged_ustadz') || null);
   const [view, setView] = useState('home');
-  const [schLogo, setSchLogo] = useState(() => localStorage.getItem('tahfidzqu_logo') || '');
-  const [schSub, setSchSub] = useState(() => localStorage.getItem('tahfidzqu_subtitle') || 'Madrasah Tahfidz Quran');
+  const [schLogo, setSchLogo] = useState('');
+  const [schSub, setSchSub] = useState('Madrasah Tahfidz Quran');
   
   const [search, setSearch] = useState('');
   const [searchSiswa, setSearchSiswa] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isAppLoading, setIsAppLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [loadingProgress, setLoadingProgress] = useState(null);
   const [firebaseError, setFirebaseError] = useState('');
-  const [isFetchingSubs, setIsFetchingSubs] = useState(true);
 
   // Collections
   const [juzs, setJuzs] = useState([]);
@@ -31,33 +47,53 @@ export const AppProvider = ({ children }) => {
   const [ustadz, setUstadz] = useState([]);
   const [halaqohs, setHalaqohs] = useState([]);
   const [siswas, setSiswas] = useState([]);
-  const [subs, setSubs] = useState([]);
 
   // Active player selection
-  const [actJuzId, setActJuzId] = useState(30);
-  const [actSurahId, setActSurahId] = useState(null);
-  const [actLevelId, setActLevelId] = useState(null);
+  const [actJuzId, setActJuzId] = useState(() => {
+    let val = localStorage.getItem('tq_juz');
+    if (!val || val === 'null' || val === 'undefined' || val === 'NaN') return 30;
+    return val;
+  });
+  const [actSurahId, setActSurahId] = useState(() => { const v = localStorage.getItem('tq_surah'); return v ? (isNaN(v) ? v : Number(v)) : null; });
+  const [actLevelId, setActLevelId] = useState(() => { const v = localStorage.getItem('tq_level'); return v ? (isNaN(v) ? v : Number(v)) : null; });
   const [actSegId, setActSegId] = useState(null);
+  const [lastPlayed, setLastPlayed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('tq_last_played')) || null; } catch(e) { return null; }
+  });
   const [repTarget, setRepTarget] = useState(7);
   const [curRep, setCurRep] = useState(0);
   const [segOrder, setSegOrder] = useState('asc'); // asc, desc, random
+
+  // Local Bookmarks (No login)
+  const [bookmarks, setBookmarks] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('tq_bookmarks')) || {}; } catch (e) { return {}; }
+  });
 
   // Filters and sorting
   const [filter, setFilter] = useState({ u: 'all', h: 'all', s: 'all', surah: 'all', startDate: '', endDate: '', status: 'all' });
   const [hierSel, setHierSel] = useState({ u: null, h: null, s: null });
   const [adminSortOrder, setAdminSortOrder] = useState('newest');
 
-  // Modals & Dialogs
-  const [modal, setModal] = useState(null);
-  const [modalData, setModalData] = useState(null);
-  const [customDialog, setCustomDialog] = useState({ show: false, type: 'alert', message: '', onConfirm: null });
-  const [syahadahData, setSyahadahData] = useState(null);
 
-  // Audio Player State
-  const [activeAudioId, setActiveAudioId] = useState(null);
-  const [activeAudioDur, setActiveAudioDur] = useState(0);
-  const [customAudioSpeed, setCustomAudioSpeed] = useState(1);
-  const audioRef = useRef(new Audio());
+  // Modals & Dialogs
+  const [modal, setModalState] = useState(null);
+  const [modalData, setModalData] = useState(null);
+
+  const setModal = (newModal, data = undefined) => {
+    if (newModal) {
+      if (typeof window !== 'undefined' && window.history) {
+        window.history.pushState({ view, modal: newModal }, '', '#' + view + '-modal-' + newModal);
+      }
+    } else {
+      if (typeof window !== 'undefined' && window.history && window.history.state && window.history.state.modal) {
+        window.history.back();
+        return;
+      }
+    }
+    setModalState(newModal);
+    if (data !== undefined) setModalData(data);
+  };
+  const [customDialog, setCustomDialog] = useState({ show: false, type: 'alert', message: '', onConfirm: null });
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -68,115 +104,57 @@ export const AppProvider = ({ children }) => {
     localStorage.setItem('tahfidzqu_theme', theme);
   }, [theme]);
 
-  // Audio object setup
+  // Sync state to localStorage for persistence
+  useEffect(() => { localStorage.setItem('tq_juz', actJuzId); }, [actJuzId]);
+  useEffect(() => { if (actSurahId) localStorage.setItem('tq_surah', actSurahId); else localStorage.removeItem('tq_surah'); }, [actSurahId]);
+  useEffect(() => { if (actLevelId) localStorage.setItem('tq_level', actLevelId); else localStorage.removeItem('tq_level'); }, [actLevelId]);
+  useEffect(() => { if (loggedInUstadzId) localStorage.setItem('tq_logged_ustadz', loggedInUstadzId); else localStorage.removeItem('tq_logged_ustadz'); }, [loggedInUstadzId]);
+  useEffect(() => { localStorage.setItem('tq_adminLvl', adminLvl); }, [adminLvl]);
   useEffect(() => {
-    const a = audioRef.current;
-    const handleTimeUpdate = () => {
-      const id = activeAudioId;
-      if (!id) return;
-      const elTime = document.getElementById('audio-time-' + id);
-      const elBar = document.getElementById('audio-bar-' + id);
-      let ct = a.currentTime;
-      if (!ct || isNaN(ct)) ct = 0;
-      if (elTime) {
-        const m = Math.floor(ct / 60).toString().padStart(2, '0');
-        const s = Math.floor(ct % 60).toString().padStart(2, '0');
-        elTime.innerText = `${m}:${s}`;
+    try {
+      if (typeof window !== 'undefined') {
+        const fullUrl = window.location.href;
+        if (fullUrl.includes('tq_adminLvl=1') || fullUrl.includes('admin=1')) {
+          setAdminLvl(1);
+          localStorage.setItem('tq_adminLvl', '1');
+        } else if (fullUrl.includes('tq_adminLvl=0') || fullUrl.includes('admin=0')) {
+          setAdminLvl(0);
+          localStorage.setItem('tq_adminLvl', '0');
+        }
       }
-      if (elBar) {
-        let d = activeAudioDur || a.duration;
-        if (!d || isNaN(d) || d === Infinity || d <= 0) d = Math.max(10, ct + 2);
-        const pct = Math.min(100, (ct / d) * 100);
-        elBar.style.width = pct + '%';
-      }
-    };
+    } catch(e) {}
+  }, []);
+  useEffect(() => { localStorage.setItem('tq_bookmarks', JSON.stringify(bookmarks)); }, [bookmarks]);
+  useEffect(() => { if (lastPlayed) localStorage.setItem('tq_last_played', JSON.stringify(lastPlayed)); }, [lastPlayed]);
 
-    const handleEnded = () => {
-      const id = activeAudioId;
-      if (id) {
-        const isUstadz = id.includes('_ust_') || id === 'grade_modal';
-        const btn = document.getElementById('audio-btn-' + id);
-        const elBar = document.getElementById('audio-bar-' + id);
-        const elTime = document.getElementById('audio-time-' + id);
-        if (btn) btn.innerHTML = `<i class="ph-fill ph-play ${isUstadz ? 'text-xs' : 'text-sm'}"></i>`;
-        if (elBar) elBar.style.width = '0%';
-        if (elTime) elTime.innerText = '00:00';
-      }
-      setActiveAudioId(null);
-    };
-
-    const handleError = () => {
-      const id = activeAudioId;
-      if (id) {
-        const isUstadz = id.includes('_ust_') || id === 'grade_modal';
-        const btn = document.getElementById('audio-btn-' + id);
-        if (btn) btn.innerHTML = `<i class="ph-fill ph-play ${isUstadz ? 'text-xs' : 'text-sm'}"></i>`;
-      }
-      setActiveAudioId(null);
-    };
-
-    a.addEventListener('timeupdate', handleTimeUpdate);
-    a.addEventListener('ended', handleEnded);
-    a.addEventListener('error', handleError);
-
-    return () => {
-      a.removeEventListener('timeupdate', handleTimeUpdate);
-      a.removeEventListener('ended', handleEnded);
-      a.removeEventListener('error', handleError);
-    };
-  }, [activeAudioId, activeAudioDur]);
-
-  const playCustomAudio = (id, url, savedDuration) => {
-    const a = audioRef.current;
-    const isUstadz = id.includes('_ust_') || id === 'grade_modal';
-    const getIcon = (state) => `<i class="ph-fill ${state === 'play' ? 'ph-play' : 'ph-pause'} ${isUstadz ? 'text-xs' : 'text-sm'}"></i>`;
-
-    if (activeAudioId === id) {
-      if (a.paused) {
-        a.play();
-        const btn = document.getElementById('audio-btn-' + id);
-        if (btn) btn.innerHTML = getIcon('pause');
-      } else {
-        a.pause();
-        const btn = document.getElementById('audio-btn-' + id);
-        if (btn) btn.innerHTML = getIcon('play');
-      }
-      return;
+  // Handle hardware back button navigation
+  useEffect(() => {
+    // initialize history with current view
+    if (typeof window !== 'undefined' && window.history) {
+      window.history.replaceState({ view }, '', '#' + view);
     }
+    const handlePopState = (event) => {
+      if (event.state) {
+        if (event.state.modal) {
+          setModalState(event.state.modal);
+        } else {
+          setModalState(null);
+        }
 
-    if (activeAudioId) {
-      const oldIsUst = activeAudioId.includes('_ust_') || activeAudioId === 'grade_modal';
-      const oldBtn = document.getElementById('audio-btn-' + activeAudioId);
-      if (oldBtn) oldBtn.innerHTML = `<i class="ph-fill ph-play ${oldIsUst ? 'text-xs' : 'text-sm'}"></i>`;
-      const oldBar = document.getElementById('audio-bar-' + activeAudioId);
-      if (oldBar) oldBar.style.width = '0%';
-      const oldTime = document.getElementById('audio-time-' + activeAudioId);
-      if (oldTime) oldTime.innerText = '00:00';
-    }
-
-    setActiveAudioId(id);
-    setActiveAudioDur(savedDuration);
-    a.src = url;
-    a.playbackRate = customAudioSpeed || 1;
-    a.play().catch(() => {
-      showAlert('Tidak dapat memutar rekaman. Browser membutuhkan interaksi.');
-      const btn = document.getElementById('audio-btn-' + id);
-      if (btn) btn.innerHTML = getIcon('play');
-      setActiveAudioId(null);
-    });
-
-    const newBtn = document.getElementById('audio-btn-' + id);
-    if (newBtn) newBtn.innerHTML = getIcon('pause');
-  };
-
-  const toggleCustomAudioSpeed = (e) => {
-    if (e) e.stopPropagation();
-    const speeds = [1, 1.25, 1.5, 2, 0.5, 0.75];
-    const next = speeds[(speeds.indexOf(customAudioSpeed) + 1) % speeds.length];
-    setCustomAudioSpeed(next);
-    if (audioRef.current) audioRef.current.playbackRate = next;
-  };
-
+        if (event.state.view) {
+          setIsLoading(true);
+          setView(event.state.view);
+          setSearch('');
+          setSearchSiswa('');
+          setTimeout(() => {
+            setIsLoading(false);
+          }, 300);
+        }
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
   const showAlert = (message) => {
     setCustomDialog({ show: true, type: 'alert', message, onConfirm: null });
   };
@@ -185,15 +163,9 @@ export const AppProvider = ({ children }) => {
     setCustomDialog({ show: true, type: 'confirm', message, onConfirm });
   };
 
-  const switchView = (targetView) => {
+  const switchView = (targetView, skipHistory = false) => {
     if (isLoading) return;
     setIsLoading(true);
-    if (view === 'player' && targetView !== 'player') {
-      if (audioRef.current && !audioRef.current.paused) {
-        audioRef.current.pause();
-        setActiveAudioId(null);
-      }
-    }
     if (adminLvl === 2 && targetView === 'admin') {
       setHierSel(prev => ({ ...prev, u: loggedInUstadzId }));
       setFilter(prev => ({ ...prev, u: loggedInUstadzId }));
@@ -201,6 +173,9 @@ export const AppProvider = ({ children }) => {
     setSearch('');
     setSearchSiswa('');
     setView(targetView);
+    if (!skipHistory && typeof window !== 'undefined' && window.history) {
+      window.history.pushState({ view: targetView }, '', '#' + targetView);
+    }
     setTimeout(() => {
       setIsLoading(false);
     }, 300);
@@ -217,10 +192,8 @@ export const AppProvider = ({ children }) => {
           const obj = snap.val();
           const arr = obj ? Object.keys(obj).map(k => ({ id: isNaN(k) ? k : Number(k), ...obj[k] })) : [];
           setter(arr);
-          if (colName === 'subs') setIsFetchingSubs(false);
         }, error => {
           console.error(`Error syncing ${colName}:`, error);
-          if (colName === 'subs') setIsFetchingSubs(false);
         });
       };
 
@@ -231,7 +204,6 @@ export const AppProvider = ({ children }) => {
       syncCollection('ustadz', setUstadz);
       syncCollection('halaqohs', setHalaqohs);
       syncCollection('siswas', setSiswas);
-      syncCollection('subs', setSubs);
 
       // App Settings
       onValue(ref(db, `artifacts/${safeId}/public/data/settings/app`), snap => {
@@ -239,17 +211,17 @@ export const AppProvider = ({ children }) => {
         if (obj) {
           if (obj.logo !== undefined) {
             setSchLogo(obj.logo);
-            localStorage.setItem('tahfidzqu_logo', obj.logo);
           }
           if (obj.subtitle !== undefined) {
             setSchSub(obj.subtitle);
-            localStorage.setItem('tahfidzqu_subtitle', obj.subtitle);
           }
         }
+        // First initial data load is complete
+        setTimeout(() => setIsAppLoading(false), 300);
       });
     }, (err) => {
       setFirebaseError(err);
-      setIsFetchingSubs(false);
+      setIsAppLoading(false);
     });
   }, []);
 
@@ -269,7 +241,7 @@ export const AppProvider = ({ children }) => {
 
   const exportFullDatabase = () => {
     const dbData = {
-      juzs, surahs, levels, segs, ustadz, halaqohs, siswas, subs,
+      juzs, surahs, levels, segs, ustadz, halaqohs, siswas,
       settings: { logo: schLogo, subtitle: schSub }
     };
     const dataStr = JSON.stringify(dbData, null, 2);
@@ -277,7 +249,7 @@ export const AppProvider = ({ children }) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `TahfidzQu_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+    link.download = `TahfidzQur_Backup_${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -291,7 +263,7 @@ export const AppProvider = ({ children }) => {
         try {
           const data = JSON.parse(ev.target.result);
           setIsLoading(true);
-          const cols = ['juzs', 'surahs', 'levels', 'segs', 'ustadz', 'halaqohs', 'siswas', 'subs'];
+          const cols = ['juzs', 'surahs', 'levels', 'segs', 'ustadz', 'halaqohs', 'siswas'];
           for (let col of cols) {
             if (data[col] && Array.isArray(data[col])) {
               await dbSaveCollection(col, data[col]);
@@ -311,6 +283,7 @@ export const AppProvider = ({ children }) => {
     });
   };
 
+
   const value = {
     theme, setTheme,
     adminLvl, setAdminLvl,
@@ -321,10 +294,10 @@ export const AppProvider = ({ children }) => {
     search, setSearch,
     searchSiswa, setSearchSiswa,
     isLoading, setIsLoading,
+    isAppLoading,
     loadingMessage, setLoadingMessage,
     loadingProgress, setLoadingProgress,
     firebaseError, setFirebaseError,
-    isFetchingSubs,
     juzs, setJuzs,
     surahs, setSurahs,
     levels, setLevels,
@@ -332,26 +305,21 @@ export const AppProvider = ({ children }) => {
     ustadz, setUstadz,
     halaqohs, setHalaqohs,
     siswas, setSiswas,
-    subs, setSubs,
     actJuzId, setActJuzId,
     actSurahId, setActSurahId,
     actLevelId, setActLevelId,
     actSegId, setActSegId,
+    lastPlayed, setLastPlayed,
     repTarget, setRepTarget,
     curRep, setCurRep,
     segOrder, setSegOrder,
+    bookmarks, setBookmarks,
     filter, setFilter,
     hierSel, setHierSel,
     adminSortOrder, setAdminSortOrder,
     modal, setModal,
     modalData, setModalData,
     customDialog, setCustomDialog,
-    syahadahData, setSyahadahData,
-    activeAudioId, setActiveAudioId,
-    activeAudioDur, setActiveAudioDur,
-    customAudioSpeed,
-    playCustomAudio,
-    toggleCustomAudioSpeed,
     showAlert, showConfirm,
     exportFullDatabase, importFullDatabase
   };
